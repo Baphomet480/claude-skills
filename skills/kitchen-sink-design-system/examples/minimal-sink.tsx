@@ -15,16 +15,20 @@
 import { useState } from "react";
 
 // ── Replace these placeholder components with real imports ──────────────────
-// import { Button } from "@/components/ui/button";
-// import { Card }   from "@/components/ui/card";
-// import { Input }  from "@/components/ui/input";
-// import { Badge }  from "@/components/ui/badge";
-// import { Alert }  from "@/components/ui/alert";
-// import { Modal }  from "@/components/ui/modal";
+// import { Button }     from "@/components/ui/button";
+// import { Card }       from "@/components/ui/card";
+// import { Input }      from "@/components/ui/input";
+// import { Badge }      from "@/components/ui/badge";
+// import { Alert }      from "@/components/ui/alert";
+// import { Modal }      from "@/components/ui/modal";
+// import { SiteHeader } from "@/components/layout/site-header";
+// import { SiteFooter } from "@/components/layout/site-footer";
 
 // ── Section registry (drives sidebar navigation) ───────────────────────────
 
 const SECTIONS = [
+    { id: "site-header", label: "Site Header" },
+    { id: "site-footer", label: "Site Footer" },
     { id: "typography", label: "Typography" },
     { id: "buttons", label: "Buttons" },
     { id: "badges", label: "Badges" },
@@ -73,6 +77,100 @@ export default function SinkPage() {
                         Component inventory and design system reference.
                     </p>
                 </header>
+
+                {/* ── Site Header ── */}
+                <section id="site-header" className="space-y-6">
+                    <h2 className="border-b pb-2 text-2xl font-semibold">Site Header</h2>
+                    <p className="text-sm text-muted-foreground">
+                        Rendered inline (not as the page wrapper) to test responsive
+                        breakpoints, sticky behavior, and nav states in isolation.
+                    </p>
+                    {/* Replace with: <SiteHeader /> */}
+                    <div className="overflow-hidden rounded-lg border">
+                        <header className="flex items-center justify-between bg-background px-6 py-4">
+                            <div className="flex items-center gap-3">
+                                <div className="h-8 w-8 rounded-full bg-primary" />
+                                <span className="text-lg font-bold">Brand</span>
+                            </div>
+                            <nav className="hidden items-center gap-6 md:flex">
+                                <a href="#" className="text-sm font-medium hover:text-primary">Home</a>
+                                <a href="#" className="text-sm font-medium hover:text-primary">About</a>
+                                <a href="#" className="text-sm font-medium hover:text-primary">Services</a>
+                                <a href="#" className="text-sm font-medium hover:text-primary">Contact</a>
+                            </nav>
+                            <button className="rounded bg-primary px-4 py-2 text-sm text-primary-foreground">
+                                CTA
+                            </button>
+                        </header>
+                    </div>
+                    <div>
+                        <h3 className="mb-3 text-sm font-medium text-muted-foreground">
+                            Mobile variant (hamburger)
+                        </h3>
+                        <div className="max-w-sm overflow-hidden rounded-lg border">
+                            <header className="flex items-center justify-between bg-background px-4 py-3">
+                                <div className="flex items-center gap-2">
+                                    <div className="h-6 w-6 rounded-full bg-primary" />
+                                    <span className="text-sm font-bold">Brand</span>
+                                </div>
+                                <button className="flex h-8 w-8 items-center justify-center rounded hover:bg-accent">
+                                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                                    </svg>
+                                </button>
+                            </header>
+                        </div>
+                    </div>
+                </section>
+
+                {/* ── Site Footer ── */}
+                <section id="site-footer" className="space-y-6">
+                    <h2 className="border-b pb-2 text-2xl font-semibold">Site Footer</h2>
+                    <p className="text-sm text-muted-foreground">
+                        Rendered inline to test link columns, responsive stacking, and
+                        brand consistency at the page boundary.
+                    </p>
+                    {/* Replace with: <SiteFooter /> */}
+                    <div className="overflow-hidden rounded-lg border">
+                        <footer className="bg-muted px-6 py-8">
+                            <div className="grid gap-8 md:grid-cols-4">
+                                <div>
+                                    <h4 className="mb-3 text-sm font-semibold">Brand</h4>
+                                    <p className="text-xs text-muted-foreground">
+                                        A brief tagline or description of the brand.
+                                    </p>
+                                </div>
+                                <div>
+                                    <h4 className="mb-3 text-sm font-semibold">Navigation</h4>
+                                    <ul className="space-y-1 text-xs text-muted-foreground">
+                                        <li><a href="#" className="hover:text-foreground">Home</a></li>
+                                        <li><a href="#" className="hover:text-foreground">About</a></li>
+                                        <li><a href="#" className="hover:text-foreground">Services</a></li>
+                                        <li><a href="#" className="hover:text-foreground">Contact</a></li>
+                                    </ul>
+                                </div>
+                                <div>
+                                    <h4 className="mb-3 text-sm font-semibold">Legal</h4>
+                                    <ul className="space-y-1 text-xs text-muted-foreground">
+                                        <li><a href="#" className="hover:text-foreground">Privacy</a></li>
+                                        <li><a href="#" className="hover:text-foreground">Terms</a></li>
+                                    </ul>
+                                </div>
+                                <div>
+                                    <h4 className="mb-3 text-sm font-semibold">Social</h4>
+                                    <div className="flex gap-3">
+                                        <div className="h-8 w-8 rounded bg-foreground/10" />
+                                        <div className="h-8 w-8 rounded bg-foreground/10" />
+                                        <div className="h-8 w-8 rounded bg-foreground/10" />
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="mt-8 border-t pt-4 text-center text-xs text-muted-foreground">
+                                © {new Date().getFullYear()} Brand. All rights reserved.
+                            </div>
+                        </footer>
+                    </div>
+                </section>
 
                 {/* ── Typography ── */}
                 <section id="typography" className="space-y-6">
