@@ -1,0 +1,268 @@
+{{/*
+  Kitchen Sink — Minimal Hugo Layout Template
+  
+  This is a starter template for the Kitchen Sink page in a Hugo project.
+  Customize it by replacing placeholder sections with your actual partials.
+  
+  Usage:
+    1. Create content/sink/_index.md with frontmatter: type: sink
+    2. Save this file as layouts/sink/list.html
+    3. Create a production guard in config/production/hugo.toml: showSink = false
+*/}}
+
+{{ define "main" }}
+
+{{/* ── Production Guard ────────────────────────────────────── */}}
+{{ if eq (hugo.Environment) "production" }}
+  {{ if not (site.Params.showSink | default false) }}
+    <meta http-equiv="refresh" content="0; url=/" />
+    {{ return }}
+  {{ end }}
+{{ end }}
+
+<div class="sink">
+  {{/* ── Navigation Sidebar ──────────────────────────────── */}}
+  <aside class="sink__sidebar">
+    <nav>
+      <h2>Kitchen Sink</h2>
+      <ul>
+        <li><a href="#tokens">Design Tokens</a></li>
+        <li><a href="#voice">Voice & Tone</a></li>
+        <li><a href="#illustrations">Illustrations</a></li>
+        <li><a href="#typography">Typography</a></li>
+        <li><a href="#buttons">Buttons</a></li>
+        <li><a href="#badges">Badges</a></li>
+        <li><a href="#cards">Cards</a></li>
+        <li><a href="#forms">Forms</a></li>
+        <li><a href="#alerts">Alerts</a></li>
+        <li><a href="#motion">Motion</a></li>
+        <li><a href="#chaos">Chaos Laboratory</a></li>
+      </ul>
+    </nav>
+  </aside>
+
+  {{/* ── Main Content ────────────────────────────────────── */}}
+  <main class="sink__content">
+
+    {{/* ── Header ──────────────────────────────────────── */}}
+    <header class="sink__header" id="header">
+      <h1>Kitchen Sink</h1>
+      <p>Living design system reference — the source of truth for all components, tokens, and content patterns.</p>
+      <p class="sink__meta">Last updated: {{ now.Format "2006-01-02" }} · Franchise: <em>[Your Franchise]</em></p>
+    </header>
+
+    {{/* ── Section 1: Design Tokens ────────────────────── */}}
+    <section id="tokens">
+      <h2>Design Tokens</h2>
+
+      <h3>Color Palette</h3>
+      {{/* 
+        Option A: Programmatic — load from data/design-tokens.json
+        {{ range site.Data.design_tokens.colors }}
+          <div class="sink__swatch" style="background-color: {{ .value }};">
+            <span>{{ .name }}</span>
+            <code>{{ .value }}</code>
+          </div>
+        {{ end }}
+
+        Option B: Manual — hardcode swatches
+      */}}
+      <div class="sink__swatch-grid">
+        <div class="sink__swatch" style="background-color: var(--color-primary);">
+          <span>Primary</span>
+          <code>--color-primary</code>
+        </div>
+        <div class="sink__swatch" style="background-color: var(--color-secondary);">
+          <span>Secondary</span>
+          <code>--color-secondary</code>
+        </div>
+        {{/* Add more swatches... */}}
+      </div>
+
+      <h3>Typography Scale</h3>
+      <div class="sink__type-scale">
+        <h1>Heading 1</h1>
+        <h2>Heading 2</h2>
+        <h3>Heading 3</h3>
+        <h4>Heading 4</h4>
+        <h5>Heading 5</h5>
+        <h6>Heading 6</h6>
+        <p>Body text — The quick brown fox jumps over the lazy dog.</p>
+        <p><small>Small / caption text</small></p>
+        <p><code>Inline code</code></p>
+      </div>
+
+      <h3>Spacing Ramp</h3>
+      {{/* Render spacing tokens visually */}}
+    </section>
+
+    {{/* ── Section 2: Voice & Tone ─────────────────────── */}}
+    <section id="voice">
+      <h2>Voice & Tone</h2>
+
+      <h3>Voice</h3>
+      <p><strong>Voice:</strong> [adjective], [adjective], [adjective]</p>
+
+      <h3>Tone Map</h3>
+      <table>
+        <thead>
+          <tr><th>User State</th><th>Tone</th><th>Example</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Pleased</td><td>Enthusiastic</td><td>"You're all set!"</td></tr>
+          <tr><td>Neutral</td><td>Informative</td><td>"3 items in your cart."</td></tr>
+          <tr><td>Confused</td><td>Supportive</td><td>"Let's get you back on track."</td></tr>
+          <tr><td>Frustrated</td><td>Empathetic</td><td>"Something went wrong. Here's what you can do."</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Content Patterns</h3>
+      <div class="sink__pattern-grid">
+        <div>
+          <h4>Empty State</h4>
+          <p class="sink__do">✅ "No projects yet. Create your first one."</p>
+          <p class="sink__dont">❌ "No data."</p>
+        </div>
+        <div>
+          <h4>Error Message</h4>
+          <p class="sink__do">✅ "We couldn't save. The file may have changed. Try refreshing."</p>
+          <p class="sink__dont">❌ "Error: 409"</p>
+        </div>
+      </div>
+    </section>
+
+    {{/* ── Section 3: Illustrations ────────────────────── */}}
+    <section id="illustrations">
+      <h2>Illustration Gallery</h2>
+      {{/* Add 3-5 canonical illustrations with prompt templates */}}
+    </section>
+
+    {{/* ── Section 4: Typography ───────────────────────── */}}
+    <section id="typography">
+      <h2>Typography</h2>
+      {{ .Content }}
+      <blockquote>A blockquote specimen for testing styled quotes.</blockquote>
+      <ul>
+        <li>Unordered list item 1</li>
+        <li>Unordered list item 2</li>
+      </ul>
+      <ol>
+        <li>Ordered list item 1</li>
+        <li>Ordered list item 2</li>
+      </ol>
+    </section>
+
+    {{/* ── Section 5: Buttons ──────────────────────────── */}}
+    <section id="buttons">
+      <h2>Buttons</h2>
+      <div class="sink__variant-grid">
+        {{ partial "components/button" (dict "label" "Primary" "variant" "primary") }}
+        {{ partial "components/button" (dict "label" "Secondary" "variant" "secondary") }}
+        {{ partial "components/button" (dict "label" "Outline" "variant" "outline") }}
+        {{ partial "components/button" (dict "label" "Ghost" "variant" "ghost") }}
+        {{ partial "components/button" (dict "label" "Destructive" "variant" "destructive") }}
+        {{ partial "components/button" (dict "label" "Disabled" "variant" "primary" "disabled" true) }}
+      </div>
+
+      <h3>Sizes</h3>
+      <div class="sink__variant-grid">
+        {{ partial "components/button" (dict "label" "Small" "size" "sm") }}
+        {{ partial "components/button" (dict "label" "Medium" "size" "md") }}
+        {{ partial "components/button" (dict "label" "Large" "size" "lg") }}
+      </div>
+    </section>
+
+    {{/* ── Section 6: Badges ───────────────────────────── */}}
+    <section id="badges">
+      <h2>Badges</h2>
+      {{/* {{ partial "components/badge" (dict "label" "Default") }} */}}
+      {{/* {{ partial "components/badge" (dict "label" "Success" "variant" "success") }} */}}
+      {{/* Add more variants... */}}
+    </section>
+
+    {{/* ── Section 7: Cards ────────────────────────────── */}}
+    <section id="cards">
+      <h2>Cards</h2>
+      <div class="sink__card-grid">
+        {{/* {{ partial "components/card" (dict "title" "Basic Card" "body" "Card content goes here.") }} */}}
+        {{/* Add variants... */}}
+      </div>
+    </section>
+
+    {{/* ── Section 8: Forms ────────────────────────────── */}}
+    <section id="forms">
+      <h2>Form Controls</h2>
+      <form onsubmit="return false;">
+        {{/* Replace with your form component partials */}}
+        <div>
+          <label for="sink-input">Text Input</label>
+          <input type="text" id="sink-input" placeholder="Entered by Gandalf the Grey" />
+        </div>
+        <div>
+          <label for="sink-textarea">Textarea</label>
+          <textarea id="sink-textarea" rows="3" placeholder="Tell us your tale..."></textarea>
+        </div>
+        <div>
+          <label for="sink-select">Select</label>
+          <select id="sink-select">
+            <option>Choose a fellowship member</option>
+            <option>Frodo Baggins</option>
+            <option>Samwise Gamgee</option>
+            <option>Aragorn</option>
+          </select>
+        </div>
+        <div>
+          <label><input type="checkbox" /> I accept the terms of the Council of Elrond</label>
+        </div>
+      </form>
+    </section>
+
+    {{/* ── Section 9: Alerts ───────────────────────────── */}}
+    <section id="alerts">
+      <h2>Alerts</h2>
+      {{/* {{ partial "components/alert" (dict "variant" "info" "message" "Information alert.") }} */}}
+      {{/* {{ partial "components/alert" (dict "variant" "success" "message" "Success alert.") }} */}}
+      {{/* {{ partial "components/alert" (dict "variant" "warning" "message" "Warning alert.") }} */}}
+      {{/* {{ partial "components/alert" (dict "variant" "error" "message" "Error alert.") }} */}}
+    </section>
+
+    {{/* ── Section 10: Motion Sampler ──────────────────── */}}
+    <section id="motion">
+      <h2>Motion Sampler</h2>
+      <p>Interactive motion demos. Hover, click, and interact to see animations.</p>
+      {{/* Add hover lift, fade in, slide in, expand/collapse demos */}}
+    </section>
+
+    {{/* ── Section 11: Chaos Laboratory ────────────────── */}}
+    <section id="chaos">
+      <h2>Chaos Laboratory</h2>
+
+      <h3>Theme Test</h3>
+      <div class="sink__theme-test">
+        <div class="sink__theme-col" data-theme="light">
+          <h4>Light Mode</h4>
+          {{/* Render key components here */}}
+        </div>
+        <div class="sink__theme-col" data-theme="dark">
+          <h4>Dark Mode</h4>
+          {{/* Render same components here */}}
+        </div>
+      </div>
+
+      <h3>Responsive Stubs</h3>
+      <div class="sink__responsive-test">
+        <div>
+          <h4>320px (Mobile)</h4>
+          <iframe src="/sink/" width="320" height="400" style="border: 1px solid var(--color-border);"></iframe>
+        </div>
+        <div>
+          <h4>768px (Tablet)</h4>
+          <iframe src="/sink/" width="768" height="400" style="border: 1px solid var(--color-border);"></iframe>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+{{ end }}
