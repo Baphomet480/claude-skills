@@ -655,7 +655,7 @@ If you have a Netlify site, you can use Netlify's built-in OAuth provider (under
 
 ## 8. Deployment: Cloudflare Pages
 
-### Connect Repository
+### Connect Repository (Dashboard)
 
 1. Cloudflare Dashboard → Pages → Create a project → Connect to Git
 2. Select GitHub repo
@@ -667,19 +667,71 @@ If you have a Netlify site, you can use Netlify's built-in OAuth provider (under
    - `HUGO_VERSION`: `0.145.0` (or latest)
    - `NODE_VERSION`: `20` (if using npm)
 
-### `wrangler.toml` (optional, for CI/CD):
+### GitHub Actions CI/CD (Recommended)
 
-```toml
-name = "your-site"
-compatibility_date = "2025-01-01"
+The bootstrap script creates `.github/workflows/deploy.yml` automatically. It handles:
+- **Push to main** → build Hugo → deploy to Cloudflare Pages (production)
+- **Pull requests** → build Hugo → validate build succeeds (no deploy)
 
-[build]
-command = "npm install && hugo --minify"
+**Required GitHub Secrets:**
 
-[build.environment]
-HUGO_VERSION = "0.145.0"
-NODE_VERSION = "20"
+| Secret | Description | Where to find |
+|---|---|---|
+| `CLOUDFLARE_API_TOKEN` | API token with Pages write permission | CF Dashboard → API Tokens → "Edit Cloudflare Workers" template |
+| `CLOUDFLARE_ACCOUNT_ID` | Your Cloudflare account ID | CF Dashboard → any zone → Overview sidebar |
+
+**Required GitHub Variable:**
+
+| Variable | Description | Where to set |
+|---|---|---|
+| `PAGES_PROJECT_NAME` | Your CF Pages project name | Repository → Settings → Variables → Actions |
+
+**Workflow (npm + Tailwind path):**
+
+```yaml
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          fetch-depth: 0
+
+      - uses: peaceiris/actions-hugo@v3
+        with:
+          hugo-version: 'latest'
+          extended: true
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+      - run: hugo --minify
+
+      - name: Deploy to Cloudflare Pages
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy public --project-name ${{ vars.PAGES_PROJECT_NAME }}
 ```
+
+**CDN-only sites:** Remove the pnpm/Node steps — only Hugo setup + `hugo --minify` are needed.
+
+**PR preview deployments:** Uncomment the preview section in the generated workflow, or see the `cloudflare-pages` skill's `references/ci-cd-templates.md` for the full pattern.
 
 ### Custom Domain
 
@@ -710,10 +762,17 @@ Build command: `hugo --minify`, output: `public`.
 
 **GitHub Pages** — `.github/workflows/hugo.yml`:
 ```yaml
-name: Deploy Hugo
+name: Deploy Hugo to GitHub Pages
+
 on:
   push:
     branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -721,18 +780,28 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: true
-      - name: Setup Hugo
-        uses: peaceiris/actions-hugo@v3
+          fetch-depth: 0
+
+      - uses: peaceiris/actions-hugo@v3
         with:
-          hugo-version: '0.145.0'
+          hugo-version: 'latest'
           extended: true
-      - name: Build
-        run: hugo --minify
-      - name: Deploy
-        uses: peaceiris/actions-gh-pages@v4
+
+      - run: hugo --minify
+
+      - uses: actions/upload-pages-artifact@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./public
+          path: ./public
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
 ```
 
 ---

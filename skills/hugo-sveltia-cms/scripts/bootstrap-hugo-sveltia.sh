@@ -382,6 +382,112 @@ node_modules/
 hugo_stats.json
 EOF
 
+# --- GitHub Actions workflow ---
+echo "⚙️  Creating GitHub Actions workflow..."
+mkdir -p .github/workflows
+
+if [[ "$USE_CDN" == true ]]; then
+  cat > .github/workflows/deploy.yml << 'YAML'
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          fetch-depth: 0
+
+      - uses: peaceiris/actions-hugo@v3
+        with:
+          hugo-version: 'latest'
+          extended: true
+
+      - run: hugo --minify
+
+      - name: Deploy to Cloudflare Pages
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy public --project-name ${{ vars.PAGES_PROJECT_NAME }}
+
+      # -- Uncomment for PR preview deployments --
+      # - name: Deploy PR Preview
+      #   if: github.event_name == 'pull_request'
+      #   uses: cloudflare/wrangler-action@v3
+      #   with:
+      #     apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      #     accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      #     command: >-
+      #       pages deploy public
+      #       --project-name ${{ vars.PAGES_PROJECT_NAME }}
+      #       --branch ${{ github.head_ref }}
+YAML
+else
+  cat > .github/workflows/deploy.yml << 'YAML'
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          fetch-depth: 0
+
+      - uses: peaceiris/actions-hugo@v3
+        with:
+          hugo-version: 'latest'
+          extended: true
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: hugo --minify
+
+      - name: Deploy to Cloudflare Pages
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy public --project-name ${{ vars.PAGES_PROJECT_NAME }}
+
+      # -- Uncomment for PR preview deployments --
+      # - name: Deploy PR Preview
+      #   if: github.event_name == 'pull_request'
+      #   uses: cloudflare/wrangler-action@v3
+      #   with:
+      #     apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      #     accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      #     command: >-
+      #       pages deploy public
+      #       --project-name ${{ vars.PAGES_PROJECT_NAME }}
+      #       --branch ${{ github.head_ref }}
+YAML
+fi
+
 echo ""
 echo "✅ Site created: $SITE_NAME"
 echo ""
@@ -397,3 +503,9 @@ echo "  2. Set up GitHub OAuth App"
 echo "  3. Deploy sveltia-cms-auth Cloudflare Worker"
 echo "  4. Update 'base_url' in static/admin/config.yml"
 echo "  5. Connect repo to Cloudflare Pages"
+echo "  6. Set GitHub Secrets: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID"
+echo "  7. Set GitHub Variable: PAGES_PROJECT_NAME"
+echo ""
+echo "CI/CD workflow created at .github/workflows/deploy.yml"
+echo "  Push to main → build + deploy to Cloudflare Pages"
+echo "  Pull requests → build validation only"

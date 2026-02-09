@@ -68,6 +68,7 @@ One archetype per content type in `archetypes/`.
 2. Deploy `sveltia-cms-auth` Cloudflare Worker
 3. Connect repo to CF Pages, set `HUGO_VERSION` env var
 4. Build command: `hugo --minify`, output: `public`
+5. The bootstrap creates `.github/workflows/deploy.yml` automatically — set `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` as GitHub Secrets and `PAGES_PROJECT_NAME` as a GitHub Variable
 
 ### Step 7: Test Locally
 
@@ -157,6 +158,7 @@ Mix and match. Each includes full field definitions.
 - [ ] `archetypes/` — one per content type
 - [ ] `content/` — seed or converted content
 - [ ] `layouts/` — Basecoat-styled templates + component partials
+- [ ] `.github/workflows/deploy.yml` — CI/CD for Cloudflare Pages
 - [ ] `.gitignore`
 
 ## Reference Files
@@ -164,5 +166,6 @@ Mix and match. Each includes full field definitions.
 - `references/hugo-sveltia-setup.md` — Full config reference, domain collections, Basecoat setup, widgets, auth, CF Pages deploy, gotchas, i18n
 - `templates/admin-index.html` — Admin page template
 - `templates/config.yml` — Annotated CMS config starter
+- `templates/deploy.yml` — GitHub Actions workflow for Cloudflare Pages CI/CD
 - `scripts/bootstrap-hugo-sveltia.sh` — One-command scaffolding
 - `scripts/convert-toml-to-yaml.py` — Batch front matter conversion

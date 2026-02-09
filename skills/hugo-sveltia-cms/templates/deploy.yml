@@ -1,0 +1,64 @@
+# GitHub Actions workflow for Hugo + Cloudflare Pages
+# Copy to .github/workflows/deploy.yml
+#
+# Required GitHub Secrets:
+#   CLOUDFLARE_API_TOKEN  — API token with Pages write permission
+#   CLOUDFLARE_ACCOUNT_ID — Your Cloudflare account ID
+#
+# Required GitHub Variable:
+#   PAGES_PROJECT_NAME — Your Cloudflare Pages project name
+#     Set at: Repository → Settings → Variables → Actions → New repository variable
+
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          fetch-depth: 0
+
+      - uses: peaceiris/actions-hugo@v3
+        with:
+          hugo-version: 'latest'
+          extended: true
+
+      # -- Node/npm steps (remove if using CDN-only Basecoat) --
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+      # -- End Node/npm steps --
+
+      - run: hugo --minify
+
+      - name: Deploy to Cloudflare Pages
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy public --project-name ${{ vars.PAGES_PROJECT_NAME }}
+
+      # -- Uncomment for PR preview deployments --
+      # - name: Deploy PR Preview
+      #   if: github.event_name == 'pull_request'
+      #   uses: cloudflare/wrangler-action@v3
+      #   with:
+      #     apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      #     accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      #     command: >-
+      #       pages deploy public
+      #       --project-name ${{ vars.PAGES_PROJECT_NAME }}
+      #       --branch ${{ github.head_ref }}
