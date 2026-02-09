@@ -38,13 +38,13 @@ Once detected, lock in these mappings for the rest of the workflow:
 
 | Concept | React / Next.js | Hugo | Astro | Static HTML |
 |---|---|---|---|---|
-| **Component** | `.tsx` in `components/` | `.html` partial in `layouts/partials/components/` | `.astro` in `src/components/` | Reusable HTML snippet |
+| **Component** | `.tsx` in `components/` | `.html` partial in `themes/<theme>/layouts/partials/components/` | `.astro` in `src/components/` | Reusable HTML snippet |
 | **Component call** | `<Button variant="primary" />` | `{{ partial "components/button" (dict ...) }}` | `<Button variant="primary" />` | Copy/paste or `include` |
 | **Props / params** | React props (TypeScript) | `dict` context | Astro props (TypeScript) | CSS classes / data-attrs |
 | **Interactivity** | `useState`, event handlers | Alpine.js `x-data` or `<details>` | `client:load` + framework islands | Vanilla JS or Alpine.js |
-| **Sink route** | `app/sink/page.tsx` | `content/sink/_index.md` + `layouts/sink/list.html` | `src/pages/sink.astro` | `sink.html` |
+| **Sink route** | `app/sink/page.tsx` | `content/sink/_index.md` + `themes/<theme>/layouts/sink/list.html` | `src/pages/sink.astro` | `sink.html` |
 | **Prod guard** | `process.env` check → return `null` | Config overlay or `hugo.Environment` check | `import.meta.env` check | Don't deploy the file |
-| **Shortcodes** | N/A (components serve both roles) | `layouts/shortcodes/` wrapping partials | Components usable in MDX | N/A |
+| **Shortcodes** | N/A (components serve both roles) | `themes/<theme>/layouts/shortcodes/` wrapping partials | Components usable in MDX | N/A |
 | **Content authors** | Components in MDX | Shortcodes in markdown | Components in MDX / `.astro` | N/A |
 | **Utility helper** | `cn()` via `clsx` + `tailwind-merge` | `classnames` partial or inline concat | `cn()` or `class:list` | Inline concat |
 
@@ -356,7 +356,7 @@ The semantic layer means dark mode, theme changes, and brand pivots only require
 If the project lacks a class-merging utility:
 
 - **React** — Add a local `cn()` using `clsx` + `tailwind-merge`, or a minimal version if those aren't in `package.json`.
-- **Hugo** — Create a `layouts/partials/helpers/classnames.html` partial:
+- **Hugo** — Create a `themes/<theme>/layouts/partials/helpers/classnames.html` partial:
   ```go-html-template
   {{- $classes := slice -}}
   {{- range . -}}{{- if . -}}{{- $classes = $classes | append . -}}{{- end -}}{{- end -}}
@@ -562,7 +562,7 @@ For every **MISSING** item from Phase 1, create the component using the framewor
 | Framework | Location | Convention |
 |---|---|---|
 | React / Next.js | `components/` or `components/ui/` | `Button.tsx`, `card.tsx` — match existing project convention |
-| Hugo | `layouts/partials/components/` | `button.html`, `card.html` |
+| Hugo | `themes/<theme>/layouts/partials/components/` | `button.html`, `card.html` |
 | Astro | `src/components/` | `Button.astro`, `Card.astro` |
 | Static HTML | `components/` or `includes/` | `button.html`, `card.html` |
 
@@ -590,7 +590,7 @@ For every **MISSING** item from Phase 1, create the component using the framewor
 
 When a component is marked as a **SHORTCODE/MDX CANDIDATE** in Phase 1:
 
-- **Hugo** — Create a shortcode in `layouts/shortcodes/` that wraps the partial. Pass through all relevant parameters.
+- **Hugo** — Create a shortcode in `themes/<theme>/layouts/shortcodes/` that wraps the partial. Pass through all relevant parameters.
 - **React / Astro** — The component itself is usable in MDX. Ensure it's exported from the project's MDX component registry.
 - **Static** — Document usage instructions for copy/paste inclusion.
 
