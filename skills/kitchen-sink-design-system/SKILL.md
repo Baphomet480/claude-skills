@@ -243,92 +243,15 @@ export function Button({ className, variant, size, ...props }: ButtonProps) {
 
 ### Hugo — Dict Context Pattern
 
-Hugo components use Go template partials with a `dict` context contract:
-
-```go-html-template
-{{/* layouts/partials/components/button.html */}}
-{{/* 
-  Params:
-    .label    (string, required) — Button text
-    .variant  (string, optional) — "primary"|"secondary"|"outline"|"ghost"|"destructive", default "primary"
-    .size     (string, optional) — "sm"|"md"|"lg", default "md"
-    .disabled (bool, optional)   — default false
-    .href     (string, optional) — If set, renders as <a> instead of <button>
-    .class    (string, optional) — Additional CSS classes
-*/}}
-
-{{- $variant := .variant | default "primary" -}}
-{{- $size := .size | default "md" -}}
-{{- $disabled := .disabled | default false -}}
-
-{{- $baseClass := "btn" -}}
-{{- $variantClass := printf "btn--%s" $variant -}}
-{{- $sizeClass := printf "btn--%s" $size -}}
-{{- $disabledClass := cond $disabled "btn--disabled" "" -}}
-
-{{- $classes := delimit (slice $baseClass $variantClass $sizeClass $disabledClass .class) " " -}}
-
-{{ if .href }}
-  <a href="{{ .href }}" class="{{ $classes }}">{{ .label }}</a>
-{{ else }}
-  <button class="{{ $classes }}"{{ if $disabled }} disabled{{ end }}>{{ .label }}</button>
-{{ end }}
-```
-
-Call it: `{{ partial "components/button" (dict "label" "Submit" "variant" "primary") }}`
+Hugo components use Go template partials with a `dict` context contract. Document params in a comment block, use `| default` for optional params, build BEM classes from variant/size, and `delimit` to join. Call via `{{ partial "components/button" (dict "label" "Submit" "variant" "primary") }}`.
 
 ### Astro — Props Interface Pattern
 
-Astro components use TypeScript `Props` in frontmatter:
-
-```astro
----
-// src/components/Button.astro
-
-interface Props {
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive';
-  size?: 'sm' | 'md' | 'lg';
-  disabled?: boolean;
-  href?: string;
-  class?: string;
-}
-
-const {
-  variant = 'primary',
-  size = 'md',
-  disabled = false,
-  href,
-  class: extraClass,
-} = Astro.props;
-
-const classes = [
-  'btn',
-  `btn--${variant}`,
-  `btn--${size}`,
-  disabled && 'btn--disabled',
-  extraClass,
-].filter(Boolean).join(' ');
----
-
-{href ? (
-  <a href={href} class:list={[classes]}><slot /></a>
-) : (
-  <button class:list={[classes]} disabled={disabled}><slot /></button>
-)}
-```
+Astro components define a TypeScript `Props` interface in frontmatter with defaults via destructuring. Build classes from variant/size, use `class:list` for merging. Pattern mirrors React CVA but uses Astro's native `Props` + `<slot />`.
 
 ### Static HTML — BEM + Data-Attribute Pattern
 
-For projects without a framework, use BEM class conventions and document the contract in a comment:
-
-```html
-<!--
-  Button Component
-  Classes: .btn, .btn--primary|secondary|outline|ghost|destructive, .btn--sm|md|lg, .btn--disabled
-  Data attrs: none
--->
-<button class="btn btn--primary btn--md">Submit</button>
-```
+Use BEM class conventions (`.btn`, `.btn--primary`, `.btn--sm`) and document the contract in an HTML comment at the top of the file listing available classes and data attributes.
 
 ### Rules (All Frameworks)
 
@@ -353,205 +276,42 @@ The semantic layer means dark mode, theme changes, and brand pivots only require
 
 ### Utility Fallback
 
-If the project lacks a class-merging utility:
-
-- **React** — Add a local `cn()` using `clsx` + `tailwind-merge`, or a minimal version if those aren't in `package.json`.
-- **Hugo** — Create a `themes/<theme>/layouts/partials/helpers/classnames.html` partial:
-  ```go-html-template
-  {{- $classes := slice -}}
-  {{- range . -}}{{- if . -}}{{- $classes = $classes | append . -}}{{- end -}}{{- end -}}
-  {{- delimit $classes " " -}}
-  ```
-- **Astro** — Use `class:list={[...]}` (built-in).
-- **Static** — Inline concatenation or a tiny JS helper.
+If the project lacks a class-merging utility: **React** — add `cn()` via `clsx` + `tailwind-merge`. **Hugo** — create a `classnames.html` partial that filters and `delimit`s a slice. **Astro** — use built-in `class:list`. **Static** — inline concat or a tiny JS helper.
 
 ## Phase 3: Voice & Tone
 
-Every design system is incomplete without content guidance. The sink page should include a **Voice & Tone** section that documents how the product communicates.
+Every design system needs content guidance. The sink page includes a **Voice & Tone** section covering:
 
-### Voice Definition
+- **Voice definition** — 3–5 adjectives defining the brand's consistent personality. Extract from existing guides or propose based on domain.
+- **Tone map** — How tone adapts to user emotional states (pleased, neutral, confused, frustrated, first-time).
+- **Content patterns** — Standard copy for empty states, error messages, success confirmations, loading states, destructive actions.
+- **Franchise placeholders** — A pop-culture franchise for all placeholder content (form labels, sample data, empty states). Document in the sink header.
 
-Voice is the brand's consistent personality. Define it with 3–5 adjectives:
-
-```
-Voice: [adjective], [adjective], [adjective]
-Example: "Confident, approachable, precise"
-```
-
-Voice rules:
-- Voice NEVER changes. It's the same in error messages, onboarding, and marketing.
-- If the project has a `GEMINI.md` or brand guide with personality descriptors, extract them.
-- If not, propose adjectives based on the project's domain and audience.
-
-### Tone Map
-
-Tone is the emotional inflection that adapts to context. Map it to user emotional states:
-
-| User State | Tone | Example |
-|---|---|---|
-| Pleased / celebrating | Enthusiastic | "You're all set! Your changes are live." |
-| Neutral / browsing | Informative | "3 items in your cart." |
-| Confused / stuck | Supportive | "Let's get you back on track. Try..." |
-| Frustrated / error | Empathetic | "Something went wrong. Here's what you can do." |
-| First-time / onboarding | Encouraging | "Welcome! Let's set up your workspace." |
-
-### Content Patterns
-
-Document standard copy patterns for recurring UI states:
-
-**Empty states** — Tell the user what goes here and how to populate it:
-- ✅ "No projects yet. Create your first one to get started."
-- ❌ "No data."
-
-**Error messages** — Answer three questions: What happened? Why? How to fix it:
-- ✅ "We couldn't save your changes. The file may have been modified by someone else. Try refreshing and saving again."
-- ❌ "Error: 409"
-
-**Success confirmations** — Concise, affirming, with clear next step:
-- ✅ "Profile updated. Changes will appear within a few minutes."
-- ❌ "Success!"
-
-**Loading states** — Set expectations:
-- ✅ "Loading your dashboard..." or a skeleton with shimmer
-- ❌ Empty space with a spinner and no context
-
-**Destructive actions** — Confirm with specifics:
-- ✅ "Delete 'Project Alpha'? This action cannot be undone."
-- ❌ "Are you sure?"
-
-### Franchise Placeholders
-
-Per project convention, pick a pop-culture franchise for placeholder content (form labels, sample data, empty states, example names). Document the chosen franchise in the sink page header and use it consistently:
-
-- Form input placeholder: "Entered by Gandalf the Grey"
-- Sample table row: "Frodo Baggins | Shire | Ring Bearer"
-- Empty state: "The Shire is quiet. No hobbits have signed up yet."
-
-**Reference:** [voice-and-tone.md](references/voice-and-tone.md)
+**Reference:** [voice-and-tone.md](references/voice-and-tone.md) — full templates, examples, and writing checklist.
 
 ## Phase 3b: Image & Illustration
 
-Photography sourced from the web cannot be used directly — copyright, licensing, and brand inconsistency all prevent it. Every kitchen sink / brand guide must define an **illustration style** and a **reinterpretation pipeline** so found reference photos can be transformed into brand-safe illustrated assets.
+Photography sourced from the web cannot be used directly (copyright, brand inconsistency). Define an **illustration style** and a **reinterpretation pipeline** to transform reference photos into brand-safe assets.
 
-### Defining the Illustration Style
+- **Define style** — Set rendering, palette, detail level, stroke, texture, and mood keywords during discovery. Document in the brand guide.
+- **Reinterpretation pipeline** — Describe subject → strip photographer style → compose prompt with brand tokens → generate → validate against sink samples → optimize & store prompt.
+- **Sink page section** — Include an Illustration Gallery with 3–5 canonical illustrations, a style definition card, and the generation prompt template.
+- **Rules** — Never use unmodified photos. Always store the generation prompt alongside the asset. Every illustration gets descriptive alt text.
 
-During discovery (Phase 0b), extract or establish the illustration language:
-
-| Dimension | Example Values |
-|---|---|
-| **Rendering** | flat vector, line art, watercolor wash, paper-cut, low-poly 3D, ink sketch |
-| **Palette** | brand palette only, monochrome + accent, analogous warm, full-spectrum muted |
-| **Detail level** | minimal / iconic, moderate / editorial, high / realistic |
-| **Stroke** | none (filled shapes), uniform weight, hand-drawn taper, thick outline |
-| **Texture** | clean / digital, grain / risograph, paper / organic |
-| **Mood keywords** | 3–5 adjectives that align with Voice (Phase 3), e.g. "warm, approachable, confident" |
-
-Document these in the brand guide and render **3–5 sample illustrations** on the sink page as the canonical references.
-
-### Reinterpretation Workflow
-
-When the agent or designer finds a reference photo:
-
-1. **Describe the subject** — Write a concise description of what's depicted (pose, setting, objects, mood), stripping photographer-specific style.
-2. **Apply the brand filter** — Compose a generation prompt combining the subject description with the project's illustration style tokens (rendering, palette, detail, stroke, texture, mood).
-3. **Generate** — Use AI image generation (`generate_image` tool or equivalent) with the composed prompt. The prompt must explicitly reference the brand's illustration style, not the original photo.
-4. **Validate** — Check the output against the sink page's illustration samples for style consistency. Regenerate if drift is detected.
-5. **Optimize** — Export at appropriate sizes/formats (WebP for web, SVG if vector-compatible), add `alt` text following content design guidelines.
-
-### Prompt Template
-
-```
-[Subject description]. Rendered in [rendering style] with [palette description].
-[Detail level] detail, [stroke style] strokes, [texture] finish.
-The mood is [mood keywords]. No photographic elements.
-```
-
-**Example:**
-```
-A barber trimming a customer's beard in a classic barbershop chair.
-Rendered in flat vector style with a warm palette of cream, rust,
-and charcoal. Moderate detail, thick outline strokes, subtle grain
-texture. The mood is confident, nostalgic, and welcoming.
-No photographic elements.
-```
-
-### Sink Page Section
-
-The kitchen sink MUST include an **Illustration Gallery** section:
-
-- 3–5 canonical illustrations showing the brand's visual language
-- Side-by-side comparison: photo reference → illustrated output (demonstrating the reinterpretation)
-- A rendered prompt template pre-filled with the project's style tokens
-- Light/dark mode rendering of each illustration
-
-### Content Rules
-
-- **Never use unmodified photos** — every image must pass through the reinterpretation pipeline
-- **Publish the prompt** — store the generation prompt alongside the asset for reproducibility
-- **Style drift detection** — if a new illustration doesn't visually match the sink samples, adjust the prompt or flag for review
-- **Alt text** — every illustration gets descriptive alt text per content design guidelines (Phase 3)
-
-**Reference:** [image-reinterpretation.md](references/image-reinterpretation.md)
+**Reference:** [image-reinterpretation.md](references/image-reinterpretation.md) — full pipeline, prompt templates, validation checklist, and sink page integration code.
 
 ## Phase 4: Motion & Interaction
 
-Animation is the body language of the product. Document motion patterns in the sink to ensure consistent, purposeful animation across the project.
+Animation is the body language of the product. Define motion patterns in the sink for consistent, purposeful animation.
 
-### Motion Principles
+- **Principles** — Purposeful (no decorative animation), informative, consistent, respectful of `prefers-reduced-motion`.
+- **Duration scale** — Define named tokens: `--duration-instant` (100ms), `--duration-fast` (200ms), `--duration-normal` (300ms), `--duration-slow` (500ms).
+- **Easing curves** — `--ease-out` for entrances, `--ease-in` for exits, `--ease-in-out` for state changes.
+- **Common patterns** — Hover lift, fade in, slide in, expand/collapse, skeleton shimmer, modal entrance/exit.
+- **Reduced motion** — Always include `prefers-reduced-motion` media query or use Tailwind `motion-safe:`/`motion-reduce:` modifiers.
+- **Sink section** — Include an interactive **Motion Sampler** demonstrating all patterns with their duration/easing tokens displayed.
 
-1. **Purposeful** — Every animation communicates something (entrance, exit, state change, feedback). No animation for decoration alone.
-2. **Informative** — Motion guides attention to what changed and where to look next.
-3. **Consistent** — Same type of change = same animation. A modal always enters the same way.
-4. **Respectful** — Always honor `prefers-reduced-motion`. Provide fallback behavior.
-
-### Duration Scale
-
-Define named durations mapped to the project's motion needs:
-
-| Token | Duration | Use Case |
-|---|---|---|
-| `--duration-instant` | 100ms | Micro-interactions: toggles, color changes, hover effects |
-| `--duration-fast` | 200ms | Small reveals: tooltips, dropdowns, badges |
-| `--duration-normal` | 300ms | Standard transitions: modals, panels, page elements |
-| `--duration-slow` | 500ms | Large reveals: full-page transitions, complex orchestration |
-
-### Easing Curves
-
-| Token | Curve | Use Case |
-|---|---|---|
-| `--ease-out` | `cubic-bezier(0, 0, 0.2, 1)` | Entrances — element arriving on screen |
-| `--ease-in` | `cubic-bezier(0.4, 0, 1, 1)` | Exits — element leaving screen |
-| `--ease-in-out` | `cubic-bezier(0.4, 0, 0.2, 1)` | State changes — element transforming in place |
-
-### Common Patterns
-
-Document these in the sink's **Motion Sampler** section:
-
-- **Hover lift** — `translateY(-2px)` + shadow increase, `--duration-instant`, `--ease-out`
-- **Fade in** — opacity 0→1, `--duration-fast`, `--ease-out`
-- **Slide in** — translateY(8px→0) + opacity 0→1, `--duration-normal`, `--ease-out`
-- **Expand/collapse** — height 0→auto with overflow hidden, `--duration-normal`, `--ease-in-out`
-- **Skeleton shimmer** — gradient sweep animation, `--duration-slow`, linear, infinite
-- **Modal entrance** — scale(0.95→1) + opacity 0→1, `--duration-normal`, `--ease-out`
-- **Modal exit** — scale(1→0.95) + opacity 1→0, `--duration-fast`, `--ease-in`
-
-### Reduced Motion
-
-Wrap all animations in a `prefers-reduced-motion` check:
-
-```css
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-}
-```
-
-For Tailwind, use `motion-safe:` and `motion-reduce:` modifiers.
-
-**Reference:** [motion-guidelines.md](references/motion-guidelines.md)
+**Reference:** [motion-guidelines.md](references/motion-guidelines.md) — full CSS/Tailwind code, keyframe definitions, Framer Motion patterns, and reduced-motion implementation.
 
 ## Phase 5: Build Components
 
@@ -707,26 +467,11 @@ However, when a CMS is present, content-author-facing components (Tier 3) should
 
 ## AI Agent Readiness
 
-These practices ensure the design system is optimally consumable by AI coding agents (Cursor, Copilot, Claude, Gemini, etc.):
-
-1. **Semantic tokens over primitives** — `--color-interactive` communicates intent; `--blue-500` does not. AI agents make better decisions when tokens encode purpose.
-2. **Machine-readable format** — Store tokens in CSS custom properties AND/OR JSON. Both humans and agents can parse them.
-3. **Typed props are the API** — Every component's type interface (React `VariantProps<>`, Hugo dict contract, Astro `Props`) is effectively its API contract. AI agents use this to generate correct usage.
-4. **Purpose-based naming** — Name tokens for what they DO, not what they LOOK LIKE:
-   - ✅ `color-button-background-brand`, `text-muted-foreground`
-   - ❌ `blue-dark`, `gray-light`
-5. **Rules file** — If the project has a `.cursorrules`, `.github/copilot-instructions.md`, `GEMINI.md`, or `CLAUDE.md`, ensure the design system tokens and component conventions are referenced there. AI agents read these files first.
-6. **Single source of truth** — The sink page IS the reference. If an AI agent needs to understand the design system, point it at the sink page and the token definitions.
+Ensure the design system is consumable by AI agents: use semantic tokens over primitives, store tokens in CSS custom properties and/or JSON, export typed props as the API contract, use purpose-based naming (`text-muted-foreground` not `gray-light`), reference tokens in the project's rules file (`CLAUDE.md`, `.cursorrules`, etc.), and treat the sink page as the single source of truth.
 
 ## Companion Skills
 
-This skill works well in conjunction with other design-oriented skills. When available, leverage them:
-
-- **design-lookup** — Use to search for CSS components, SVG icons, and design patterns from the web. Helpful during Establish mode when you need inspiration for component styling or when looking for specific SVG assets (spinners, dividers, icons) to include in the sink.
-- **Frontend / web design guidelines skills** — If the project or user has a separate skill for frontend design standards, web design guidelines, or brand identity (e.g., a project-specific visual identity skill), read it during Phase 0b discovery. Its rules and constraints should feed into the token system and voice definition.
-- **deep-research** — Use for comprehensive research when establishing a new design system from scratch and the user wants to evaluate design system approaches, compare component libraries, or survey competitor aesthetics.
-
-When multiple skills apply, the kitchen sink skill acts as the **integrator** — it consumes the outputs of companion skills (design references, brand identity, research findings) and codifies them into the component library and sink page.
+When available, leverage: **design-lookup** for CSS components, SVG icons, and design inspiration during Establish mode. **Frontend/brand identity skills** for project-specific visual identity constraints during discovery. **deep-research** for evaluating design system approaches from scratch. This skill acts as the **integrator** — consuming companion skill outputs and codifying them into the component library and sink page.
 
 ## Anti-patterns
 

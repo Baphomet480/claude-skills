@@ -123,34 +123,11 @@ For every extracted value, identify its token type:
 
 ### Step 3: Audit for Drift
 
-Scan component files for violations:
-
-```bash
-# Find hardcoded hex values in component files
-grep -rn '#[0-9a-fA-F]\{3,8\}' src/components/
-
-# Find arbitrary Tailwind values
-grep -rn '\[#' src/components/
-grep -rn 'w-\[' src/components/
-grep -rn 'h-\[' src/components/
-
-# Find non-semantic color usage
-grep -rn 'bg-blue-\|bg-red-\|bg-green-\|text-blue-\|text-red-' src/components/
-```
+Scan component files for: hardcoded hex values, arbitrary Tailwind values (`w-[37px]`, `[#ff0000]`), and non-semantic color usage (`bg-blue-500` instead of `bg-primary`).
 
 ### Step 4: Gap Report
 
-Output a delta between documented and implemented:
-
-```
-DOCUMENTED but NOT BUILT:
-  - Badge (destructive variant) — in brand guide, no component
-  - Toast — referenced in guidelines, not implemented
-
-BUILT but NOT DOCUMENTED:
-  - Spinner component — exists in /components/ui/spinner.tsx, not in any guide
-  - "link" button variant — exists in code, not in brand guide
-```
+Output a delta: what's documented but not built, and what's built but not documented.
 
 ---
 
@@ -160,20 +137,7 @@ When no design direction exists:
 
 ### Step 1: Extract De-Facto Tokens
 
-Scan the codebase for implicit design decisions:
-
-```bash
-# Extract all color values from Tailwind classes
-grep -rohn 'bg-[a-z]*-[0-9]*\|text-[a-z]*-[0-9]*\|border-[a-z]*-[0-9]*' src/ \
-  | sort | uniq -c | sort -rn | head -30
-
-# Extract font families
-grep -rn 'font-family\|fontFamily' src/ tailwind.config.*
-
-# Extract spacing patterns
-grep -rohn 'p-[0-9]*\|px-[0-9]*\|py-[0-9]*\|m-[0-9]*\|gap-[0-9]*' src/ \
-  | sort | uniq -c | sort -rn | head -20
-```
+Scan the codebase for implicit design decisions: grep for color classes, font-family declarations, and spacing patterns across component files, `globals.css`, and Tailwind config. Catalog every color, font, and spacing value actually in use.
 
 ### Step 2: Propose Token System
 

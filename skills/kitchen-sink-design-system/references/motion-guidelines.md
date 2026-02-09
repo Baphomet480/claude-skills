@@ -187,110 +187,17 @@ Modal scales up slightly while fading in. Reverse for exit.
 
 ---
 
-## Framer Motion Patterns
+## Framer Motion
 
-When the project uses `framer-motion` (common in Next.js/React), use these patterns:
-
-### Page Element Entrance
-
-```tsx
-import { motion } from "framer-motion";
-
-const fadeInUp = {
-  initial: { opacity: 0, y: 8 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.3, ease: [0, 0, 0.2, 1] },
-};
-
-<motion.div {...fadeInUp}>
-  <Card>Content</Card>
-</motion.div>
-```
-
-### Staggered Children
-
-```tsx
-const container = {
-  animate: { transition: { staggerChildren: 0.05 } },
-};
-
-const item = {
-  initial: { opacity: 0, y: 8 },
-  animate: { opacity: 1, y: 0, transition: { duration: 0.3 } },
-};
-
-<motion.ul variants={container} initial="initial" animate="animate">
-  {items.map((i) => (
-    <motion.li key={i.id} variants={item}>{i.name}</motion.li>
-  ))}
-</motion.ul>
-```
-
-### Animate Presence (Modal / Toast)
-
-```tsx
-import { AnimatePresence, motion } from "framer-motion";
-
-<AnimatePresence>
-  {isOpen && (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      transition={{ duration: 0.2, ease: [0, 0, 0.2, 1] }}
-    >
-      <ModalContent />
-    </motion.div>
-  )}
-</AnimatePresence>
-```
+When the project uses `framer-motion`, apply the same duration/easing tokens from above via Framer's `transition` prop. Key patterns: `fadeInUp` variants for page elements, `staggerChildren` for lists, and `AnimatePresence` for mount/unmount animations (modals, toasts). Use `useReducedMotion()` hook for the reduced motion fallback.
 
 ---
 
 ## Reduced Motion
 
-### CSS Implementation
-
-Always include this in the global stylesheet:
-
-```css
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
-}
-```
-
-### Tailwind Modifiers
-
-Use `motion-safe:` to apply animations only when the user hasn't requested reduced motion:
-
-```html
-<div class="motion-safe:animate-fade-in motion-reduce:opacity-100">
-  Content
-</div>
-```
-
-### Framer Motion Hook
-
-```tsx
-import { useReducedMotion } from "framer-motion";
-
-function Component() {
-  const shouldReduce = useReducedMotion();
-  return (
-    <motion.div
-      animate={{ opacity: 1, y: shouldReduce ? 0 : 8 }}
-      transition={{ duration: shouldReduce ? 0 : 0.3 }}
-    />
-  );
-}
-```
+- **CSS** — Add `@media (prefers-reduced-motion: reduce)` that sets `animation-duration`, `animation-iteration-count`, `transition-duration` to near-zero on `*, *::before, *::after`.
+- **Tailwind** — Use `motion-safe:` and `motion-reduce:` modifiers on animation classes.
+- **Framer Motion** — Use `useReducedMotion()` hook to conditionally zero out durations and transforms.
 
 ---
 
