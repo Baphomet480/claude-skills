@@ -1,0 +1,81 @@
+# yaml-language-server: $schema=https://unpkg.com/@sveltia/cms/schema/sveltia-cms.json
+
+# ============================================================
+# Sveltia CMS Configuration
+# CHANGEME: Search for "CHANGEME" and replace all placeholders
+# ============================================================
+
+backend:
+  name: github
+  repo: "owner/repo"  # CHANGEME: GitHub username/repo
+  branch: main
+  base_url: "https://your-auth-worker.workers.dev"  # CHANGEME: Cloudflare Worker URL for OAuth
+  commit_messages:
+    create: "feat(content): create {{collection}} '{{slug}}'"
+    update: "fix(content): update {{collection}} '{{slug}}'"
+    delete: "chore(content): delete {{collection}} '{{slug}}'"
+    uploadMedia: "feat(media): upload '{{path}}'"
+    deleteMedia: "chore(media): delete '{{path}}'"
+
+media_folder: "static/images/uploads"
+public_folder: "/images/uploads"
+
+collections:
+  - name: posts
+    label: Posts
+    label_singular: Post
+    folder: "content/posts"
+    create: true
+    slug: "{{year}}-{{month}}-{{day}}-{{slug}}"
+    extension: "md"
+    format: "yaml"
+    sortable_fields:
+      fields: [title, date]
+    view_groups:
+      - label: Year
+        field: date
+        pattern: '\d{4}'
+    fields:
+      - { label: Title, name: title, widget: string }
+      - { label: Date, name: date, widget: datetime }
+      - { label: Draft, name: draft, widget: boolean, default: true }
+      - { label: Description, name: description, widget: text, required: false }
+      - { label: Featured Image, name: image, widget: image, required: false }
+      - { label: Tags, name: tags, widget: list, required: false }
+      - { label: Categories, name: categories, widget: list, required: false }
+      - { label: Body, name: body, widget: markdown }
+
+  - name: pages
+    label: Pages
+    label_singular: Page
+    folder: "content"
+    create: true
+    extension: "md"
+    format: "yaml"
+    filter: { field: type, value: page }
+    fields:
+      - { label: Title, name: title, widget: string }
+      - { label: Type, name: type, widget: hidden, default: page }
+      - { label: Draft, name: draft, widget: boolean, default: true }
+      - { label: Weight, name: weight, widget: number, required: false }
+      - { label: Description, name: description, widget: text, required: false }
+      - { label: Body, name: body, widget: markdown }
+
+  - name: settings
+    label: Site Settings
+    files:
+      - label: General
+        name: general
+        file: "data/settings.yaml"
+        format: "yaml"
+        fields:
+          - { label: Site Title, name: title, widget: string }
+          - { label: Description, name: description, widget: text }
+          - { label: Logo, name: logo, widget: image, required: false }
+          - label: Social Links
+            name: social
+            widget: object
+            fields:
+              - { label: GitHub, name: github, widget: string, required: false }
+              - { label: LinkedIn, name: linkedin, widget: string, required: false }
+              - { label: Twitter/X, name: twitter, widget: string, required: false }
