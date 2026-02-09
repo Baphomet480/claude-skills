@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# Pre-commit hook: rebuild dist/*.skill for any skills/ that have staged changes
+set -euo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+SKILLS_DIR="$REPO_ROOT/skills"
+DIST_DIR="$REPO_ROOT/dist"
+
+mkdir -p "$DIST_DIR"
+
+# Get list of skill directories with staged changes
+changed_skills=$(git diff --cached --name-only | grep '^skills/' | cut -d/ -f2 | sort -u || true)
+
+if [ -z "$changed_skills" ]; then
+    exit 0
+fi
+
+for skill in $changed_skills; do
+    skill_dir="$SKILLS_DIR/$skill"
+    if [ -d "$skill_dir" ]; then
+        dist_file="$DIST_DIR/${skill}.skill"
+        echo "Packaging $skill -> dist/${skill}.skill"
+        # Remove old package, rebuild from skills/ directory
+        rm -f "$dist_file"
+        (cd "$SKILLS_DIR" && zip -r "$dist_file" "$skill/") > /dev/null
+        git add "$dist_file"
+    fi
+done
