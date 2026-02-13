@@ -31,9 +31,9 @@ Goal: Fix issues in design and research skills.
 - [x] Task: Standardize `kitchen-sink-design-system` [a7e54c7]
     - [x] Sub-task: Write Tests: Update generic test.
     - [x] Sub-task: Implement Feature: Apply standard structure.
-- [ ] Task: Standardize `deep-research`
-    - [ ] Sub-task: Write Tests: Update generic test.
-    - [ ] Sub-task: Implement Feature: Apply standard structure.
+- [x] Task: Standardize `deep-research` [befa18b]
+    - [x] Sub-task: Write Tests: Update generic test.
+    - [x] Sub-task: Implement Feature: Apply standard structure.
 - [ ] Task: Standardize `design-lookup`
     - [ ] Sub-task: Write Tests: Update generic test.
     - [ ] Sub-task: Implement Feature: Apply standard structure.
