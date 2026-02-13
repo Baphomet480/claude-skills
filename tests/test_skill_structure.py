@@ -45,3 +45,6 @@ class TestSkillStructure(unittest.TestCase):
 
     def test_nextjs_tinacms_structure(self):
         self.check_skill_structure('nextjs-tinacms')
+
+    def test_hugo_sveltia_cms_structure(self):
+        self.check_skill_structure('hugo-sveltia-cms')
