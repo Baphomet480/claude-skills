@@ -57,3 +57,6 @@ class TestSkillStructure(unittest.TestCase):
 
     def test_design_lookup_structure(self):
         self.check_skill_structure('design-lookup')
+
+    def test_pitolandia_visual_identity_structure(self):
+        self.check_skill_structure('pitolandia-visual-identity')
