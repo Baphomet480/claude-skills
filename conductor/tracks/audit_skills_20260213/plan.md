@@ -1,6 +1,6 @@
 # Implementation Plan - Audit and standardize existing skills
 
-## Phase 1: Automated Audit Tooling
+## Phase 1: Automated Audit Tooling [checkpoint: 20c8c89]
 Goal: Create a script to automatically check for compliance issues across all skills.
 
 - [x] Task: Create `scripts/audit_skills.py` [37e9f1f]
