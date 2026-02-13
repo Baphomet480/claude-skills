@@ -20,9 +20,9 @@ Goal: Fix issues in scaffolding and deployment skills.
 - [x] Task: Standardize `nextjs-tinacms` [1bc184c]
     - [x] Sub-task: Write Tests: Update generic test to include this skill.
     - [x] Sub-task: Implement Feature: Apply standard structure and naming.
-- [ ] Task: Standardize `hugo-sveltia-cms`
-    - [ ] Sub-task: Write Tests: Update generic test to include this skill.
-    - [ ] Sub-task: Implement Feature: Apply standard structure and naming.
+- [x] Task: Standardize `hugo-sveltia-cms` [46b42dd]
+    - [x] Sub-task: Write Tests: Update generic test to include this skill.
+    - [x] Sub-task: Implement Feature: Apply standard structure and naming.
 - [ ] Task: Conductor - User Manual Verification 'Standardization - Group A' (Protocol in workflow.md)
 
 ## Phase 3: Standardization - Group B (Design & Research)
