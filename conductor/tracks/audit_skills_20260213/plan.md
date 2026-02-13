@@ -25,7 +25,7 @@ Goal: Fix issues in scaffolding and deployment skills.
     - [x] Sub-task: Implement Feature: Apply standard structure and naming.
 - [ ] Task: Conductor - User Manual Verification 'Standardization - Group A' (Protocol in workflow.md)
 
-## Phase 3: Standardization - Group B (Design & Research)
+## Phase 3: Standardization - Group B (Design & Research) [checkpoint: 53c151e]
 Goal: Fix issues in design and research skills.
 
 - [x] Task: Standardize `kitchen-sink-design-system` [a7e54c7]
