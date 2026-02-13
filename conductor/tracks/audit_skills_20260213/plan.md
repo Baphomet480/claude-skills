@@ -11,7 +11,7 @@ Goal: Create a script to automatically check for compliance issues across all sk
     - [x] Sub-task: Save the output to `conductor/tracks/audit_skills_20260213/audit_report_initial.md`.
 - [ ] Task: Conductor - User Manual Verification 'Automated Audit Tooling' (Protocol in workflow.md)
 
-## Phase 2: Standardization - Group A (Infrastructure & Setup)
+## Phase 2: Standardization - Group A (Infrastructure & Setup) [checkpoint: 155f13e]
 Goal: Fix issues in scaffolding and deployment skills.
 
 - [x] Task: Standardize `cloudflare-pages` [910c82c]
