@@ -22,8 +22,7 @@ class TestSkillStructure(unittest.TestCase):
         pattern = r'^[a-z0-9]+(-[a-z0-9]+)*$'
         return bool(re.match(pattern, stem))
 
-    def test_cloudflare_pages_structure(self):
-        skill_name = 'cloudflare-pages'
+    def check_skill_structure(self, skill_name):
         skill_path = os.path.join(self.skills_dir, skill_name)
         
         if not os.path.exists(skill_path):
@@ -40,3 +39,9 @@ class TestSkillStructure(unittest.TestCase):
             
             for dirname in dirs:
                 self.assertTrue(self.check_kebab_case(dirname), f"Directory '{dirname}' (in {root}) is not kebab-case")
+
+    def test_cloudflare_pages_structure(self):
+        self.check_skill_structure('cloudflare-pages')
+
+    def test_nextjs_tinacms_structure(self):
+        self.check_skill_structure('nextjs-tinacms')
