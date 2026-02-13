@@ -51,3 +51,6 @@ class TestSkillStructure(unittest.TestCase):
 
     def test_kitchen_sink_structure(self):
         self.check_skill_structure('kitchen-sink-design-system')
+
+    def test_deep_research_structure(self):
+        self.check_skill_structure('deep-research')
