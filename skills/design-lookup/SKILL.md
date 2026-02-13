@@ -9,22 +9,22 @@ Search the web for CSS components, SVG icons, animations, and design resources. 
 
 ## Tools
 
-### `scripts/fetch_page.py` — Playwright browser fetcher
+### `scripts/fetch-page.py` — Playwright browser fetcher
 
 Bypasses Cloudflare protection and renders SPAs. Use this for sites that block WebFetch (CodePen, UIVerse, etc.).
 
 ```bash
 # Extract HTML/CSS/JS code from a CodePen pen (returns clean JSON)
-python3 scripts/fetch_page.py "https://codepen.io/user/pen/ID" --codepen-code
+python3 scripts/fetch-page.py "https://codepen.io/user/pen/ID" --codepen-code
 
 # Fetch any protected page as text
-python3 scripts/fetch_page.py "https://uiverse.io/user/component-slug"
+python3 scripts/fetch-page.py "https://uiverse.io/user/component-slug"
 
 # Extract specific elements with CSS selector
-python3 scripts/fetch_page.py "https://example.com" --selector ".code-block"
+python3 scripts/fetch-page.py "https://example.com" --selector ".code-block"
 
 # Increase timeout for slow pages
-python3 scripts/fetch_page.py "https://example.com" --wait 20
+python3 scripts/fetch-page.py "https://example.com" --wait 20
 ```
 
 **When to use:** After WebSearch finds promising URLs on Cloudflare-protected sites (CodePen, UIVerse, etc.), use this script to fetch the actual code.
@@ -49,9 +49,9 @@ python3 scripts/fetch_page.py "https://example.com" --wait 20
 
 4. **Fetch code** — Use the appropriate extraction method per source:
 
-   **CodePen pens** — Use `fetch_page.py --codepen-code` to extract clean HTML/CSS/JS as JSON.
+   **CodePen pens** — Use `fetch-page.py --codepen-code` to extract clean HTML/CSS/JS as JSON.
 
-   **UIVerse components** — Use `fetch_page.py` to get the page text (includes code with line numbers inline).
+   **UIVerse components** — Use `fetch-page.py` to get the page text (includes code with line numbers inline).
 
    **SVG icons** — Fetch raw SVGs directly from GitHub with WebFetch:
    - Lucide: `https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/{name}.svg`

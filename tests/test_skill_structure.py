@@ -54,3 +54,6 @@ class TestSkillStructure(unittest.TestCase):
 
     def test_deep_research_structure(self):
         self.check_skill_structure('deep-research')
+
+    def test_design_lookup_structure(self):
+        self.check_skill_structure('design-lookup')
