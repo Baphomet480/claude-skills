@@ -34,9 +34,9 @@ Goal: Fix issues in design and research skills.
 - [x] Task: Standardize `deep-research` [befa18b]
     - [x] Sub-task: Write Tests: Update generic test.
     - [x] Sub-task: Implement Feature: Apply standard structure.
-- [ ] Task: Standardize `design-lookup`
-    - [ ] Sub-task: Write Tests: Update generic test.
-    - [ ] Sub-task: Implement Feature: Apply standard structure.
+- [x] Task: Standardize `design-lookup` [12314a0]
+    - [x] Sub-task: Write Tests: Update generic test.
+    - [x] Sub-task: Implement Feature: Apply standard structure.
 - [ ] Task: Standardize `pitolandia-visual-identity`
     - [ ] Sub-task: Write Tests: Update generic test.
     - [ ] Sub-task: Implement Feature: Apply standard structure.
