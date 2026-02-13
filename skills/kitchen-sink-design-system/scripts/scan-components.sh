@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# scan_components.sh — Kitchen Sink Inventory Scanner (Multi-Framework)
+# scan-components.sh — Kitchen Sink Inventory Scanner (Multi-Framework)
 #
 # Walks a project's component directory and compares found exports
 # against the tiered Kitchen Sink checklist. Also performs Phase 0
@@ -9,7 +9,7 @@
 # Supports: React/Next.js, Hugo, Astro, SvelteKit, Nuxt, Static HTML
 #
 # Usage:
-#   bash scripts/scan_components.sh [component_dir]
+#   bash scripts/scan-components.sh [component_dir]
 #
 # Arguments:
 #   component_dir  Path to the components directory (default: auto-detected based on framework)
@@ -600,7 +600,7 @@ if [[ -z "$COMPONENT_DIR" ]]; then
         ;;
     esac
     echo ""
-    echo "Usage: bash scan_components.sh [component_dir]"
+    echo "Usage: bash scan-components.sh [component_dir]"
     exit 1
   fi
 fi

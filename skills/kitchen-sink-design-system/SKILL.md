@@ -135,7 +135,7 @@ When the project has no documented design system:
    - Apply the project's franchise placeholder convention (per user rules)
 4. **Approve** — Present the proposal to the user. Do NOT proceed to Phase 1 until tokens and voice are approved.
 
-**Automated option:** Run `bash scripts/scan_components.sh [component_dir]` from the skill directory to get a Phase 0 discovery report + EXISTING / MISSING inventory against the tiered checklist.
+**Automated option:** Run `bash scripts/scan-components.sh [component_dir]` from the skill directory to get a Phase 0 discovery report + EXISTING / MISSING inventory against the tiered checklist.
 
 **Reference:** [design-system-discovery.md](references/design-system-discovery.md)
 

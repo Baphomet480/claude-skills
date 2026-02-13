@@ -48,3 +48,6 @@ class TestSkillStructure(unittest.TestCase):
 
     def test_hugo_sveltia_cms_structure(self):
         self.check_skill_structure('hugo-sveltia-cms')
+
+    def test_kitchen_sink_structure(self):
+        self.check_skill_structure('kitchen-sink-design-system')
