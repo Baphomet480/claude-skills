@@ -20,6 +20,8 @@ Portable AI agent skill distribution. Skills are framework-agnostic instruction 
 skills/          ← Source (edit here)
 dist/            ← Packaged .skill ZIPs (auto-generated on commit)
 hooks/pre-commit ← Auto-packages modified skills into dist/
+scripts/         ← Repository maintenance scripts (e.g. audit_skills.py)
+tests/           ← Tests for repository maintenance scripts
 ```
 
 ## Installing a Skill
@@ -49,7 +51,8 @@ cp -r skills/<name> ~/.gemini/antigravity/skills/<name>
    ---
    ```
 2. Add supporting files in `references/`, `templates/`, `examples/`, `scripts/` as needed
-3. Commit — the pre-commit hook packages it into `dist/<name>.skill`
+3. **Verify** — Run `python3 scripts/audit_skills.py skills` to ensure compliance (SKILL.md exists, valid frontmatter, no loose files).
+4. Commit — the pre-commit hook packages it into `dist/<name>.skill`
 
 ## Distribution
 
