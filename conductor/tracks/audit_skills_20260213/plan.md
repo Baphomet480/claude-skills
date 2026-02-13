@@ -49,3 +49,6 @@ Goal: Ensure all skills are now compliant and the audit script passes cleanly.
     - [x] Sub-task: Execute `scripts/audit_skills.py` again.
     - [x] Sub-task: Verify zero violations.
 - [ ] Task: Conductor - User Manual Verification 'Final Validation' (Protocol in workflow.md)
+
+## Phase: Review Fixes
+- [x] Task: Apply review suggestions [454baaf]
