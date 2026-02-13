@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# verify_deployment.sh — Check deployment status, list history, verify SSL
+# verify-deployment.sh — Check deployment status, list history, verify SSL
 #
-# Usage: bash verify_deployment.sh <project_name> [custom_domain]
+# Usage: bash verify-deployment.sh <project_name> [custom_domain]
 #
 # Environment:
 #   CLOUDFLARE_ACCOUNT_ID  — Required. Your Cloudflare account ID.
@@ -12,7 +12,7 @@
 # Example:
 #   export CLOUDFLARE_ACCOUNT_ID="abc123"
 #   export CLOUDFLARE_API_TOKEN="your-token"
-#   bash verify_deployment.sh my-site myapp.example.com
+#   bash verify-deployment.sh my-site myapp.example.com
 
 set -euo pipefail
 

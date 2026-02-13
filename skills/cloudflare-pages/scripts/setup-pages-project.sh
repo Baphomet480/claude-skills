@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# setup_pages_project.sh — Create a Cloudflare Pages project via wrangler
+# setup-pages-project.sh — Create a Cloudflare Pages project via wrangler
 #
-# Usage: bash setup_pages_project.sh <project_name> <build_command> <output_dir> [branch]
+# Usage: bash setup-pages-project.sh <project_name> <build_command> <output_dir> [branch]
 #
 # Environment:
 #   CLOUDFLARE_ACCOUNT_ID  — Required. Your Cloudflare account ID.
 #
 # Example:
 #   export CLOUDFLARE_ACCOUNT_ID="abc123"
-#   bash setup_pages_project.sh my-site "npm run build" dist main
+#   bash setup-pages-project.sh my-site "npm run build" dist main
 
 set -euo pipefail
 

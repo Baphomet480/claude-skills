@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# add_custom_domain.sh — Register a custom domain on a Cloudflare Pages project + create CNAME
+# add-custom-domain.sh — Register a custom domain on a Cloudflare Pages project + create CNAME
 #
-# Usage: bash add_custom_domain.sh <custom_domain> <project_name>
+# Usage: bash add-custom-domain.sh <custom_domain> <project_name>
 #
 # Environment:
 #   CLOUDFLARE_ACCOUNT_ID   — Required. Your Cloudflare account ID.
@@ -17,7 +17,7 @@
 #   export CLOUDFLARE_API_TOKEN="pages-token"
 #   export CLOUDFLARE_ZONE_ID="zone456"
 #   export CLOUDFLARE_DNS_TOKEN="dns-token"   # optional
-#   bash add_custom_domain.sh myapp.example.com my-pages-project
+#   bash add-custom-domain.sh myapp.example.com my-pages-project
 
 set -euo pipefail
 
@@ -136,4 +136,4 @@ echo "  Domain:    https://${CUSTOM_DOMAIN}"
 echo "  Pages URL: https://${PROJECT_NAME}.pages.dev"
 echo ""
 echo "SSL will be provisioned automatically (typically 30-60 seconds)."
-echo "Run verify_deployment.sh to check status."
+echo "Run verify-deployment.sh to check status."

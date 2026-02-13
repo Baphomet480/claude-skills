@@ -37,7 +37,7 @@ Each deploy gets a unique preview URL. The latest deploy on `production` branch 
 ### Step 1 — Create the Pages project
 
 ```bash
-bash scripts/setup_pages_project.sh <project-name> "<build-command>" <output-dir> [branch]
+bash scripts/setup-pages-project.sh <project-name> "<build-command>" <output-dir> [branch]
 ```
 
 This runs `wrangler pages project create` and prints the resulting `*.pages.dev` URL. The `branch` argument defaults to `main`.
@@ -64,7 +64,7 @@ export CLOUDFLARE_API_TOKEN="<pages-edit-token>"
 export CLOUDFLARE_ZONE_ID="<your-zone-id>"
 export CLOUDFLARE_DNS_TOKEN="<dns-edit-token>"   # optional, falls back to API_TOKEN
 
-bash scripts/add_custom_domain.sh <custom-domain> <project-name>
+bash scripts/add-custom-domain.sh <custom-domain> <project-name>
 ```
 
 The script performs two operations:
@@ -107,7 +107,7 @@ git checkout main
 export CLOUDFLARE_ACCOUNT_ID="<your-account-id>"
 export CLOUDFLARE_API_TOKEN="<your-token>"
 
-bash scripts/verify_deployment.sh <project-name> [custom-domain]
+bash scripts/verify-deployment.sh <project-name> [custom-domain]
 ```
 
 Shows: latest deployment status (color-coded), last 5 deployments table, custom domain SSL status, and HTTP 200 check on `*.pages.dev`.
@@ -116,19 +116,19 @@ Shows: latest deployment status (color-coded), last 5 deployments table, custom 
 
 | Script | Purpose | Required env vars |
 |---|---|---|
-| `setup_pages_project.sh` | Create Pages project via wrangler | `CLOUDFLARE_ACCOUNT_ID` |
-| `add_custom_domain.sh` | Register domain + create CNAME | `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ZONE_ID` |
-| `verify_deployment.sh` | Check deploy status, SSL, HTTP | `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN` |
+| `setup-pages-project.sh` | Create Pages project via wrangler | `CLOUDFLARE_ACCOUNT_ID` |
+| `add-custom-domain.sh` | Register domain + create CNAME | `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ZONE_ID` |
+| `verify-deployment.sh` | Check deploy status, SSL, HTTP | `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN` |
 
 ## Token Reference
 
 | Operation | Token needed | Scope | Where used |
 |---|---|---|---|
 | `wrangler pages deploy` | Wrangler OAuth | Automatic via `wrangler login` | Local CLI, CI/CD |
-| Register custom domain on Pages | API Token | Account:Cloudflare Pages:Edit | `add_custom_domain.sh` |
-| Create CNAME DNS record | DNS API Token | Zone:DNS:Edit | `add_custom_domain.sh` |
+| Register custom domain on Pages | API Token | Account:Cloudflare Pages:Edit | `add-custom-domain.sh` |
+| Create CNAME DNS record | DNS API Token | Zone:DNS:Edit | `add-custom-domain.sh` |
 | CI/CD deploy (GitHub Actions) | API Token | "Edit Cloudflare Workers" template | GitHub Secrets |
-| Query deployments | API Token | Account:Cloudflare Pages:Read | `verify_deployment.sh` |
+| Query deployments | API Token | Account:Cloudflare Pages:Read | `verify-deployment.sh` |
 
 **Tip:** For simpler setups, a single API token with both Pages:Edit and DNS:Edit scopes can be used — set `CLOUDFLARE_API_TOKEN` and omit `CLOUDFLARE_DNS_TOKEN`.
 
@@ -140,7 +140,7 @@ Shows: latest deployment status (color-coded), last 5 deployments table, custom 
 | `Authentication error` | OAuth expired or wrong token | `wrangler login` (re-authenticate) |
 | Custom domain stuck "pending" | Missing or wrong CNAME record | Check DNS: CNAME must point to `<project>.pages.dev` |
 | SSL not provisioning | Domain not proxied through Cloudflare | Set CNAME proxy to "Proxied" (orange cloud) |
-| 522 error on custom domain | DNS record exists but wrong target | Delete old record, re-run `add_custom_domain.sh` |
+| 522 error on custom domain | DNS record exists but wrong target | Delete old record, re-run `add-custom-domain.sh` |
 | Deploy succeeds but site 404s | Wrong output directory | Verify build output dir matches deploy path |
 | CI/CD deploy fails | Missing GitHub secrets | Add `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` |
 
