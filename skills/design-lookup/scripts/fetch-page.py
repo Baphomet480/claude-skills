@@ -2,20 +2,20 @@
 """Fetch web page content using Playwright to bypass Cloudflare and render SPAs.
 
 Usage:
-    python3 fetch_page.py <url> [--selector CSS_SELECTOR] [--wait SECONDS] [--codepen-code]
+    python3 fetch-page.py <url> [--selector CSS_SELECTOR] [--wait SECONDS] [--codepen-code]
 
 Examples:
     # Fetch a CodePen pen page and extract code
-    python3 fetch_page.py "https://codepen.io/mgrubinger/pen/MYWQRx" --codepen-code
+    python3 fetch-page.py "https://codepen.io/mgrubinger/pen/MYWQRx" --codepen-code
 
     # Fetch any Cloudflare-protected or SPA page as text
-    python3 fetch_page.py "https://uiverse.io/cssbuttons-io/smart-turkey-45"
+    python3 fetch-page.py "https://uiverse.io/cssbuttons-io/smart-turkey-45"
 
     # Fetch with a custom CSS selector
-    python3 fetch_page.py "https://example.com" --selector "main.content"
+    python3 fetch-page.py "https://example.com" --selector "main.content"
 
     # Wait longer for slow pages
-    python3 fetch_page.py "https://example.com" --wait 20
+    python3 fetch-page.py "https://example.com" --wait 20
 
 Outputs page text content to stdout. Use --codepen-code to extract
 structured HTML/CSS/JS JSON from CodePen pens.
