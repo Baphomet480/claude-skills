@@ -4,5 +4,5 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-- [~] **Track: Audit and standardize existing skills**
+- [x] **Track: Audit and standardize existing skills**
   *Link: [./conductor/tracks/audit_skills_20260213/](./conductor/tracks/audit_skills_20260213/)*
