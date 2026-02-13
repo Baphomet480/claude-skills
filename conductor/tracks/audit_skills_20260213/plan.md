@@ -42,7 +42,7 @@ Goal: Fix issues in design and research skills.
     - [x] Sub-task: Implement Feature: Apply standard structure.
 - [ ] Task: Conductor - User Manual Verification 'Standardization - Group B' (Protocol in workflow.md)
 
-## Phase 4: Final Validation
+## Phase 4: Final Validation [checkpoint: bd04986]
 Goal: Ensure all skills are now compliant and the audit script passes cleanly.
 
 - [x] Task: Run final audit [42b9365]
