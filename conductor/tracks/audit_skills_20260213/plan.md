@@ -28,9 +28,9 @@ Goal: Fix issues in scaffolding and deployment skills.
 ## Phase 3: Standardization - Group B (Design & Research)
 Goal: Fix issues in design and research skills.
 
-- [ ] Task: Standardize `kitchen-sink-design-system`
-    - [ ] Sub-task: Write Tests: Update generic test.
-    - [ ] Sub-task: Implement Feature: Apply standard structure.
+- [x] Task: Standardize `kitchen-sink-design-system` [a7e54c7]
+    - [x] Sub-task: Write Tests: Update generic test.
+    - [x] Sub-task: Implement Feature: Apply standard structure.
 - [ ] Task: Standardize `deep-research`
     - [ ] Sub-task: Write Tests: Update generic test.
     - [ ] Sub-task: Implement Feature: Apply standard structure.
