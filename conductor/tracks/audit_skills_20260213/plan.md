@@ -17,9 +17,9 @@ Goal: Fix issues in scaffolding and deployment skills.
 - [x] Task: Standardize `cloudflare-pages` [910c82c]
     - [x] Sub-task: Write Tests: Create `tests/test_skill_structure.py` (generic test) that can verify a specific skill folder structure.
     - [x] Sub-task: Implement Feature: Fix `SKILL.md` frontmatter, move loose files to `references/` or `templates/` if needed, rename non-kebab files.
-- [ ] Task: Standardize `nextjs-tinacms`
-    - [ ] Sub-task: Write Tests: Update generic test to include this skill.
-    - [ ] Sub-task: Implement Feature: Apply standard structure and naming.
+- [x] Task: Standardize `nextjs-tinacms` [1bc184c]
+    - [x] Sub-task: Write Tests: Update generic test to include this skill.
+    - [x] Sub-task: Implement Feature: Apply standard structure and naming.
 - [ ] Task: Standardize `hugo-sveltia-cms`
     - [ ] Sub-task: Write Tests: Update generic test to include this skill.
     - [ ] Sub-task: Implement Feature: Apply standard structure and naming.
