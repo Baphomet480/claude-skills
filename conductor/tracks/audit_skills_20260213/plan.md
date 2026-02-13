@@ -14,9 +14,9 @@ Goal: Create a script to automatically check for compliance issues across all sk
 ## Phase 2: Standardization - Group A (Infrastructure & Setup)
 Goal: Fix issues in scaffolding and deployment skills.
 
-- [ ] Task: Standardize `cloudflare-pages`
-    - [ ] Sub-task: Write Tests: Create `tests/test_skill_structure.py` (generic test) that can verify a specific skill folder structure.
-    - [ ] Sub-task: Implement Feature: Fix `SKILL.md` frontmatter, move loose files to `references/` or `templates/` if needed, rename non-kebab files.
+- [x] Task: Standardize `cloudflare-pages` [910c82c]
+    - [x] Sub-task: Write Tests: Create `tests/test_skill_structure.py` (generic test) that can verify a specific skill folder structure.
+    - [x] Sub-task: Implement Feature: Fix `SKILL.md` frontmatter, move loose files to `references/` or `templates/` if needed, rename non-kebab files.
 - [ ] Task: Standardize `nextjs-tinacms`
     - [ ] Sub-task: Write Tests: Update generic test to include this skill.
     - [ ] Sub-task: Implement Feature: Apply standard structure and naming.
