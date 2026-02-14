@@ -21,22 +21,23 @@ This skill allows the AI to interact with the user's Gmail account.
 
 ## Setup
 
-1.  Place your `credentials.json` file in `~/.gmail_credentials/`.
-2.  **Recommended (Zero Setup)**:
-    Run directly with `uv`:
+1.  **Recommended (gcloud ADC)**:
+    This method allows you to use your Google account without managing file paths.
 
     ```bash
-    uv run skills/gmail/scripts/gmail.py setup
+    # Login with specific scopes for Gmail
+    gcloud auth application-default login --scopes https://www.googleapis.com/auth/gmail.modify
     ```
 
-    _Alternatively (Standard PiP)_:
+    Then run the script:
 
     ```bash
-    pip install -r skills/gmail/requirements.txt
-    python3 skills/gmail/scripts/gmail.py setup
+    uv run skills/gmail/scripts/gmail.py verify
     ```
 
-    Follow the link to authorize the app.
+2.  **Alternative (credentials.json)**:
+    - Place `credentials.json` in `~/.gmail_credentials/`.
+    - Run `uv run skills/gmail/scripts/gmail.py setup`
 
 ## Usage
 

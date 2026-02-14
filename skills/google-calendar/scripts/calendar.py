@@ -23,6 +23,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 
+import google.auth
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -57,14 +58,31 @@ class CalendarTool:
         scope = self._get_current_scope()
         scopes = SCOPES_MAP.get(scope, SCOPES_MAP[DEFAULT_SCOPE])
 
+        # 1. Try Local Pickle
         if TOKEN_FILE.exists():
-            with open(TOKEN_FILE, "rb") as token:
-                creds = pickle.load(token)
+            try:
+                with open(TOKEN_FILE, "rb") as token:
+                    creds = pickle.load(token)
+            except Exception:
+                pass
 
+        # 2. Try ADC
+        if not creds or not creds.valid:
+            try:
+                creds, _ = google.auth.default(scopes=scopes)
+                if creds and creds.expired and creds.refresh_token:
+                     creds.refresh(Request())
+            except Exception:
+                 creds = None
+
+        # 3. Fallback to Client Secrets
         if not creds or not creds.valid:
             if creds and creds.expired and creds.refresh_token:
                 try:
                     creds.refresh(Request())
+                    if TOKEN_FILE.exists():
+                         with open(TOKEN_FILE, "wb") as token:
+                            pickle.dump(creds, token)
                 except Exception:
                     if TOKEN_FILE.exists():
                         TOKEN_FILE.unlink()
@@ -72,13 +90,19 @@ class CalendarTool:
 
             if not creds:
                 if not CLIENT_SECRETS_FILE.exists():
+                    print(f"Error: Credentials file not found at {CLIENT_SECRETS_FILE}")
+                    print("To fix, either:")
+                    print("1. Run: gcloud auth application-default login --scopes https://www.googleapis.com/auth/calendar.events")
+                    print("2. OR download credentials.json to that location.")
                     return
+
+                print(f"Starting authentication flow using {CLIENT_SECRETS_FILE}...")
                 flow = InstalledAppFlow.from_client_secrets_file(str(CLIENT_SECRETS_FILE), scopes)
                 creds = flow.run_local_server(port=0)
 
-            CREDENTIALS_DIR.mkdir(parents=True, exist_ok=True)
-            with open(TOKEN_FILE, "wb") as token:
-                pickle.dump(creds, token)
+                CREDENTIALS_DIR.mkdir(parents=True, exist_ok=True)
+                with open(TOKEN_FILE, "wb") as token:
+                    pickle.dump(creds, token)
 
         if creds:
              self.service = build("calendar", "v3", credentials=creds)

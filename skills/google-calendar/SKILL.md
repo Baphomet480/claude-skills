@@ -19,19 +19,21 @@ This skill allows the AI to manage the user's Google Calendar.
 
 ## Setup
 
-1.  Place `credentials.json` in `~/.calendar_credentials/`.
-2.  **Recommended (Zero Setup)**:
+1.  **Recommended (gcloud ADC)**:
 
     ```bash
-    uv run skills/google-calendar/scripts/calendar.py setup
+    gcloud auth application-default login --scopes https://www.googleapis.com/auth/calendar.events
     ```
 
-    _Alternatively (Standard PiP)_:
+    Then verify:
 
     ```bash
-    pip install -r skills/google-calendar/requirements.txt
-    python3 skills/google-calendar/scripts/calendar.py setup
+    uv run skills/google-calendar/scripts/calendar.py list --limit 1
     ```
+
+2.  **Alternative (credentials.json)**:
+    - Place `credentials.json` in `~/.calendar_credentials/`.
+    - Run `uv run skills/google-calendar/scripts/calendar.py setup`
 
 ## Usage
 

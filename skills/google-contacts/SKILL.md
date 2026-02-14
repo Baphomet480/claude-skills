@@ -19,19 +19,21 @@ This skill allows the AI to manage the user's Google Contacts.
 
 ## Setup
 
-1.  Place `credentials.json` in `~/.contacts_credentials/`.
-2.  **Recommended (Zero Setup)**:
+1.  **Recommended (gcloud ADC)**:
 
     ```bash
-    uv run skills/google-contacts/scripts/contacts.py setup
+    gcloud auth application-default login --scopes https://www.googleapis.com/auth/contacts
     ```
 
-    _Alternatively (Standard PiP)_:
+    Then verify:
 
     ```bash
-    pip install -r skills/google-contacts/requirements.txt
-    python3 skills/google-contacts/scripts/contacts.py setup
+    uv run skills/google-contacts/scripts/contacts.py search --query "Test"
     ```
+
+2.  **Alternative (credentials.json)**:
+    - Place `credentials.json` in `~/.contacts_credentials/`.
+    - Run `uv run skills/google-contacts/scripts/contacts.py setup`
 
 ## Usage
 

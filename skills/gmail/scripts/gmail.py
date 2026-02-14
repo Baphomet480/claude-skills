@@ -27,6 +27,7 @@ from email.mime.text import MIMEText
 from pathlib import Path
 from typing import Dict, List, Optional, Any, Union
 
+import google.auth
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -74,14 +75,36 @@ class GmailTool:
         scope = self._get_current_scope()
         scopes = SCOPES_MAP.get(scope, SCOPES_MAP[DEFAULT_SCOPE])
 
+        # 1. Try Local Pickle (Fastest)
         if TOKEN_FILE.exists():
-            with open(TOKEN_FILE, "rb") as token:
-                creds = pickle.load(token)
+            try:
+                with open(TOKEN_FILE, "rb") as token:
+                    creds = pickle.load(token)
+            except Exception:
+                pass
 
+        # 2. Try ADC (gcloud auth application-default login)
+        if not creds or not creds.valid:
+            try:
+                # Attempt to get default credentials
+                # Note: scopes are required for user accounts
+                creds, project_id = google.auth.default(scopes=scopes)
+                # Refresh if expired (ADC credentials usually handle this automatically, but explicit check doesn't hurt)
+                if creds and creds.expired and creds.refresh_token:
+                     creds.refresh(Request())
+            except Exception:
+                 # ADC failed or not configured
+                 creds = None
+
+        # 3. Fallback to Client Secrets (credentials.json)
         if not creds or not creds.valid:
             if creds and creds.expired and creds.refresh_token:
                 try:
                     creds.refresh(Request())
+                    # Save refreshed token if it came from pickle
+                    if TOKEN_FILE.exists():
+                         with open(TOKEN_FILE, "wb") as token:
+                            pickle.dump(creds, token)
                 except Exception:
                     # Token invalid/revoked, delete and re-auth
                     if TOKEN_FILE.exists():
@@ -90,17 +113,20 @@ class GmailTool:
 
             if not creds:
                 if not CLIENT_SECRETS_FILE.exists():
-                    # We cannot authenticate without secrets.
-                    # This will be handled gracefully by methods checking self.service
+                    print(f"Error: Credentials file not found at {CLIENT_SECRETS_FILE}")
+                    print("To fix, either:")
+                    print("1. Run: gcloud auth application-default login --scopes https://www.googleapis.com/auth/gmail.modify")
+                    print("2. OR download credentials.json to that location.")
                     return
 
+                print(f"Starting authentication flow using {CLIENT_SECRETS_FILE}...")
                 flow = InstalledAppFlow.from_client_secrets_file(str(CLIENT_SECRETS_FILE), scopes)
                 creds = flow.run_local_server(port=0)
-
-            # Save check
-            CREDENTIALS_DIR.mkdir(parents=True, exist_ok=True)
-            with open(TOKEN_FILE, "wb") as token:
-                pickle.dump(creds, token)
+                
+                # Only save pickle for the explicit flow
+                CREDENTIALS_DIR.mkdir(parents=True, exist_ok=True)
+                with open(TOKEN_FILE, "wb") as token:
+                    pickle.dump(creds, token)
 
         if creds:
              self.service = build("gmail", "v1", credentials=creds)
