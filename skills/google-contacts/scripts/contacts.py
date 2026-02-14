@@ -17,7 +17,6 @@ Features:
 import argparse
 import json
 import os
-import pickle
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 
@@ -30,7 +29,7 @@ from googleapiclient.discovery import build, Resource
 # --- Configuration ---
 
 CREDENTIALS_DIR = Path(os.environ.get("CONTACTS_CREDENTIALS_DIR", Path.home() / ".contacts_credentials"))
-TOKEN_FILE = CREDENTIALS_DIR / "token.pickle"
+TOKEN_FILE = CREDENTIALS_DIR / "token.json"
 CLIENT_SECRETS_FILE = CREDENTIALS_DIR / "credentials.json"
 SCOPE_FILE = CREDENTIALS_DIR / "scope.txt"
 
@@ -55,11 +54,10 @@ class ContactsTool:
         scope = self._get_current_scope()
         scopes = SCOPES_MAP.get(scope, SCOPES_MAP[DEFAULT_SCOPE])
 
-        # 1. Try Local Pickle
+        # 1. Try Local Token (JSON)
         if TOKEN_FILE.exists():
             try:
-                with open(TOKEN_FILE, "rb") as token:
-                    creds = pickle.load(token)
+                creds = Credentials.from_authorized_user_file(str(TOKEN_FILE), scopes)
             except Exception:
                 pass
 
@@ -67,19 +65,27 @@ class ContactsTool:
         if not creds or not creds.valid:
             try:
                 creds, _ = google.auth.default(scopes=scopes)
-                if creds and creds.expired and creds.refresh_token:
-                     creds.refresh(Request())
+                if (
+                    creds
+                    and creds.expired
+                    and getattr(creds, "refresh_token", None)
+                ):
+                    creds.refresh(Request())
             except Exception:
                  creds = None
 
         # 3. Fallback to Client Secrets
         if not creds or not creds.valid:
-            if creds and creds.expired and creds.refresh_token:
+            if (
+                creds
+                and creds.expired
+                and getattr(creds, "refresh_token", None)
+            ):
                 try:
                     creds.refresh(Request())
                     if TOKEN_FILE.exists():
-                         with open(TOKEN_FILE, "wb") as token:
-                            pickle.dump(creds, token)
+                        CREDENTIALS_DIR.mkdir(parents=True, exist_ok=True)
+                        TOKEN_FILE.write_text(creds.to_json())
                 except Exception:
                     if TOKEN_FILE.exists():
                         TOKEN_FILE.unlink()
@@ -98,8 +104,7 @@ class ContactsTool:
                 creds = flow.run_local_server(port=0)
 
                 CREDENTIALS_DIR.mkdir(parents=True, exist_ok=True)
-                with open(TOKEN_FILE, "wb") as token:
-                    pickle.dump(creds, token)
+                TOKEN_FILE.write_text(creds.to_json())
 
         if creds:
              self.service = build("people", "v1", credentials=creds)
@@ -111,10 +116,15 @@ class ContactsTool:
                 "and run 'python3 contacts.py setup'."
             )
 
+    def _safe_first(self, items: List, key: str, default: str = "") -> str:
+        """Safely get a value from the first item of a list, handling missing keys and empty lists."""
+        if not items:
+            return default
+        return items[0].get(key, default)
+
     def search_contacts(self, query: str) -> List[Dict[str, Any]]:
         """Search for contacts."""
         self.ensure_service()
-        # The People API 'search' method
         results = self.service.people().searchContacts(
             query=query,
             readMask="names,emailAddresses,phoneNumbers"
@@ -123,9 +133,9 @@ class ContactsTool:
         normalized = []
         for result in results.get("results", []):
             person = result.get("person", {})
-            name = person.get("names", [{}])[0].get("displayName", "Unknown")
-            email = person.get("emailAddresses", [{}])[0].get("value", "")
-            phone = person.get("phoneNumbers", [{}])[0].get("value", "")
+            name = self._safe_first(person.get("names", []), "displayName", "Unknown")
+            email = self._safe_first(person.get("emailAddresses", []), "value")
+            phone = self._safe_first(person.get("phoneNumbers", []), "value")
             resource_name = person.get("resourceName")
             
             normalized.append({
@@ -191,6 +201,12 @@ def main():
         
         if args.command == "verify":
             tool.ensure_service()
+            # Real API check: list connections to validate token usability
+            tool.service.people().connections().list(
+                resourceName="people/me",
+                pageSize=1,
+                personFields="names"
+            ).execute()
             print_json({"status": "authenticated", "message": "Contacts API ready"})
 
         elif args.command == "search":

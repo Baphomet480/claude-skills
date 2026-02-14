@@ -12,14 +12,13 @@ Google Calendar Skill - AI-powered Calendar interactions.
 Features:
 - List upcoming events
 - Create new events
-- Parse simple time strings (via `dateutil` if available, or strict ISO)
+- Accept ISO8601 date-time strings for event start/end
 """
 
 import argparse
 import json
 import os
-import pickle
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 
@@ -32,7 +31,7 @@ from googleapiclient.discovery import build, Resource
 # --- Configuration ---
 
 CREDENTIALS_DIR = Path(os.environ.get("CALENDAR_CREDENTIALS_DIR", Path.home() / ".calendar_credentials"))
-TOKEN_FILE = CREDENTIALS_DIR / "token.pickle"
+TOKEN_FILE = CREDENTIALS_DIR / "token.json"
 CLIENT_SECRETS_FILE = CREDENTIALS_DIR / "credentials.json"
 SCOPE_FILE = CREDENTIALS_DIR / "scope.txt"
 
@@ -58,11 +57,10 @@ class CalendarTool:
         scope = self._get_current_scope()
         scopes = SCOPES_MAP.get(scope, SCOPES_MAP[DEFAULT_SCOPE])
 
-        # 1. Try Local Pickle
+        # 1. Try Local Token (JSON)
         if TOKEN_FILE.exists():
             try:
-                with open(TOKEN_FILE, "rb") as token:
-                    creds = pickle.load(token)
+                creds = Credentials.from_authorized_user_file(str(TOKEN_FILE), scopes)
             except Exception:
                 pass
 
@@ -70,19 +68,27 @@ class CalendarTool:
         if not creds or not creds.valid:
             try:
                 creds, _ = google.auth.default(scopes=scopes)
-                if creds and creds.expired and creds.refresh_token:
-                     creds.refresh(Request())
+                if (
+                    creds
+                    and creds.expired
+                    and getattr(creds, "refresh_token", None)
+                ):
+                    creds.refresh(Request())
             except Exception:
                  creds = None
 
         # 3. Fallback to Client Secrets
         if not creds or not creds.valid:
-            if creds and creds.expired and creds.refresh_token:
+            if (
+                creds
+                and creds.expired
+                and getattr(creds, "refresh_token", None)
+            ):
                 try:
                     creds.refresh(Request())
                     if TOKEN_FILE.exists():
-                         with open(TOKEN_FILE, "wb") as token:
-                            pickle.dump(creds, token)
+                        CREDENTIALS_DIR.mkdir(parents=True, exist_ok=True)
+                        TOKEN_FILE.write_text(creds.to_json())
                 except Exception:
                     if TOKEN_FILE.exists():
                         TOKEN_FILE.unlink()
@@ -101,8 +107,7 @@ class CalendarTool:
                 creds = flow.run_local_server(port=0)
 
                 CREDENTIALS_DIR.mkdir(parents=True, exist_ok=True)
-                with open(TOKEN_FILE, "wb") as token:
-                    pickle.dump(creds, token)
+                TOKEN_FILE.write_text(creds.to_json())
 
         if creds:
              self.service = build("calendar", "v3", credentials=creds)
@@ -111,11 +116,11 @@ class CalendarTool:
         if not self.service:
             raise RuntimeError(
                 f"Calendar API not authenticated. Please ensure '{CLIENT_SECRETS_FILE}' exists "
-                "and run 'python3 calendar.py setup'."
+                "and run 'python3 google_calendar.py setup'."
             )
 
     def list_events(self, max_results: int = 10) -> List[Dict[str, Any]]:
-        """List upcoming 10 events."""
+        """List upcoming events."""
         self.ensure_service()
         now = datetime.utcnow().isoformat() + "Z"  # 'Z' indicates UTC time
         events_result = self.service.events().list(
@@ -178,9 +183,9 @@ def main():
         tool = CalendarTool()
         
         if args.command == "verify":
-            # If we got here, tool.ensure_service() would have succeeded during __init__ (sort of)
-            # Actually __init__ just calls _authenticate. ensure_service checks self.service.
             tool.ensure_service()
+            # Real API check: attempt to list 1 event to validate token usability
+            tool.list_events(max_results=1)
             print_json({"status": "authenticated", "message": "Calendar API ready"})
 
         elif args.command == "list":

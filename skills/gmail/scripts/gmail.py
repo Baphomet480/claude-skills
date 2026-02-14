@@ -20,25 +20,22 @@ import argparse
 import base64
 import json
 import os
-import pickle
-import sys
 from datetime import datetime
 from email.mime.text import MIMEText
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Union
+from typing import Dict, List, Optional, Any
 
 import google.auth
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build, Resource
-from googleapiclient.errors import HttpError
 
 # --- Configuration ---
 
 # Allow overriding the credentials directory via environment variable
 CREDENTIALS_DIR = Path(os.environ.get("GMAIL_CREDENTIALS_DIR", Path.home() / ".gmail_credentials"))
-TOKEN_FILE = CREDENTIALS_DIR / "token.pickle"
+TOKEN_FILE = CREDENTIALS_DIR / "token.json"
 CLIENT_SECRETS_FILE = CREDENTIALS_DIR / "credentials.json"
 SCOPE_FILE = CREDENTIALS_DIR / "scope.txt"
 
@@ -75,36 +72,40 @@ class GmailTool:
         scope = self._get_current_scope()
         scopes = SCOPES_MAP.get(scope, SCOPES_MAP[DEFAULT_SCOPE])
 
-        # 1. Try Local Pickle (Fastest)
+        # 1. Try Local Token (JSON)
         if TOKEN_FILE.exists():
             try:
-                with open(TOKEN_FILE, "rb") as token:
-                    creds = pickle.load(token)
+                creds = Credentials.from_authorized_user_file(str(TOKEN_FILE), scopes)
             except Exception:
                 pass
 
         # 2. Try ADC (gcloud auth application-default login)
         if not creds or not creds.valid:
             try:
-                # Attempt to get default credentials
-                # Note: scopes are required for user accounts
                 creds, project_id = google.auth.default(scopes=scopes)
-                # Refresh if expired (ADC credentials usually handle this automatically, but explicit check doesn't hurt)
-                if creds and creds.expired and creds.refresh_token:
-                     creds.refresh(Request())
+                if (
+                    creds
+                    and creds.expired
+                    and getattr(creds, "refresh_token", None)
+                ):
+                    creds.refresh(Request())
             except Exception:
                  # ADC failed or not configured
                  creds = None
 
         # 3. Fallback to Client Secrets (credentials.json)
         if not creds or not creds.valid:
-            if creds and creds.expired and creds.refresh_token:
+            if (
+                creds
+                and creds.expired
+                and getattr(creds, "refresh_token", None)
+            ):
                 try:
                     creds.refresh(Request())
-                    # Save refreshed token if it came from pickle
+                    # Save refreshed token
                     if TOKEN_FILE.exists():
-                         with open(TOKEN_FILE, "wb") as token:
-                            pickle.dump(creds, token)
+                        CREDENTIALS_DIR.mkdir(parents=True, exist_ok=True)
+                        TOKEN_FILE.write_text(creds.to_json())
                 except Exception:
                     # Token invalid/revoked, delete and re-auth
                     if TOKEN_FILE.exists():
@@ -123,10 +124,9 @@ class GmailTool:
                 flow = InstalledAppFlow.from_client_secrets_file(str(CLIENT_SECRETS_FILE), scopes)
                 creds = flow.run_local_server(port=0)
                 
-                # Only save pickle for the explicit flow
+                # Save token as JSON
                 CREDENTIALS_DIR.mkdir(parents=True, exist_ok=True)
-                with open(TOKEN_FILE, "wb") as token:
-                    pickle.dump(creds, token)
+                TOKEN_FILE.write_text(creds.to_json())
 
         if creds:
              self.service = build("gmail", "v1", credentials=creds)
@@ -178,7 +178,7 @@ class GmailTool:
             try:
                 details = self._get_message_details(msg["id"])
                 detailed_messages.append(details)
-            except Exception as e:
+            except Exception:
                 # Skip individual failures in batch
                 continue
         
