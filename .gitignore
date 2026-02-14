@@ -18,3 +18,11 @@ __pycache__/
 
 # Don't ignore dist/ — packaged skills are tracked
 # Don't ignore hooks/ — pre-commit hook is tracked
+
+# Google Workspace Skills Credentials
+*.pickle
+credentials.json
+token.json
+.gmail_credentials/
+.calendar_credentials/
+.contacts_credentials/

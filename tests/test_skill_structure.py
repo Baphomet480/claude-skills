@@ -7,10 +7,10 @@ class TestSkillStructure(unittest.TestCase):
         # We assume the test is run from the project root
         self.skills_dir = 'skills'
 
-    def check_kebab_case(self, name):
+    def check_kebab_case(self, name, allow_underscores=False):
         # Allow dots for extensions, but main part must be kebab
         # e.g. file-name.txt is valid
-        # file_name.txt is invalid
+        # file_name.txt is invalid (unless allow_underscores=True for .py files)
         # file-name.tar.gz is valid
         if name.startswith('.'): # Ignore hidden files like .DS_Store
             return True
@@ -19,7 +19,11 @@ class TestSkillStructure(unittest.TestCase):
         parts = name.split('.')
         stem = parts[0]
         
-        pattern = r'^[a-z0-9]+(-[a-z0-9]+)*$'
+        if allow_underscores:
+            # Python modules can use underscores (hyphens are invalid in imports)
+            pattern = r'^[a-z0-9]+([_-][a-z0-9]+)*$'
+        else:
+            pattern = r'^[a-z0-9]+(-[a-z0-9]+)*$'
         return bool(re.match(pattern, stem))
 
     def check_skill_structure(self, skill_name):
@@ -30,12 +34,19 @@ class TestSkillStructure(unittest.TestCase):
 
         # Check all files in skill directory recursively
         for root, dirs, files in os.walk(skill_path):
+            # Skip __pycache__ directories (runtime artifacts)
+            dirs[:] = [d for d in dirs if d != '__pycache__']
+
             for filename in files:
                 if filename == 'SKILL.md':
                     continue
-                # Check if filename is kebab-case
+                # Allow underscores in .py files (Python modules can't use hyphens)
+                is_python = filename.endswith('.py')
                 rel_path = os.path.relpath(os.path.join(root, filename), self.skills_dir)
-                self.assertTrue(self.check_kebab_case(filename), f"File '{filename}' (in {rel_path}) is not kebab-case")
+                self.assertTrue(
+                    self.check_kebab_case(filename, allow_underscores=is_python),
+                    f"File '{filename}' (in {rel_path}) is not kebab-case"
+                )
             
             for dirname in dirs:
                 self.assertTrue(self.check_kebab_case(dirname), f"Directory '{dirname}' (in {root}) is not kebab-case")
@@ -60,3 +71,12 @@ class TestSkillStructure(unittest.TestCase):
 
     def test_pitolandia_visual_identity_structure(self):
         self.check_skill_structure('pitolandia-visual-identity')
+
+    def test_gmail_structure(self):
+        self.check_skill_structure('gmail')
+
+    def test_google_calendar_structure(self):
+        self.check_skill_structure('google-calendar')
+
+    def test_google_contacts_structure(self):
+        self.check_skill_structure('google-contacts')
