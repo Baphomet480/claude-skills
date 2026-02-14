@@ -150,6 +150,9 @@ def main():
     # setup
     subparsers.add_parser("setup", help="Run interactive authentication flow")
 
+    # verify
+    subparsers.add_parser("verify", help="Check authentication status")
+
     # list
     list_parser = subparsers.add_parser("list", help="List upcoming events")
     list_parser.add_argument("--limit", type=int, default=10, help="Max results")
@@ -174,7 +177,13 @@ def main():
     try:
         tool = CalendarTool()
         
-        if args.command == "list":
+        if args.command == "verify":
+            # If we got here, tool.ensure_service() would have succeeded during __init__ (sort of)
+            # Actually __init__ just calls _authenticate. ensure_service checks self.service.
+            tool.ensure_service()
+            print_json({"status": "authenticated", "message": "Calendar API ready"})
+
+        elif args.command == "list":
             events = tool.list_events(args.limit)
             print_json(events)
         

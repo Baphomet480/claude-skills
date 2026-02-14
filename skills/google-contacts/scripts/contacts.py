@@ -162,6 +162,9 @@ def main():
     # setup
     subparsers.add_parser("setup", help="Run interactive authentication flow")
 
+    # verify
+    subparsers.add_parser("verify", help="Check authentication status")
+
     # search
     search_parser = subparsers.add_parser("search", help="Search contacts")
     search_parser.add_argument("--query", "-q", required=True, help="Name or email to search")
@@ -186,7 +189,11 @@ def main():
     try:
         tool = ContactsTool()
         
-        if args.command == "search":
+        if args.command == "verify":
+            tool.ensure_service()
+            print_json({"status": "authenticated", "message": "Contacts API ready"})
+
+        elif args.command == "search":
             contacts = tool.search_contacts(args.query)
             print_json(contacts)
 
