@@ -28,26 +28,26 @@ This skill allows the AI to manage the user's Google Calendar.
     Then verify:
 
     ```bash
-    uv run skills/google-calendar/scripts/calendar.py list --limit 1
+    uv run skills/google-calendar/scripts/google_calendar.py verify
     ```
 
 2.  **Alternative (credentials.json)**:
     - Place `credentials.json` in `~/.calendar_credentials/`.
-    - Run `uv run skills/google-calendar/scripts/calendar.py setup`
+    - Run `uv run skills/google-calendar/scripts/google_calendar.py setup`
 
 ## Usage
 
 ### 1. List Upcoming Events
 
 ```bash
-uv run skills/google-calendar/scripts/calendar.py list --limit 5
+uv run skills/google-calendar/scripts/google_calendar.py list --limit 5
 ```
 
 ### 2. Create Event
 
 ```bash
 # Schedule a Council Meeting
-uv run skills/google-calendar/scripts/calendar.py create \
+uv run skills/google-calendar/scripts/google_calendar.py create \
   --summary "Jedi Council Meeting" \
   --start "2026-05-04T10:00:00" \
   --end "2026-05-04T11:00:00" \
