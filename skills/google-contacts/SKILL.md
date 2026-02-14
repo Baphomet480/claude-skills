@@ -22,7 +22,7 @@ This skill allows the AI to manage the user's Google Contacts.
 1.  **Recommended (gcloud ADC)**:
 
     ```bash
-    gcloud auth application-default login --scopes https://www.googleapis.com/auth/contacts
+    gcloud auth application-default login --scopes https://www.googleapis.com/auth/contacts,https://www.googleapis.com/auth/cloud-platform
     ```
 
     Then verify:

@@ -22,7 +22,7 @@ This skill allows the AI to manage the user's Google Calendar.
 1.  **Recommended (gcloud ADC)**:
 
     ```bash
-    gcloud auth application-default login --scopes https://www.googleapis.com/auth/calendar.events
+    gcloud auth application-default login --scopes https://www.googleapis.com/auth/calendar.events,https://www.googleapis.com/auth/cloud-platform
     ```
 
     Then verify:

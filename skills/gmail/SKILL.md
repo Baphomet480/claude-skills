@@ -26,7 +26,7 @@ This skill allows the AI to interact with the user's Gmail account.
 
     ```bash
     # Login with specific scopes for Gmail
-    gcloud auth application-default login --scopes https://www.googleapis.com/auth/gmail.modify
+    gcloud auth application-default login --scopes https://www.googleapis.com/auth/gmail.modify,https://www.googleapis.com/auth/cloud-platform
     ```
 
     Then run the script:
