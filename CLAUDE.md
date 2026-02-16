@@ -35,6 +35,7 @@ Skills are consumed by both Claude (`.agent/skills/`) and Gemini (`~/.gemini/ant
 | `design-lookup`              | Design system discovery and reference                                                                                                    |
 | `hugo-sveltia-cms`           | Hugo + Sveltia CMS integration                                                                                                           |
 | `pitolandia-visual-identity` | Pitolandia brand visual identity system                                                                                                  |
+| `remini-web`                 | Remini web enhancement workflow with manual login and browser-assisted upload/download automation                                        |
 
 ## Workflow
 
