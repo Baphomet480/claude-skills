@@ -8,7 +8,7 @@
 
 """
 Google Workspace Master Setup
-Authenticates ONCE for Gmail, Calendar, and Contacts.
+Authenticates ONCE for Gmail, Calendar, Contacts, Drive, and Photos.
 
 Usage:
   uv run ~/.agents/skills/gmail/scripts/setup_workspace.py
@@ -23,9 +23,12 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 
 # The superset of scopes for all skills
 ALL_SCOPES = [
-    "https://www.googleapis.com/auth/gmail.modify",
-    "https://www.googleapis.com/auth/calendar.events",
+    "https://mail.google.com/",
+    "https://www.googleapis.com/auth/calendar",
     "https://www.googleapis.com/auth/contacts",
+    "https://www.googleapis.com/auth/drive",
+    "https://www.googleapis.com/auth/photoslibrary",
+    "https://www.googleapis.com/auth/photoslibrary.sharing",
     "https://www.googleapis.com/auth/cloud-platform",
 ]
 
@@ -34,6 +37,8 @@ SKILL_DIRS = {
     "gmail": Path.home() / ".gmail_credentials",
     "calendar": Path.home() / ".calendar_credentials",
     "contacts": Path.home() / ".contacts_credentials",
+    "drive": Path.home() / ".drive_credentials",
+    "photos": Path.home() / ".photos_credentials",
 }
 
 # Possible locations for the source credentials.json
@@ -55,7 +60,7 @@ def find_credentials():
 def main():
     print()
     print("Google Workspace Master Setup")
-    print("(Gmail + Calendar + Contacts)")
+    print("(Gmail + Calendar + Contacts + Drive + Photos)")
     print()
 
     # 1. Find Client Secrets
