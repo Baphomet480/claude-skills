@@ -35,6 +35,9 @@ Skills are consumed by both Claude (`.agent/skills/`) and Gemini (`~/.gemini/ant
 | `design-lookup`              | Design system discovery and reference                                                                                                    |
 | `hugo-sveltia-cms`           | Hugo + Sveltia CMS integration                                                                                                           |
 | `pitolandia-visual-identity` | Pitolandia brand visual identity system                                                                                                  |
+| `gmail`                      | Full CRUD Gmail — search, read, draft, send, reply, reply-all, forward, trash, labels, attachments                                       |
+| `google-calendar`            | Full CRUD Google Calendar — list, get, search, create, update, delete events, quick-add, list calendars                                  |
+| `google-contacts`            | Full CRUD Google Contacts — search, list, get, create, update, delete contacts                                                           |
 
 ## Workflow
 
