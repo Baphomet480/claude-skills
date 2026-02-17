@@ -40,22 +40,12 @@ ALL_SCOPES = [
 # Primary unified directory
 WORKSPACE_DIR = Path.home() / ".google_workspace"
 
-# Legacy per-service directories (for backward compat distribution)
-LEGACY_DIRS = {
-    "gmail": Path.home() / ".gmail_credentials",
-    "calendar": Path.home() / ".calendar_credentials",
-    "contacts": Path.home() / ".contacts_credentials",
-    "drive": Path.home() / ".drive_credentials",
-    "photos": Path.home() / ".photos_credentials",
-}
-
 # Possible locations for the source credentials.json
 POSSIBLE_CRED_FILES = [
     WORKSPACE_DIR / "credentials.json",
     Path.home() / ".gemini/credentials/google_client_secret.json",
     Path.home() / "Downloads/credentials.json",
     Path.cwd() / "credentials.json",
-    LEGACY_DIRS["gmail"] / "credentials.json",
 ]
 
 
@@ -115,26 +105,9 @@ def main():
 
     print(f"  Token saved to: {WORKSPACE_DIR / 'token.json'}")
 
-    # 4. Distribute to legacy directories (backward compat)
-    print()
-    print("Distributing to legacy directories (backward compat)...")
-
-    for skill, directory in LEGACY_DIRS.items():
-        directory.mkdir(parents=True, exist_ok=True)
-
-        # Write Token
-        (directory / "token.json").write_text(token_json)
-
-        # Ensure credentials exist there too
-        dest_creds = directory / "credentials.json"
-        if not dest_creds.exists():
-            shutil.copy(creds_file, dest_creds)
-
-        print(f"  - {skill.capitalize()}: Ready")
-
     print()
     print("All Google Workspace services are now ready to use.")
-    print(f"Primary credentials: {WORKSPACE_DIR}")
+    print(f"Credentials: {WORKSPACE_DIR}")
 
 if __name__ == "__main__":
     main()
