@@ -36,11 +36,7 @@ Skills are consumed by both Claude (`.agent/skills/`) and Gemini (`~/.gemini/ant
 | `hugo-sveltia-cms`           | Hugo + Sveltia CMS integration                                                                                                           |
 | `pitolandia-visual-identity` | Pitolandia brand visual identity system                                                                                                  |
 | `remini-web`                 | Remini web enhancement workflow with manual login and browser-assisted upload/download automation                                        |
-| `gmail`                      | Full CRUD Gmail — search, read, draft, send, reply, reply-all, forward, trash, labels, attachments                                       |
-| `google-calendar`            | Full CRUD Google Calendar — list, get, search, create, update, delete events, quick-add, list calendars                                  |
-| `google-contacts`            | Full CRUD Google Contacts — search, list, get, create, update, delete contacts                                                           |
-| `google-drive`               | Full CRUD Google Drive — list, search, upload, download, export, mkdir, move, copy, rename, trash, delete, share, permissions            |
-| `google-photos`              | Google Photos — list, search, download, upload media, manage albums                                                                      |
+| `google-workspace`           | Unified Google Workspace — Gmail, Calendar, Contacts, Drive, Photos with SQLite cache/index (replaces per-service skills)               |
 
 ## Workflow
 
