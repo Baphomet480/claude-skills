@@ -1,0 +1,10 @@
+[Unit]
+Description=Google Workspace Token Maintenance
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/uv run %h/.claude/skills/google-workspace/scripts/maintain_token.py
+StandardOutput=journal
+StandardError=journal
