@@ -583,6 +583,39 @@ def print_json(data: Any) -> None:
     print(json.dumps(data, indent=2, default=str))
 
 
+def _show_sync_age() -> None:
+    """Print last cache sync time to stderr (non-intrusive)."""
+    try:
+        import sqlite3
+        cache_dir = Path(os.environ.get("WORKSPACE_CACHE_DIR",
+                         os.environ.get("GOOGLE_WORKSPACE_DIR",
+                         str(Path.home() / ".google_workspace"))))
+        db_path = cache_dir / "cache.db"
+        if not db_path.exists():
+            return
+        conn = sqlite3.connect(str(db_path))
+        row = conn.execute(
+            "SELECT last_sync, record_count FROM sync_state WHERE service = 'gmail'"
+        ).fetchone()
+        conn.close()
+        if row and row[0]:
+            dt = datetime.fromisoformat(row[0])
+            delta = datetime.now(dt.tzinfo) - dt
+            mins = int(delta.total_seconds() / 60)
+            if mins < 1:
+                ago = "just now"
+            elif mins < 60:
+                ago = f"{mins}m ago"
+            elif mins < 1440:
+                ago = f"{mins // 60}h {mins % 60}m ago"
+            else:
+                ago = f"{mins // 1440}d ago"
+            import sys as _sys
+            print(f"[cache: {row[1]} msgs, synced {ago}]", file=_sys.stderr)
+    except Exception:
+        pass
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Gmail AI Skill — Full CRUD + Reply/Forward")
     subparsers = parser.add_subparsers(dest="command", help="Command to run")
@@ -664,6 +697,7 @@ def main() -> None:
     sp.add_argument("--output-dir", default=".", help="Directory to save attachments")
 
     args = parser.parse_args()
+    _show_sync_age()
 
     # Setup is special — skip auto-auth
     if args.command == "setup":

@@ -27,8 +27,13 @@ ALL_SCOPES = [
     "https://www.googleapis.com/auth/calendar",
     "https://www.googleapis.com/auth/contacts",
     "https://www.googleapis.com/auth/drive",
-    "https://www.googleapis.com/auth/photoslibrary",
-    "https://www.googleapis.com/auth/photoslibrary.sharing",
+    # Photos: old photoslibrary/photoslibrary.readonly scopes were killed March 2025.
+    # These surviving scopes only cover app-uploaded content.
+    "https://www.googleapis.com/auth/photoslibrary.appendonly",
+    "https://www.googleapis.com/auth/photoslibrary.readonly.appcreateddata",
+    "https://www.googleapis.com/auth/photoslibrary.edit.appcreateddata",
+    # Picker API scope — for interactive selection from full library
+    "https://www.googleapis.com/auth/photospicker.mediaitems.readonly",
     "https://www.googleapis.com/auth/cloud-platform",
 ]
 

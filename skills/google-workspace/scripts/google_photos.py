@@ -32,6 +32,7 @@ Commands:
 import argparse
 import json
 import os
+from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 
@@ -62,11 +63,14 @@ CLIENT_SECRETS_FILE = CREDENTIALS_DIR / "credentials.json"
 SCOPE_FILE = CREDENTIALS_DIR / "scope.txt"
 
 SCOPES_MAP = {
-    "readonly": ["https://www.googleapis.com/auth/photoslibrary.readonly"],
+    # Post-March 2025: old photoslibrary/photoslibrary.readonly scopes are dead.
+    # These scopes only cover app-uploaded content.
+    "readonly": ["https://www.googleapis.com/auth/photoslibrary.readonly.appcreateddata"],
     "appendonly": ["https://www.googleapis.com/auth/photoslibrary.appendonly"],
     "full": [
-        "https://www.googleapis.com/auth/photoslibrary",
-        "https://www.googleapis.com/auth/photoslibrary.sharing",
+        "https://www.googleapis.com/auth/photoslibrary.appendonly",
+        "https://www.googleapis.com/auth/photoslibrary.readonly.appcreateddata",
+        "https://www.googleapis.com/auth/photoslibrary.edit.appcreateddata",
     ],
 }
 DEFAULT_SCOPE = "full"
@@ -456,6 +460,39 @@ def print_json(data: Any) -> None:
     print(json.dumps(data, indent=2, default=str))
 
 
+def _show_sync_age() -> None:
+    """Print last cache sync time to stderr (non-intrusive)."""
+    try:
+        import sqlite3
+        cache_dir = Path(os.environ.get("WORKSPACE_CACHE_DIR",
+                         os.environ.get("GOOGLE_WORKSPACE_DIR",
+                         str(Path.home() / ".google_workspace"))))
+        db_path = cache_dir / "cache.db"
+        if not db_path.exists():
+            return
+        conn = sqlite3.connect(str(db_path))
+        row = conn.execute(
+            "SELECT last_sync, record_count FROM sync_state WHERE service = 'photos'"
+        ).fetchone()
+        conn.close()
+        if row and row[0]:
+            dt = datetime.fromisoformat(row[0])
+            delta = datetime.now(dt.tzinfo) - dt
+            mins = int(delta.total_seconds() / 60)
+            if mins < 1:
+                ago = "just now"
+            elif mins < 60:
+                ago = f"{mins}m ago"
+            elif mins < 1440:
+                ago = f"{mins // 60}h {mins % 60}m ago"
+            else:
+                ago = f"{mins // 1440}d ago"
+            import sys as _sys
+            print(f"[cache: {row[1]} items, synced {ago}]", file=_sys.stderr)
+    except Exception:
+        pass
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Google Photos AI Skill")
     subparsers = parser.add_subparsers(dest="command", help="Command to run")
@@ -520,6 +557,7 @@ def main() -> None:
     sp.add_argument("--items", nargs="+", required=True, help="Media item IDs")
 
     args = parser.parse_args()
+    _show_sync_age()
 
     if args.command == "setup":
         tool = PhotosTool(skip_auth=True)

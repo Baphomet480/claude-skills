@@ -24,6 +24,7 @@ Commands:
 import argparse
 import json
 import os
+import socket
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -35,6 +36,7 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 
 try:
     import sqlite_utils
@@ -57,14 +59,26 @@ ALL_SCOPES = [
     "https://www.googleapis.com/auth/calendar",
     "https://www.googleapis.com/auth/contacts",
     "https://www.googleapis.com/auth/drive",
-    "https://www.googleapis.com/auth/photoslibrary",
-    "https://www.googleapis.com/auth/photoslibrary.sharing",
+    "https://www.googleapis.com/auth/photoslibrary.appendonly",
+    "https://www.googleapis.com/auth/photoslibrary.readonly.appcreateddata",
     "https://www.googleapis.com/auth/cloud-platform",
 ]
 
 PHOTOS_API_BASE = "https://photoslibrary.googleapis.com/v1"
 
-SERVICES = ["gmail", "calendar", "contacts", "drive", "photos"]
+SERVICES = ["gmail", "calendar", "contacts", "drive"]
+# Photos only sees app-uploaded data since March 2025 API changes — opt-in only
+ALL_SERVICES = SERVICES + ["photos"]
+
+# Network errors that should fail gracefully (not crash the daemon)
+NETWORK_ERRORS = (
+    socket.timeout,
+    socket.gaierror,
+    ConnectionError,
+    requests.exceptions.ConnectionError,
+    requests.exceptions.Timeout,
+    requests.exceptions.ReadTimeout,
+)
 
 
 # --- Auth ---
@@ -744,8 +758,8 @@ def main() -> None:
     sp = subparsers.add_parser("sync", help="Sync metadata from Google APIs")
     sp.add_argument(
         "--service",
-        choices=SERVICES,
-        help="Sync a specific service (default: all)",
+        choices=ALL_SERVICES,
+        help="Sync a specific service (default: gmail, calendar, contacts, drive)",
     )
 
     # search
@@ -753,8 +767,16 @@ def main() -> None:
     sp.add_argument("query", help="Search query")
     sp.add_argument(
         "--service",
-        choices=SERVICES,
+        choices=ALL_SERVICES,
         help="Search within a specific service",
+    )
+
+    # last-sync
+    sp = subparsers.add_parser("last-sync", help="Show last sync time (for use in prompts)")
+    sp.add_argument(
+        "--service",
+        choices=ALL_SERVICES,
+        help="Check a specific service",
     )
 
     # status
@@ -766,7 +788,12 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.command == "sync":
-        creds = get_credentials()
+        try:
+            creds = get_credentials()
+        except NETWORK_ERRORS as e:
+            print(f"Network unavailable, skipping sync: {e}")
+            sys.exit(0)
+
         db = get_db()
         services_to_sync = [args.service] if args.service else SERVICES
 
@@ -781,14 +808,21 @@ def main() -> None:
         print(f"Syncing: {', '.join(services_to_sync)}")
         print()
 
+        errors = 0
         for svc in services_to_sync:
             try:
                 sync_map[svc](db, creds)
+            except NETWORK_ERRORS as e:
+                print(f"  {svc.capitalize()}: Network error, skipping — {type(e).__name__}")
+                errors += 1
             except Exception as e:
                 print(f"  {svc.capitalize()}: Error — {e}")
+                errors += 1
             print()
 
         print("Sync complete.")
+        # Exit 0 even on partial failures so systemd doesn't mark as failed
+        sys.exit(0)
 
     elif args.command == "search":
         db = get_db()
@@ -797,6 +831,36 @@ def main() -> None:
             print_json(results)
         else:
             print_json({"results": [], "message": "No matches found"})
+
+    elif args.command == "last-sync":
+        if not DB_PATH.exists():
+            print("No cache. Run: uv run scripts/cache.py sync")
+        else:
+            db = get_db()
+            targets = [args.service] if args.service else SERVICES
+            for svc in targets:
+                state = get_sync_state(db, svc)
+                last = state.get("last_sync")
+                count = state.get("record_count", 0)
+                if last:
+                    # Parse and show relative time
+                    try:
+                        dt = datetime.fromisoformat(last)
+                        delta = datetime.now(timezone.utc) - dt
+                        mins = int(delta.total_seconds() / 60)
+                        if mins < 1:
+                            ago = "just now"
+                        elif mins < 60:
+                            ago = f"{mins}m ago"
+                        elif mins < 1440:
+                            ago = f"{mins // 60}h ago"
+                        else:
+                            ago = f"{mins // 1440}d ago"
+                    except Exception:
+                        ago = last
+                    print(f"  {svc}: {count} records, synced {ago}")
+                else:
+                    print(f"  {svc}: never synced")
 
     elif args.command == "status":
         db = get_db()
