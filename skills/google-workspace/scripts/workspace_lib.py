@@ -93,7 +93,7 @@ def authenticate(
                     print(f"    Have: {granted_scopes}", file=sys.stderr)
                     print(f"    Need: {required_scopes}", file=sys.stderr)
                     print("    Ignoring local token. Run 'setup' to refresh permissions.", file=sys.stderr)
-                    creds = None
+                    return None
             
             # Refresh if expired
             if creds and creds.expired and getattr(creds, "refresh_token", None):
@@ -104,12 +104,16 @@ def authenticate(
                     token_file.write_text(creds.to_json())
                 except Exception as e:
                     print(f"⚠️  Token refresh failed: {e}", file=sys.stderr)
-                    creds = None
+                    print("    Please re-run setup to generate a new token.", file=sys.stderr)
+                    return None
 
-        except Exception:
-            creds = None
+            return creds
 
-    # 2. Try ADC
+        except Exception as e:
+            print(f"⚠️  Error loading local token: {e}", file=sys.stderr)
+            return None
+
+    # 2. Try ADC (Only if local token does not exist)
     if not creds or not creds.valid:
         try:
             creds, _ = google.auth.default(scopes=list(required_scopes))
