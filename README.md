@@ -6,6 +6,7 @@ Portable AI agent skill distribution. Skills are framework-agnostic instruction 
 
 | Skill                          | Description                                                                                                                                                      |
 | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **google-workspace**           | Unified Gmail, Calendar, Contacts, Drive, and Photos skill with local SQLite cache, robust auth, and HTML email support.                                         |
 | **kitchen-sink-design-system** | Framework-agnostic Kitchen Sink design system workflow — component inventory, tiered checklists, CVA patterns, voice/tone, image reinterpretation, motion tokens |
 | **nextjs-tinacms**             | Next.js 16 + React 19 + TinaCMS — scaffolding through production, 247-task day 0–2 checklist                                                                     |
 | **cloudflare-pages**           | Cloudflare Pages deployment and configuration                                                                                                                    |
