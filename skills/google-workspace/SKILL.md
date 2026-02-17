@@ -140,6 +140,9 @@ uv run scripts/gmail.py search --query "has:attachment subject:plans" --limit 5
 ```bash
 uv run scripts/gmail.py read --id "18e..."
 uv run scripts/gmail.py thread --id "18e..."
+
+# Prefer HTML body
+uv run scripts/gmail.py read --id "18e..." --html
 ```
 
 ### Create a Draft
@@ -152,6 +155,9 @@ uv run scripts/gmail.py draft \
   --subject "Training Schedule" \
   --body "Master, when shall we begin the next session?" \
   --cc "mace@jedi.org"
+
+# Create HTML draft
+uv run scripts/gmail.py draft --to "yoda@dagobah.net" --subject "HTML Test" --body "<b>Bold</b>" --html
 ```
 
 ### Send an Email
@@ -161,14 +167,19 @@ uv run scripts/gmail.py send \
   --to "yoda@dagobah.net" \
   --subject "Urgent: Sith Sighting" \
   --body "Master, I sense a disturbance in the Force."
+
+# Send HTML
+uv run scripts/gmail.py send --to "yoda@dagobah.net" --subject "HTML" --body "<h1>Alert</h1>" --html
 ```
 
 ### Reply / Reply All / Forward
 
 ```bash
 # Reply (draft by default, --send for immediate)
-uv run scripts/gmail.py reply --id "18e..." --body "Acknowledged, Master."
 uv run scripts/gmail.py reply --id "18e..." --body "Acknowledged." --send
+
+# Reply with HTML
+uv run scripts/gmail.py reply --id "18e..." --body "<b>Agreed.</b>" --send --html
 
 # Reply all
 uv run scripts/gmail.py reply-all --id "18e..." --body "Council noted." --send
@@ -195,6 +206,26 @@ uv run scripts/gmail.py attachments --id "18e..." --output-dir ./downloads
 1. **Prefer `draft` over `send`** for new compositions — let the user review first.
 2. **Reply/Forward defaults to draft** — use `--send` only when explicitly requested.
 3. **Trash is reversible** — permanent deletion is not exposed.
+
+---
+
+## Token Maintenance & Persistence
+
+### 7-Day Expiry Fix (Important)
+If you are using a personal Gmail account with a "Testing" GCP project, your refresh token will expire every 7 days.
+To fix this, follow the guide at `references/GCP_SETUP.md` to set up a proper app or use an Internal app (Workspace users).
+
+### Background Refresh
+To keep your 1-hour access token fresh and avoid CLI latency:
+
+```bash
+# Install the maintenance service
+cp scripts/workspace-token-maintainer.service ~/.config/systemd/user/
+cp scripts/workspace-token-maintainer.timer ~/.config/systemd/user/
+systemctl --user enable --now workspace-token-maintainer.timer
+```
+
+This runs `scripts/maintain_token.py` every 45 minutes to refresh the token on disk.
 
 ---
 
