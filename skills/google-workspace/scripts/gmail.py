@@ -664,10 +664,12 @@ def main() -> None:
     # read
     sp = subparsers.add_parser("read", help="Read a single message (full body)")
     sp.add_argument("--id", required=True, help="Message ID")
+    sp.add_argument("--html", action="store_true", help="Prefer HTML body")
 
     # thread
     sp = subparsers.add_parser("thread", help="Read all messages in a thread")
     sp.add_argument("--id", required=True, help="Thread ID")
+    sp.add_argument("--html", action="store_true", help="Prefer HTML body")
 
     # draft
     sp = subparsers.add_parser("draft", help="Create a draft email")
