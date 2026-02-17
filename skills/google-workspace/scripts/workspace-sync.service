@@ -1,0 +1,17 @@
+[Unit]
+Description=Google Workspace Cache Sync
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# Point cache to the big NVMe drive
+Environment=GOOGLE_WORKSPACE_DIR=%h/.google_workspace
+Environment=WORKSPACE_CACHE_DIR=/mnt/ai-data/google-workspace-cache
+ExecStartPre=/usr/bin/mkdir -p /mnt/ai-data/google-workspace-cache
+ExecStart=/usr/bin/uv run %h/.agents/skills/google-workspace/scripts/cache.py sync
+# Skip photos for now (API 403)
+# ExecStart=/usr/bin/uv run %h/.agents/skills/google-workspace/scripts/cache.py sync --service photos
+TimeoutStartSec=300
+StandardOutput=journal
+StandardError=journal

@@ -47,7 +47,10 @@ except ImportError:
 WORKSPACE_DIR = Path(
     os.environ.get("GOOGLE_WORKSPACE_DIR", Path.home() / ".google_workspace")
 )
-DB_PATH = WORKSPACE_DIR / "cache.db"
+CACHE_DIR = Path(
+    os.environ.get("WORKSPACE_CACHE_DIR", str(WORKSPACE_DIR))
+)
+DB_PATH = CACHE_DIR / "cache.db"
 
 ALL_SCOPES = [
     "https://mail.google.com/",
@@ -122,7 +125,7 @@ def get_credentials() -> Credentials:
 
 def get_db() -> sqlite_utils.Database:
     """Open (or create) the cache database."""
-    WORKSPACE_DIR.mkdir(parents=True, exist_ok=True)
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
     db = sqlite_utils.Database(str(DB_PATH))
 
     # Ensure sync_state table exists
@@ -329,21 +332,24 @@ def sync_calendar(db: sqlite_utils.Database, creds: Credentials) -> int:
 
     events = []
     page_token = None
+    new_sync_token = None
+
+    # Build base kwargs once — must stay consistent across all pages
+    # Note: singleEvents=True is incompatible with syncToken, so we omit it
+    base_kwargs: Dict[str, Any] = {
+        "calendarId": "primary",
+        "maxResults": 250,
+    }
+    if sync_token:
+        base_kwargs["syncToken"] = sync_token
+        print("  Calendar: Incremental sync...")
+    else:
+        print("  Calendar: Full sync (first run)...")
+        base_kwargs["timeMin"] = "2020-01-01T00:00:00Z"
 
     try:
         while True:
-            kwargs: Dict[str, Any] = {
-                "calendarId": "primary",
-                "maxResults": 250,
-                "singleEvents": True,
-            }
-            if sync_token and not page_token:
-                kwargs["syncToken"] = sync_token
-                print(f"  Calendar: Incremental sync...")
-            elif not page_token:
-                print("  Calendar: Full sync (first run)...")
-                kwargs["orderBy"] = "startTime"
-                kwargs["timeMin"] = "2020-01-01T00:00:00Z"
+            kwargs = dict(base_kwargs)
             if page_token:
                 kwargs["pageToken"] = page_token
 
