@@ -32,6 +32,7 @@ Commands:
 import argparse
 import json
 import os
+import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Any
@@ -43,19 +44,15 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build, Resource
 
+import workspace_lib
+
 # --- Configuration ---
 
 def _find_credentials_dir() -> Path:
-    """Check env var, then unified workspace dir, then legacy dir."""
-    if os.environ.get("PHOTOS_CREDENTIALS_DIR"):
-        return Path(os.environ["PHOTOS_CREDENTIALS_DIR"])
-    workspace = Path(os.environ.get("GOOGLE_WORKSPACE_DIR", Path.home() / ".google_workspace"))
-    if (workspace / "token.json").exists():
-        return workspace
-    legacy = Path.home() / ".photos_credentials"
-    if (legacy / "token.json").exists():
-        return legacy
-    return workspace
+    return workspace_lib.find_credentials_dir(
+        env_var="PHOTOS_CREDENTIALS_DIR",
+        legacy_dir_name=".photos_credentials"
+    )
 
 CREDENTIALS_DIR = _find_credentials_dir()
 TOKEN_FILE = CREDENTIALS_DIR / "token.json"
@@ -103,46 +100,21 @@ class PhotosTool:
         return DEFAULT_SCOPE
 
     def _authenticate(self) -> None:
-        creds = None
+        """Authenticate using shared workspace library."""
         scope = self._get_current_scope()
         scopes = SCOPES_MAP.get(scope, SCOPES_MAP[DEFAULT_SCOPE])
+        
+        self.creds = workspace_lib.authenticate(
+            scopes=scopes,
+            token_file=TOKEN_FILE,
+            client_secrets_file=CLIENT_SECRETS_FILE,
+            service_name="Photos"
+        )
 
-        # 1. Try Local Token
-        if TOKEN_FILE.exists():
-            try:
-                creds = Credentials.from_authorized_user_file(str(TOKEN_FILE), scopes)
-            except Exception:
-                pass
-
-        # 2. Try ADC
-        if not creds or not creds.valid:
-            try:
-                creds, _ = google.auth.default(scopes=scopes)
-                if creds and creds.expired and getattr(creds, "refresh_token", None):
-                    creds.refresh(Request())
-            except Exception:
-                creds = None
-
-        # 3. Refresh expired token
-        if not creds or not creds.valid:
-            if creds and creds.expired and getattr(creds, "refresh_token", None):
-                try:
-                    creds.refresh(Request())
-                    CREDENTIALS_DIR.mkdir(parents=True, exist_ok=True)
-                    TOKEN_FILE.write_text(creds.to_json())
-                except Exception:
-                    if TOKEN_FILE.exists():
-                        TOKEN_FILE.unlink()
-                    creds = None
-
-            if not creds and CLIENT_SECRETS_FILE.exists():
-                pass
-
-        if creds:
-            self.creds = creds
+        if self.creds:
             self._session = requests.Session()
             self._session.headers.update({
-                "Authorization": f"Bearer {creds.token}",
+                "Authorization": f"Bearer {self.creds.token}",
                 "Content-Type": "application/json",
             })
 
@@ -456,10 +428,6 @@ class PhotosTool:
 # ────────────────────────────────────────────────────────────
 
 
-def print_json(data: Any) -> None:
-    print(json.dumps(data, indent=2, default=str))
-
-
 def _show_sync_age() -> None:
     """Print last cache sync time to stderr (non-intrusive)."""
     try:
@@ -570,11 +538,11 @@ def main() -> None:
         if args.command == "verify":
             tool.ensure_service()
             tool.list_items(limit=1)
-            print_json({"status": "authenticated", "message": "Photos API ready"})
+            workspace_lib.print_json({"status": "authenticated", "message": "Photos API ready"})
 
         elif args.command == "list":
             result = tool.list_items(limit=args.limit, page_token=args.page_token)
-            print_json(result)
+            workspace_lib.print_json(result)
 
         elif args.command == "search":
             result = tool.search_items(
@@ -584,15 +552,15 @@ def main() -> None:
                 categories=args.categories,
                 page_token=args.page_token,
             )
-            print_json(result)
+            workspace_lib.print_json(result)
 
         elif args.command == "get":
             item = tool.get_item(args.id)
-            print_json(item)
+            workspace_lib.print_json(item)
 
         elif args.command == "download":
             path = tool.download_item(args.id, args.output)
-            print_json({"status": "downloaded", "path": path})
+            workspace_lib.print_json({"status": "downloaded", "path": path})
 
         elif args.command == "upload":
             item = tool.upload_item(
@@ -600,36 +568,36 @@ def main() -> None:
                 description=args.description,
                 album_id=args.album,
             )
-            print_json({"status": "uploaded", "item": item})
+            workspace_lib.print_json({"status": "uploaded", "item": item})
 
         elif args.command == "albums":
             result = tool.list_albums(limit=args.limit, page_token=args.page_token)
-            print_json(result)
+            workspace_lib.print_json(result)
 
         elif args.command == "album-get":
             album = tool.get_album(args.id)
             contents = tool.get_album_contents(
                 args.id, limit=args.limit, page_token=args.page_token
             )
-            print_json({"album": album, **contents})
+            workspace_lib.print_json({"album": album, **contents})
 
         elif args.command == "album-create":
             album = tool.create_album(args.title)
-            print_json({"status": "created", "album": album})
+            workspace_lib.print_json({"status": "created", "album": album})
 
         elif args.command == "album-add":
             result = tool.add_to_album(args.album, args.items)
-            print_json(result)
+            workspace_lib.print_json(result)
 
         elif args.command == "album-remove":
             result = tool.remove_from_album(args.album, args.items)
-            print_json(result)
+            workspace_lib.print_json(result)
 
         else:
             parser.print_help()
 
     except Exception as e:
-        print_json({"status": "error", "message": str(e), "type": type(e).__name__})
+        workspace_lib.print_json({"status": "error", "message": str(e), "type": type(e).__name__})
 
 
 if __name__ == "__main__":

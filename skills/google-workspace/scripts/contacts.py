@@ -23,6 +23,7 @@ Commands:
 import argparse
 import json
 import os
+import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Any
@@ -33,19 +34,15 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build, Resource
 
+import workspace_lib
+
 # --- Configuration ---
 
 def _find_credentials_dir() -> Path:
-    """Check env var, then unified workspace dir, then legacy dir."""
-    if os.environ.get("CONTACTS_CREDENTIALS_DIR"):
-        return Path(os.environ["CONTACTS_CREDENTIALS_DIR"])
-    workspace = Path(os.environ.get("GOOGLE_WORKSPACE_DIR", Path.home() / ".google_workspace"))
-    if (workspace / "token.json").exists():
-        return workspace
-    legacy = Path.home() / ".contacts_credentials"
-    if (legacy / "token.json").exists():
-        return legacy
-    return workspace
+    return workspace_lib.find_credentials_dir(
+        env_var="CONTACTS_CREDENTIALS_DIR",
+        legacy_dir_name=".contacts_credentials"
+    )
 
 CREDENTIALS_DIR = _find_credentials_dir()
 TOKEN_FILE = CREDENTIALS_DIR / "token.json"
@@ -76,42 +73,18 @@ class ContactsTool:
         return DEFAULT_SCOPE
 
     def _authenticate(self) -> None:
-        creds = None
+        """Authenticate using shared workspace library."""
         scope = self._get_current_scope()
         scopes = SCOPES_MAP.get(scope, SCOPES_MAP[DEFAULT_SCOPE])
+        
+        creds = workspace_lib.authenticate(
+            scopes=scopes,
+            token_file=TOKEN_FILE,
+            client_secrets_file=CLIENT_SECRETS_FILE,
+            service_name="Contacts"
+        )
 
-        # 1. Try Local Token
-        if TOKEN_FILE.exists():
-            try:
-                creds = Credentials.from_authorized_user_file(str(TOKEN_FILE), scopes)
-            except Exception:
-                pass
-
-        # 2. Try ADC
-        if not creds or not creds.valid:
-            try:
-                creds, _ = google.auth.default(scopes=scopes)
-                if creds and creds.expired and getattr(creds, "refresh_token", None):
-                    creds.refresh(Request())
-            except Exception:
-                creds = None
-
-        # 3. Refresh expired token
-        if not creds or not creds.valid:
-            if creds and creds.expired and getattr(creds, "refresh_token", None):
-                try:
-                    creds.refresh(Request())
-                    CREDENTIALS_DIR.mkdir(parents=True, exist_ok=True)
-                    TOKEN_FILE.write_text(creds.to_json())
-                except Exception:
-                    if TOKEN_FILE.exists():
-                        TOKEN_FILE.unlink()
-                    creds = None
-
-            if not creds and CLIENT_SECRETS_FILE.exists():
-                pass
-
-        if creds:
+        if creds and creds.valid:
             self.service = build("people", "v1", credentials=creds)
 
     def setup_interactive(self) -> None:
@@ -347,10 +320,6 @@ class ContactsTool:
 # ────────────────────────────────────────────────────────────
 
 
-def print_json(data: Any) -> None:
-    print(json.dumps(data, indent=2, default=str))
-
-
 def _show_sync_age() -> None:
     """Print last cache sync time to stderr (non-intrusive)."""
     try:
@@ -451,19 +420,19 @@ def main() -> None:
                 pageSize=1,
                 personFields="names",
             ).execute()
-            print_json({"status": "authenticated", "message": "Contacts API ready"})
+            workspace_lib.print_json({"status": "authenticated", "message": "Contacts API ready"})
 
         elif args.command == "search":
             contacts = tool.search_contacts(args.query, limit=args.limit)
-            print_json(contacts)
+            workspace_lib.print_json(contacts)
 
         elif args.command == "list":
             result = tool.list_contacts(limit=args.limit, page_token=args.page_token)
-            print_json(result)
+            workspace_lib.print_json(result)
 
         elif args.command == "get":
             contact = tool.get_contact(args.id)
-            print_json(contact)
+            workspace_lib.print_json(contact)
 
         elif args.command == "create":
             contact = tool.create_contact(
@@ -475,7 +444,7 @@ def main() -> None:
                 title=args.title,
                 notes=args.notes,
             )
-            print_json({"status": "created", "contact": contact})
+            workspace_lib.print_json({"status": "created", "contact": contact})
 
         elif args.command == "update":
             contact = tool.update_contact(
@@ -488,17 +457,17 @@ def main() -> None:
                 title=args.title,
                 notes=args.notes,
             )
-            print_json({"status": "updated", "contact": contact})
+            workspace_lib.print_json({"status": "updated", "contact": contact})
 
         elif args.command == "delete":
             result = tool.delete_contact(args.id)
-            print_json(result)
+            workspace_lib.print_json(result)
 
         else:
             parser.print_help()
 
     except Exception as e:
-        print_json({"status": "error", "message": str(e), "type": type(e).__name__})
+        workspace_lib.print_json({"status": "error", "message": str(e), "type": type(e).__name__})
 
 
 if __name__ == "__main__":

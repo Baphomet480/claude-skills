@@ -25,6 +25,7 @@ Commands:
 import argparse
 import json
 import os
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Optional, Any
@@ -35,19 +36,15 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build, Resource
 
+import workspace_lib
+
 # --- Configuration ---
 
 def _find_credentials_dir() -> Path:
-    """Check env var, then unified workspace dir, then legacy dir."""
-    if os.environ.get("CALENDAR_CREDENTIALS_DIR"):
-        return Path(os.environ["CALENDAR_CREDENTIALS_DIR"])
-    workspace = Path(os.environ.get("GOOGLE_WORKSPACE_DIR", Path.home() / ".google_workspace"))
-    if (workspace / "token.json").exists():
-        return workspace
-    legacy = Path.home() / ".calendar_credentials"
-    if (legacy / "token.json").exists():
-        return legacy
-    return workspace
+    return workspace_lib.find_credentials_dir(
+        env_var="CALENDAR_CREDENTIALS_DIR",
+        legacy_dir_name=".calendar_credentials"
+    )
 
 CREDENTIALS_DIR = _find_credentials_dir()
 TOKEN_FILE = CREDENTIALS_DIR / "token.json"
@@ -76,42 +73,18 @@ class CalendarTool:
         return DEFAULT_SCOPE
 
     def _authenticate(self) -> None:
-        creds = None
+        """Authenticate using shared workspace library."""
         scope = self._get_current_scope()
         scopes = SCOPES_MAP.get(scope, SCOPES_MAP[DEFAULT_SCOPE])
+        
+        creds = workspace_lib.authenticate(
+            scopes=scopes,
+            token_file=TOKEN_FILE,
+            client_secrets_file=CLIENT_SECRETS_FILE,
+            service_name="Calendar"
+        )
 
-        # 1. Try Local Token
-        if TOKEN_FILE.exists():
-            try:
-                creds = Credentials.from_authorized_user_file(str(TOKEN_FILE), scopes)
-            except Exception:
-                pass
-
-        # 2. Try ADC
-        if not creds or not creds.valid:
-            try:
-                creds, _ = google.auth.default(scopes=scopes)
-                if creds and creds.expired and getattr(creds, "refresh_token", None):
-                    creds.refresh(Request())
-            except Exception:
-                creds = None
-
-        # 3. Refresh expired token
-        if not creds or not creds.valid:
-            if creds and creds.expired and getattr(creds, "refresh_token", None):
-                try:
-                    creds.refresh(Request())
-                    CREDENTIALS_DIR.mkdir(parents=True, exist_ok=True)
-                    TOKEN_FILE.write_text(creds.to_json())
-                except Exception:
-                    if TOKEN_FILE.exists():
-                        TOKEN_FILE.unlink()
-                    creds = None
-
-            if not creds and CLIENT_SECRETS_FILE.exists():
-                pass
-
-        if creds:
+        if creds and creds.valid:
             self.service = build("calendar", "v3", credentials=creds)
 
     def setup_interactive(self) -> None:
@@ -341,10 +314,6 @@ class CalendarTool:
 # ────────────────────────────────────────────────────────────
 
 
-def print_json(data: Any) -> None:
-    print(json.dumps(data, indent=2, default=str))
-
-
 def _show_sync_age() -> None:
     """Print last cache sync time to stderr (non-intrusive)."""
     try:
@@ -458,11 +427,11 @@ def main() -> None:
         if args.command == "verify":
             tool.ensure_service()
             tool.list_events(max_results=1)
-            print_json({"status": "authenticated", "message": "Calendar API ready"})
+            workspace_lib.print_json({"status": "authenticated", "message": "Calendar API ready"})
 
         elif args.command == "calendars":
             cals = tool.list_calendars()
-            print_json(cals)
+            workspace_lib.print_json(cals)
 
         elif args.command == "list":
             events = tool.list_events(
@@ -472,15 +441,15 @@ def main() -> None:
                 time_max=args.before,
                 query=args.query,
             )
-            print_json(events)
+            workspace_lib.print_json(events)
 
         elif args.command == "get":
             event = tool.get_event(args.id, calendar_id=args.calendar)
-            print_json(event)
+            workspace_lib.print_json(event)
 
         elif args.command == "search":
             events = tool.search_events(args.query, max_results=args.limit, calendar_id=args.calendar)
-            print_json(events)
+            workspace_lib.print_json(events)
 
         elif args.command == "create":
             event = tool.create_event(
@@ -494,7 +463,7 @@ def main() -> None:
                 timezone_str=args.timezone,
                 all_day=args.all_day,
             )
-            print_json({"status": "created", "event": event})
+            workspace_lib.print_json({"status": "created", "event": event})
 
         elif args.command == "update":
             event = tool.update_event(
@@ -508,21 +477,21 @@ def main() -> None:
                 attendees=args.attendees,
                 timezone_str=args.timezone,
             )
-            print_json({"status": "updated", "event": event})
+            workspace_lib.print_json({"status": "updated", "event": event})
 
         elif args.command == "delete":
             result = tool.delete_event(args.id, calendar_id=args.calendar)
-            print_json(result)
+            workspace_lib.print_json(result)
 
         elif args.command == "quick":
             event = tool.quick_add(args.text, calendar_id=args.calendar)
-            print_json({"status": "created", "event": event})
+            workspace_lib.print_json({"status": "created", "event": event})
 
         else:
             parser.print_help()
 
     except Exception as e:
-        print_json({"status": "error", "message": str(e), "type": type(e).__name__})
+        workspace_lib.print_json({"status": "error", "message": str(e), "type": type(e).__name__})
 
 
 if __name__ == "__main__":

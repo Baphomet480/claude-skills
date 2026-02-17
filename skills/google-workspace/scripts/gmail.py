@@ -259,7 +259,7 @@ class GmailTool:
             "labels": msg.get("labelIds", []),
         }
 
-    def read_message(self, msg_id: str) -> Dict[str, Any]:
+    def read_message(self, msg_id: str, prefer_html: bool = False) -> Dict[str, Any]:
         """Read a single message including full body text."""
         self.ensure_service()
         msg = (
@@ -268,8 +268,8 @@ class GmailTool:
             .get(userId="me", id=msg_id, format="full")
             .execute()
         )
-        headers = {h["name"]: h["value"] for h in msg.get("payload", {}).get("headers", [])}
-        body = self._extract_body(msg.get("payload", {}))
+        headers = {h["name"].lower(): h["value"] for h in msg.get("payload", {}).get("headers", [])}
+        body = self._extract_body(msg.get("payload", {}), prefer_html=prefer_html)
         attachments = self._list_attachments(msg.get("payload", {}))
 
         return {
@@ -290,7 +290,7 @@ class GmailTool:
             "attachments": attachments,
         }
 
-    def read_thread(self, thread_id: str) -> Dict[str, Any]:
+    def read_thread(self, thread_id: str, prefer_html: bool = False) -> Dict[str, Any]:
         """Read all messages in a thread."""
         self.ensure_service()
         thread = (
@@ -302,8 +302,8 @@ class GmailTool:
 
         messages = []
         for msg in thread.get("messages", []):
-            headers = {h["name"]: h["value"] for h in msg.get("payload", {}).get("headers", [])}
-            body = self._extract_body(msg.get("payload", {}))
+            headers = {h["name"].lower(): h["value"] for h in msg.get("payload", {}).get("headers", [])}
+            body = self._extract_body(msg.get("payload", {}), prefer_html=prefer_html)
             messages.append({
                 "id": msg["id"],
                 "snippet": msg.get("snippet"),
@@ -327,29 +327,41 @@ class GmailTool:
     # Body extraction helpers
     # ────────────────────────────────────────────────────────────
 
-    def _extract_body(self, payload: Dict[str, Any]) -> str:
-        """Recursively extract text/plain body (fallback to text/html)."""
+    def _extract_body(self, payload: Dict[str, Any], prefer_html: bool = False) -> str:
+        """Recursively extract body, preferring HTML if requested."""
         mime_type = payload.get("mimeType", "")
 
         # Direct body data
-        if mime_type == "text/plain" and payload.get("body", {}).get("data"):
-            return base64.urlsafe_b64decode(payload["body"]["data"]).decode("utf-8", errors="replace")
+        if payload.get("body", {}).get("data"):
+            decoded = base64.urlsafe_b64decode(payload["body"]["data"]).decode("utf-8", errors="replace")
+            if mime_type == "text/html":
+                return decoded
+            if mime_type == "text/plain":
+                return decoded
 
         # Multipart: recurse
         parts = payload.get("parts", [])
         plain_text = ""
         html_text = ""
+        
         for part in parts:
             part_mime = part.get("mimeType", "")
-            if part_mime == "text/plain" and part.get("body", {}).get("data"):
-                plain_text += base64.urlsafe_b64decode(part["body"]["data"]).decode("utf-8", errors="replace")
-            elif part_mime == "text/html" and part.get("body", {}).get("data"):
-                html_text += base64.urlsafe_b64decode(part["body"]["data"]).decode("utf-8", errors="replace")
+            part_body = part.get("body", {}).get("data")
+            
+            if part_mime == "text/plain" and part_body:
+                plain_text += base64.urlsafe_b64decode(part_body).decode("utf-8", errors="replace")
+            elif part_mime == "text/html" and part_body:
+                html_text += base64.urlsafe_b64decode(part_body).decode("utf-8", errors="replace")
             elif part_mime.startswith("multipart/"):
-                nested = self._extract_body(part)
+                nested = self._extract_body(part, prefer_html=prefer_html)
                 if nested:
-                    plain_text += nested
+                    if prefer_html:
+                        html_text += nested
+                    else:
+                        plain_text += nested
 
+        if prefer_html and html_text:
+            return html_text
         return plain_text if plain_text else html_text
 
     def _list_attachments(self, payload: Dict[str, Any]) -> List[Dict[str, str]]:
@@ -402,9 +414,11 @@ class GmailTool:
         bcc: Optional[str] = None,
         in_reply_to: Optional[str] = None,
         references: Optional[str] = None,
+        is_html: bool = False,
     ) -> str:
         """Build a MIME message and return urlsafe-b64 encoded raw string."""
-        message = MIMEText(body, "plain", "utf-8")
+        subtype = "html" if is_html else "plain"
+        message = MIMEText(body, subtype, "utf-8")
         message["to"] = to
         message["from"] = self._get_user_email()
         message["subject"] = subject
@@ -428,10 +442,11 @@ class GmailTool:
         thread_id: Optional[str] = None,
         in_reply_to: Optional[str] = None,
         references: Optional[str] = None,
+        is_html: bool = False,
     ) -> Dict[str, Any]:
         """Create a draft email (optionally threaded)."""
         self.ensure_service()
-        raw = self._build_mime(to, subject, body, cc, bcc, in_reply_to, references)
+        raw = self._build_mime(to, subject, body, cc, bcc, in_reply_to, references, is_html=is_html)
         draft_body: Dict[str, Any] = {"message": {"raw": raw}}
         if thread_id:
             draft_body["message"]["threadId"] = thread_id
@@ -447,10 +462,11 @@ class GmailTool:
         thread_id: Optional[str] = None,
         in_reply_to: Optional[str] = None,
         references: Optional[str] = None,
+        is_html: bool = False,
     ) -> Dict[str, Any]:
         """Send an email directly."""
         self.ensure_service()
-        raw = self._build_mime(to, subject, body, cc, bcc, in_reply_to, references)
+        raw = self._build_mime(to, subject, body, cc, bcc, in_reply_to, references, is_html=is_html)
         msg_body: Dict[str, Any] = {"raw": raw}
         if thread_id:
             msg_body["threadId"] = thread_id
@@ -460,7 +476,7 @@ class GmailTool:
     # Reply / Reply All / Forward
     # ────────────────────────────────────────────────────────────
 
-    def reply(self, msg_id: str, body: str, send: bool = False) -> Dict[str, Any]:
+    def reply(self, msg_id: str, body: str, send: bool = False, is_html: bool = False) -> Dict[str, Any]:
         """Reply to the sender of a message."""
         original = self.read_message(msg_id)
         to = original["from"]
@@ -476,9 +492,10 @@ class GmailTool:
             thread_id=original["threadId"],
             in_reply_to=original.get("messageId"),
             references=self._build_references(original),
+            is_html=is_html,
         )
 
-    def reply_all(self, msg_id: str, body: str, send: bool = False) -> Dict[str, Any]:
+    def reply_all(self, msg_id: str, body: str, send: bool = False, is_html: bool = False) -> Dict[str, Any]:
         """Reply to all recipients of a message (sender + To + Cc, minus self)."""
         original = self.read_message(msg_id)
         my_email = self._get_user_email().lower()
@@ -514,6 +531,7 @@ class GmailTool:
             thread_id=original["threadId"],
             in_reply_to=original.get("messageId"),
             references=self._build_references(original),
+            is_html=is_html,
         )
 
     def forward(
@@ -522,22 +540,33 @@ class GmailTool:
         to: str,
         body: Optional[str] = None,
         send: bool = False,
+        is_html: bool = False,
     ) -> Dict[str, Any]:
         """Forward a message (includes original body)."""
-        original = self.read_message(msg_id)
+        original = self.read_message(msg_id, prefer_html=is_html)
 
         subject = original["subject"] or ""
         if not subject.lower().startswith("fwd:"):
             subject = f"Fwd: {subject}"
 
         # Build forwarded body with attribution
-        fwd_header = (
-            f"\n\n---------- Forwarded message ----------\n"
-            f"From: {original.get('from', 'Unknown')}\n"
-            f"Date: {original.get('date', 'Unknown')}\n"
-            f"Subject: {original.get('subject', '(no subject)')}\n"
-            f"To: {original.get('to', 'Unknown')}\n\n"
-        )
+        if is_html:
+            fwd_header = (
+                f"<br><br>---------- Forwarded message ----------<br>"
+                f"From: {original.get('from', 'Unknown')}<br>"
+                f"Date: {original.get('date', 'Unknown')}<br>"
+                f"Subject: {original.get('subject', '(no subject)')}<br>"
+                f"To: {original.get('to', 'Unknown')}<br><br>"
+            )
+        else:
+            fwd_header = (
+                f"\n\n---------- Forwarded message ----------\n"
+                f"From: {original.get('from', 'Unknown')}\n"
+                f"Date: {original.get('date', 'Unknown')}\n"
+                f"Subject: {original.get('subject', '(no subject)')}\n"
+                f"To: {original.get('to', 'Unknown')}\n\n"
+            )
+            
         original_body = original.get("body", "")
         full_body = (body or "") + fwd_header + original_body
 
@@ -549,6 +578,7 @@ class GmailTool:
             thread_id=original["threadId"],
             in_reply_to=original.get("messageId"),
             references=self._build_references(original),
+            is_html=is_html,
         )
 
     def _build_references(self, msg: Dict[str, Any]) -> str:
@@ -643,29 +673,33 @@ def main() -> None:
     sp = subparsers.add_parser("draft", help="Create a draft email")
     sp.add_argument("--to", required=True, help="Recipient email")
     sp.add_argument("--subject", required=True, help="Subject line")
-    sp.add_argument("--body", required=True, help="Email body text")
+    sp.add_argument("--body", required=True, help="Email body text (or HTML if --html set)")
     sp.add_argument("--cc", help="CC recipient(s)")
     sp.add_argument("--bcc", help="BCC recipient(s)")
+    sp.add_argument("--html", action="store_true", help="Send as HTML")
 
     # send
     sp = subparsers.add_parser("send", help="Send an email directly")
     sp.add_argument("--to", required=True, help="Recipient email")
     sp.add_argument("--subject", required=True, help="Subject line")
-    sp.add_argument("--body", required=True, help="Email body text")
+    sp.add_argument("--body", required=True, help="Email body text (or HTML if --html set)")
     sp.add_argument("--cc", help="CC recipient(s)")
     sp.add_argument("--bcc", help="BCC recipient(s)")
+    sp.add_argument("--html", action="store_true", help="Send as HTML")
 
     # reply
     sp = subparsers.add_parser("reply", help="Reply to a message (sender only)")
     sp.add_argument("--id", required=True, help="Message ID to reply to")
     sp.add_argument("--body", required=True, help="Reply body text")
     sp.add_argument("--send", action="store_true", help="Send immediately (default: draft)")
+    sp.add_argument("--html", action="store_true", help="Send as HTML")
 
     # reply-all
     sp = subparsers.add_parser("reply-all", help="Reply to all recipients")
     sp.add_argument("--id", required=True, help="Message ID to reply to")
     sp.add_argument("--body", required=True, help="Reply body text")
     sp.add_argument("--send", action="store_true", help="Send immediately (default: draft)")
+    sp.add_argument("--html", action="store_true", help="Send as HTML")
 
     # forward
     sp = subparsers.add_parser("forward", help="Forward a message")
@@ -673,6 +707,7 @@ def main() -> None:
     sp.add_argument("--to", required=True, help="Forward recipient email")
     sp.add_argument("--body", help="Optional note above forwarded content")
     sp.add_argument("--send", action="store_true", help="Send immediately (default: draft)")
+    sp.add_argument("--html", action="store_true", help="Send as HTML")
 
     # trash
     sp = subparsers.add_parser("trash", help="Move a message to trash")
@@ -709,54 +744,54 @@ def main() -> None:
         tool = GmailTool()
 
         if args.command == "verify":
-            print_json({"status": "authenticated", "profile": tool.get_profile()})
+            workspace_lib.print_json({"status": "authenticated", "profile": tool.get_profile()})
 
         elif args.command == "search":
             results = tool.search_messages(args.query, args.limit)
-            print_json(results)
+            workspace_lib.print_json(results)
 
         elif args.command == "read":
-            msg = tool.read_message(args.id)
-            print_json(msg)
+            msg = tool.read_message(args.id, prefer_html=args.html)
+            workspace_lib.print_json(msg)
 
         elif args.command == "thread":
-            thread = tool.read_thread(args.id)
-            print_json(thread)
+            thread = tool.read_thread(args.id, prefer_html=args.html)
+            workspace_lib.print_json(thread)
 
         elif args.command == "draft":
-            draft = tool.create_draft(args.to, args.subject, args.body, args.cc, args.bcc)
-            print_json({"status": "draft_created", "draft": draft})
+            draft = tool.create_draft(args.to, args.subject, args.body, args.cc, args.bcc, is_html=args.html)
+            workspace_lib.print_json({"status": "draft_created", "draft": draft})
 
         elif args.command == "send":
-            result = tool.send_message(args.to, args.subject, args.body, args.cc, args.bcc)
-            print_json({"status": "sent", "message": result})
+            result = tool.send_message(args.to, args.subject, args.body, args.cc, args.bcc, is_html=args.html)
+            workspace_lib.print_json({"status": "sent", "message": result})
 
         elif args.command == "reply":
-            result = tool.reply(args.id, args.body, send=args.send)
+            result = tool.reply(args.id, args.body, send=args.send, is_html=args.html)
             action = "sent" if args.send else "draft_created"
-            print_json({"status": action, "result": result})
+            workspace_lib.print_json({"status": action, "result": result})
 
         elif args.command == "reply-all":
-            result = tool.reply_all(args.id, args.body, send=args.send)
+            result = tool.reply_all(args.id, args.body, send=args.send, is_html=args.html)
             action = "sent" if args.send else "draft_created"
-            print_json({"status": action, "result": result})
+            workspace_lib.print_json({"status": action, "result": result})
 
         elif args.command == "forward":
-            result = tool.forward(args.id, args.to, body=args.body, send=args.send)
+            result = tool.forward(args.id, args.to, body=args.body, send=args.send, is_html=args.html)
             action = "sent" if args.send else "draft_created"
-            print_json({"status": action, "result": result})
+            workspace_lib.print_json({"status": action, "result": result})
 
         elif args.command == "trash":
             result = tool.trash_message(args.id)
-            print_json({"status": "trashed", "message": result})
+            workspace_lib.print_json({"status": "trashed", "message": result})
 
         elif args.command == "untrash":
             result = tool.untrash_message(args.id)
-            print_json({"status": "untrashed", "message": result})
+            workspace_lib.print_json({"status": "untrashed", "message": result})
 
         elif args.command == "labels":
             labels = tool.list_labels()
-            print_json(labels)
+            workspace_lib.print_json(labels)
 
         elif args.command == "modify-labels":
             result = tool.modify_labels(
@@ -764,7 +799,7 @@ def main() -> None:
                 add_labels=args.add or None,
                 remove_labels=args.remove or None,
             )
-            print_json({"status": "labels_modified", "message": result})
+            workspace_lib.print_json({"status": "labels_modified", "message": result})
 
         elif args.command == "attachments":
             msg = tool.read_message(args.id)
@@ -775,13 +810,13 @@ def main() -> None:
                         args.id, att["attachmentId"], att["filename"], args.output_dir
                     )
                     downloaded.append({"filename": att["filename"], "path": path})
-            print_json({"status": "downloaded", "attachments": downloaded})
+            workspace_lib.print_json({"status": "downloaded", "attachments": downloaded})
 
         else:
             parser.print_help()
 
     except Exception as e:
-        print_json({"status": "error", "message": str(e), "type": type(e).__name__})
+        workspace_lib.print_json({"status": "error", "message": str(e), "type": type(e).__name__})
 
 
 if __name__ == "__main__":

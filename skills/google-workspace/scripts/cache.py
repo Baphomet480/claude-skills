@@ -30,11 +30,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-import google.auth
 import requests
-from google.auth.transport.requests import Request
-from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
+import workspace_lib
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
@@ -54,16 +51,6 @@ CACHE_DIR = Path(
 )
 DB_PATH = CACHE_DIR / "cache.db"
 
-ALL_SCOPES = [
-    "https://mail.google.com/",
-    "https://www.googleapis.com/auth/calendar",
-    "https://www.googleapis.com/auth/contacts",
-    "https://www.googleapis.com/auth/drive",
-    "https://www.googleapis.com/auth/photoslibrary.appendonly",
-    "https://www.googleapis.com/auth/photoslibrary.readonly.appcreateddata",
-    "https://www.googleapis.com/auth/cloud-platform",
-]
-
 PHOTOS_API_BASE = "https://photoslibrary.googleapis.com/v1"
 
 SERVICES = ["gmail", "calendar", "contacts", "drive"]
@@ -79,59 +66,6 @@ NETWORK_ERRORS = (
     requests.exceptions.Timeout,
     requests.exceptions.ReadTimeout,
 )
-
-
-# --- Auth ---
-
-
-def _find_credentials_dir() -> Path:
-    """Find credentials, checking unified then legacy dirs."""
-    workspace = Path(
-        os.environ.get("GOOGLE_WORKSPACE_DIR", Path.home() / ".google_workspace")
-    )
-    if (workspace / "token.json").exists():
-        return workspace
-    # Check legacy dirs
-    for name in [
-        ".gmail_credentials",
-        ".calendar_credentials",
-        ".drive_credentials",
-    ]:
-        legacy = Path.home() / name
-        if (legacy / "token.json").exists():
-            return legacy
-    return workspace
-
-
-def get_credentials() -> Credentials:
-    """Authenticate and return credentials."""
-    creds_dir = _find_credentials_dir()
-    token_file = creds_dir / "token.json"
-    creds = None
-
-    if token_file.exists():
-        try:
-            creds = Credentials.from_authorized_user_file(str(token_file), ALL_SCOPES)
-        except Exception:
-            pass
-
-    if not creds or not creds.valid:
-        try:
-            creds, _ = google.auth.default(scopes=ALL_SCOPES)
-            if creds and creds.expired and getattr(creds, "refresh_token", None):
-                creds.refresh(Request())
-        except Exception:
-            creds = None
-
-    if not creds or not creds.valid:
-        if creds and creds.expired and getattr(creds, "refresh_token", None):
-            creds.refresh(Request())
-
-    if not creds:
-        print("Error: Not authenticated. Run setup_workspace.py first.")
-        sys.exit(1)
-
-    return creds
 
 
 # --- Database ---
@@ -744,10 +678,6 @@ def search_cache(
 # --- CLI ---
 
 
-def print_json(data: Any) -> None:
-    print(json.dumps(data, indent=2, default=str))
-
-
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Google Workspace Cache — Local SQLite index"
@@ -789,7 +719,15 @@ def main() -> None:
 
     if args.command == "sync":
         try:
-            creds = get_credentials()
+            # For cache sync, we need full scopes
+            workspace_dir = workspace_lib.find_credentials_dir()
+            creds = workspace_lib.authenticate(
+                scopes=workspace_lib.ALL_SCOPES,
+                token_file=workspace_dir / "token.json",
+                service_name="Cache"
+            )
+            if not creds:
+                sys.exit(1)
         except NETWORK_ERRORS as e:
             print(f"Network unavailable, skipping sync: {e}")
             sys.exit(0)
@@ -828,9 +766,9 @@ def main() -> None:
         db = get_db()
         results = search_cache(db, args.query, service=args.service)
         if results:
-            print_json(results)
+            workspace_lib.print_json(results)
         else:
-            print_json({"results": [], "message": "No matches found"})
+            workspace_lib.print_json({"results": [], "message": "No matches found"})
 
     elif args.command == "last-sync":
         if not DB_PATH.exists():
@@ -876,7 +814,7 @@ def main() -> None:
         status["database_exists"] = DB_PATH.exists()
         if DB_PATH.exists():
             status["database_size_mb"] = round(DB_PATH.stat().st_size / 1048576, 2)
-        print_json(status)
+        workspace_lib.print_json(status)
 
     elif args.command == "clear":
         if DB_PATH.exists():

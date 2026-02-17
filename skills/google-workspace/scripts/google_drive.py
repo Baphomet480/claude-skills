@@ -35,6 +35,7 @@ import io
 import json
 import mimetypes
 import os
+import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Any
@@ -46,19 +47,15 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build, Resource
 from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
 
+import workspace_lib
+
 # --- Configuration ---
 
 def _find_credentials_dir() -> Path:
-    """Check env var, then unified workspace dir, then legacy dir."""
-    if os.environ.get("DRIVE_CREDENTIALS_DIR"):
-        return Path(os.environ["DRIVE_CREDENTIALS_DIR"])
-    workspace = Path(os.environ.get("GOOGLE_WORKSPACE_DIR", Path.home() / ".google_workspace"))
-    if (workspace / "token.json").exists():
-        return workspace
-    legacy = Path.home() / ".drive_credentials"
-    if (legacy / "token.json").exists():
-        return legacy
-    return workspace
+    return workspace_lib.find_credentials_dir(
+        env_var="DRIVE_CREDENTIALS_DIR",
+        legacy_dir_name=".drive_credentials"
+    )
 
 CREDENTIALS_DIR = _find_credentials_dir()
 TOKEN_FILE = CREDENTIALS_DIR / "token.json"
@@ -112,42 +109,18 @@ class DriveTool:
         return DEFAULT_SCOPE
 
     def _authenticate(self) -> None:
-        creds = None
+        """Authenticate using shared workspace library."""
         scope = self._get_current_scope()
         scopes = SCOPES_MAP.get(scope, SCOPES_MAP[DEFAULT_SCOPE])
+        
+        creds = workspace_lib.authenticate(
+            scopes=scopes,
+            token_file=TOKEN_FILE,
+            client_secrets_file=CLIENT_SECRETS_FILE,
+            service_name="Drive"
+        )
 
-        # 1. Try Local Token
-        if TOKEN_FILE.exists():
-            try:
-                creds = Credentials.from_authorized_user_file(str(TOKEN_FILE), scopes)
-            except Exception:
-                pass
-
-        # 2. Try ADC
-        if not creds or not creds.valid:
-            try:
-                creds, _ = google.auth.default(scopes=scopes)
-                if creds and creds.expired and getattr(creds, "refresh_token", None):
-                    creds.refresh(Request())
-            except Exception:
-                creds = None
-
-        # 3. Refresh expired token
-        if not creds or not creds.valid:
-            if creds and creds.expired and getattr(creds, "refresh_token", None):
-                try:
-                    creds.refresh(Request())
-                    CREDENTIALS_DIR.mkdir(parents=True, exist_ok=True)
-                    TOKEN_FILE.write_text(creds.to_json())
-                except Exception:
-                    if TOKEN_FILE.exists():
-                        TOKEN_FILE.unlink()
-                    creds = None
-
-            if not creds and CLIENT_SECRETS_FILE.exists():
-                pass  # require explicit `setup` command
-
-        if creds:
+        if creds and creds.valid:
             self.service = build("drive", "v3", credentials=creds)
 
     def setup_interactive(self) -> None:
@@ -537,10 +510,6 @@ class DriveTool:
 # ────────────────────────────────────────────────────────────
 
 
-def print_json(data: Any) -> None:
-    print(json.dumps(data, indent=2, default=str))
-
-
 def _show_sync_age() -> None:
     """Print last cache sync time to stderr (non-intrusive)."""
     try:
@@ -686,7 +655,7 @@ def main() -> None:
         if args.command == "verify":
             tool.ensure_service()
             tool.list_files(limit=1)
-            print_json({"status": "authenticated", "message": "Drive API ready"})
+            workspace_lib.print_json({"status": "authenticated", "message": "Drive API ready"})
 
         elif args.command == "list":
             files = tool.list_files(
@@ -694,7 +663,7 @@ def main() -> None:
                 limit=args.limit,
                 include_trashed=args.include_trashed,
             )
-            print_json(files)
+            workspace_lib.print_json(files)
 
         elif args.command == "search":
             files = tool.search_files(
@@ -703,11 +672,11 @@ def main() -> None:
                 mime_type=args.mime_type,
                 include_trashed=args.include_trashed,
             )
-            print_json(files)
+            workspace_lib.print_json(files)
 
         elif args.command == "get":
             f = tool.get_file(args.id)
-            print_json(f)
+            workspace_lib.print_json(f)
 
         elif args.command == "upload":
             f = tool.upload_file(
@@ -716,15 +685,15 @@ def main() -> None:
                 folder_id=args.folder,
                 description=args.description,
             )
-            print_json({"status": "uploaded", "file": f})
+            workspace_lib.print_json({"status": "uploaded", "file": f})
 
         elif args.command == "download":
             path = tool.download_file(args.id, args.output)
-            print_json({"status": "downloaded", "path": path})
+            workspace_lib.print_json({"status": "downloaded", "path": path})
 
         elif args.command == "export":
             path = tool.export_file(args.id, args.output, export_format=args.format)
-            print_json({"status": "exported", "path": path, "format": args.format})
+            workspace_lib.print_json({"status": "exported", "path": path, "format": args.format})
 
         elif args.command == "mkdir":
             folder = tool.create_folder(
@@ -732,31 +701,31 @@ def main() -> None:
                 parent_id=args.parent,
                 description=args.description,
             )
-            print_json({"status": "created", "folder": folder})
+            workspace_lib.print_json({"status": "created", "folder": folder})
 
         elif args.command == "move":
             f = tool.move_file(args.id, args.to)
-            print_json({"status": "moved", "file": f})
+            workspace_lib.print_json({"status": "moved", "file": f})
 
         elif args.command == "copy":
             f = tool.copy_file(args.id, name=args.name, folder_id=args.folder)
-            print_json({"status": "copied", "file": f})
+            workspace_lib.print_json({"status": "copied", "file": f})
 
         elif args.command == "rename":
             f = tool.rename_file(args.id, args.name)
-            print_json({"status": "renamed", "file": f})
+            workspace_lib.print_json({"status": "renamed", "file": f})
 
         elif args.command == "trash":
             f = tool.trash_file(args.id)
-            print_json({"status": "trashed", "file": f})
+            workspace_lib.print_json({"status": "trashed", "file": f})
 
         elif args.command == "untrash":
             f = tool.untrash_file(args.id)
-            print_json({"status": "untrashed", "file": f})
+            workspace_lib.print_json({"status": "untrashed", "file": f})
 
         elif args.command == "delete":
             result = tool.delete_file(args.id)
-            print_json(result)
+            workspace_lib.print_json(result)
 
         elif args.command == "share":
             result = tool.share_file(
@@ -768,21 +737,21 @@ def main() -> None:
                 send_notification=not args.no_notify,
                 message=args.message,
             )
-            print_json({"status": "shared", "permission": result})
+            workspace_lib.print_json({"status": "shared", "permission": result})
 
         elif args.command == "unshare":
             result = tool.unshare_file(args.id, args.permission_id)
-            print_json(result)
+            workspace_lib.print_json(result)
 
         elif args.command == "permissions":
             perms = tool.list_permissions(args.id)
-            print_json(perms)
+            workspace_lib.print_json(perms)
 
         else:
             parser.print_help()
 
     except Exception as e:
-        print_json({"status": "error", "message": str(e), "type": type(e).__name__})
+        workspace_lib.print_json({"status": "error", "message": str(e), "type": type(e).__name__})
 
 
 if __name__ == "__main__":
