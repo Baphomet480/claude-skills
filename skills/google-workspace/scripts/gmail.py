@@ -43,6 +43,8 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build, Resource
 
+import workspace_lib
+
 # --- Configuration ---
 
 def _find_credentials_dir() -> Path:
@@ -276,15 +278,15 @@ class GmailTool:
             "id": msg_id,
             "threadId": msg.get("threadId"),
             "snippet": msg.get("snippet"),
-            "from": headers.get("From"),
-            "to": headers.get("To"),
-            "cc": headers.get("Cc"),
-            "bcc": headers.get("Bcc"),
-            "subject": headers.get("Subject"),
-            "date": headers.get("Date"),
-            "messageId": headers.get("Message-ID"),
-            "inReplyTo": headers.get("In-Reply-To"),
-            "references": headers.get("References"),
+            "from": headers.get("from"),
+            "to": headers.get("to"),
+            "cc": headers.get("cc"),
+            "bcc": headers.get("bcc"),
+            "subject": headers.get("subject"),
+            "date": headers.get("date"),
+            "messageId": headers.get("message-id"),
+            "inReplyTo": headers.get("in-reply-to"),
+            "references": headers.get("references"),
             "labels": msg.get("labelIds", []),
             "body": body,
             "attachments": attachments,
@@ -307,12 +309,12 @@ class GmailTool:
             messages.append({
                 "id": msg["id"],
                 "snippet": msg.get("snippet"),
-                "from": headers.get("From"),
-                "to": headers.get("To"),
-                "cc": headers.get("Cc"),
-                "subject": headers.get("Subject"),
-                "date": headers.get("Date"),
-                "messageId": headers.get("Message-ID"),
+                "from": headers.get("from"),
+                "to": headers.get("to"),
+                "cc": headers.get("cc"),
+                "subject": headers.get("subject"),
+                "date": headers.get("date"),
+                "messageId": headers.get("message-id"),
                 "labels": msg.get("labelIds", []),
                 "body": body,
             })
@@ -476,19 +478,38 @@ class GmailTool:
     # Reply / Reply All / Forward
     # ────────────────────────────────────────────────────────────
 
+    def _format_reply_body(self, new_body: str, original: Dict[str, Any], is_html: bool) -> str:
+        """Format the reply body with the quoted original message."""
+        sender = original.get("from", "Unknown")
+        date = original.get("date", "Unknown")
+        orig_body = original.get("body", "")
+
+        if is_html:
+            quote_header = f"<br><br>On {date}, {sender} wrote:<br>"
+            # Wrap original body in blockquote
+            quoted_body = f"<blockquote style=\"margin:0 0 0 .8ex;border-left:1px #ccc solid;padding-left:1ex\">{orig_body}</blockquote>"
+            return f"{new_body}{quote_header}{quoted_body}"
+        else:
+            quote_header = f"\n\nOn {date}, {sender} wrote:\n"
+            # Prefix each line with "> "
+            quoted_body = "".join(f"> {line}\n" for line in orig_body.splitlines())
+            return f"{new_body}{quote_header}{quoted_body}"
+
     def reply(self, msg_id: str, body: str, send: bool = False, is_html: bool = False) -> Dict[str, Any]:
         """Reply to the sender of a message."""
-        original = self.read_message(msg_id)
+        original = self.read_message(msg_id, prefer_html=is_html)
         to = original["from"]
         subject = original["subject"] or ""
         if not subject.lower().startswith("re:"):
             subject = f"Re: {subject}"
 
+        full_body = self._format_reply_body(body, original, is_html)
+
         method = self.send_message if send else self.create_draft
         return method(
             to=to,
             subject=subject,
-            body=body,
+            body=full_body,
             thread_id=original["threadId"],
             in_reply_to=original.get("messageId"),
             references=self._build_references(original),
@@ -497,7 +518,7 @@ class GmailTool:
 
     def reply_all(self, msg_id: str, body: str, send: bool = False, is_html: bool = False) -> Dict[str, Any]:
         """Reply to all recipients of a message (sender + To + Cc, minus self)."""
-        original = self.read_message(msg_id)
+        original = self.read_message(msg_id, prefer_html=is_html)
         my_email = self._get_user_email().lower()
 
         # Collect all recipients
@@ -522,11 +543,13 @@ class GmailTool:
         if not subject.lower().startswith("re:"):
             subject = f"Re: {subject}"
 
+        full_body = self._format_reply_body(body, original, is_html)
+
         method = self.send_message if send else self.create_draft
         return method(
             to=to,
             subject=subject,
-            body=body,
+            body=full_body,
             cc=cc,
             thread_id=original["threadId"],
             in_reply_to=original.get("messageId"),
