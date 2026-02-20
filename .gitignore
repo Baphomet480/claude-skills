@@ -26,3 +26,6 @@ token.json
 .gmail_credentials/
 .calendar_credentials/
 .contacts_credentials/
+
+.gemini/
+gha-creds-*.json

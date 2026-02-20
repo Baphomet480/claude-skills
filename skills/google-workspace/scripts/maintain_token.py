@@ -16,6 +16,7 @@ import sys
 import os
 from pathlib import Path
 from datetime import datetime
+import subprocess
 
 # Add script directory to path to import workspace_lib
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -46,10 +47,20 @@ def main():
             print(f"Success. Token refreshed at {datetime.now()}.")
         else:
             print("Token has no refresh token. Cannot maintain.")
+            try:
+                subprocess.run(["notify-send", "Google Workspace Auth Expired", "Please re-authenticate your Google Workspace AI Skill."], check=False)
+                subprocess.run(["osascript", "-e", 'display notification "Please re-authenticate your Google Workspace AI Skill." with title "Google Workspace Auth Expired"'], check=False)
+            except Exception:
+                pass
             sys.exit(1)
 
     except Exception as e:
         print(f"Error refreshing token: {e}", file=sys.stderr)
+        try:
+            subprocess.run(["notify-send", "Google Workspace Auth Error", f"Failed to refresh token: {e}"], check=False)
+            subprocess.run(["osascript", "-e", f'display notification "Failed to refresh token: {e}" with title "Google Workspace Auth Error"'], check=False)
+        except Exception:
+            pass
         sys.exit(1)
 
 if __name__ == "__main__":

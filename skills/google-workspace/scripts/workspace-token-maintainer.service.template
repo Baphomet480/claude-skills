@@ -5,6 +5,6 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/uv run %h/.claude/skills/google-workspace/scripts/maintain_token.py
+ExecStart=%UV_PATH% run %INSTALL_DIR%/scripts/maintain_token.py
 StandardOutput=journal
 StandardError=journal
