@@ -492,7 +492,6 @@ def main() -> None:
     sp.add_argument("--items", nargs="+", required=True, help="Media item IDs")
 
     args = parser.parse_args()
-    workspace_lib.show_sync_age("photos", "items")
 
     if args.command == "setup":
         tool = PhotosTool(skip_auth=True)

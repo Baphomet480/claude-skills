@@ -381,7 +381,6 @@ def main() -> None:
     sp.add_argument("--calendar", default="primary", help="Calendar ID")
 
     args = parser.parse_args()
-    workspace_lib.show_sync_age("calendar", "events")
 
     if args.command == "setup":
         tool = CalendarTool(skip_auth=True)

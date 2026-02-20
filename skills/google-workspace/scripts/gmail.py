@@ -731,7 +731,6 @@ def main() -> None:
     sp.add_argument("--output-dir", default=".", help="Directory to save attachments")
 
     args = parser.parse_args()
-    workspace_lib.show_sync_age("gmail", "msgs")
 
     # Setup is special — skip auto-auth
     if args.command == "setup":

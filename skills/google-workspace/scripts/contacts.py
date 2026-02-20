@@ -370,7 +370,6 @@ def main() -> None:
     sp.add_argument("--id", required=True, help="Resource name (e.g. 'people/c12345')")
 
     args = parser.parse_args()
-    workspace_lib.show_sync_age("contacts", "contacts")
 
     if args.command == "setup":
         tool = ContactsTool(skip_auth=True)

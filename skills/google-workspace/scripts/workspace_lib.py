@@ -127,33 +127,5 @@ def authenticate(
 
     return creds
 
-def show_sync_age(service: str, item_name: str) -> None:
-    """Print last cache sync time to stderr (non-intrusive)."""
-    try:
-        import sqlite3
-        from datetime import datetime
-        cache_dir = Path(os.environ.get("WORKSPACE_CACHE_DIR", str(WORKSPACE_DIR)))
-        db_path = cache_dir / "cache.db"
-        if not db_path.exists():
-            return
-        conn = sqlite3.connect(str(db_path))
-        row = conn.execute(
-            f"SELECT last_sync, record_count FROM sync_state WHERE service = '{service}'"
-        ).fetchone()
-        conn.close()
-        if row and row[0]:
-            dt = datetime.fromisoformat(row[0])
-            delta = datetime.now(dt.tzinfo) - dt
-            mins = int(delta.total_seconds() / 60)
-            if mins < 1:
-                ago = "just now"
-            elif mins < 60:
-                ago = f"{mins}m ago"
-            elif mins < 1440:
-                ago = f"{mins // 60}h {mins % 60}m ago"
-            else:
-                ago = f"{mins // 1440}d ago"
-            print(f"[cache: {row[1]} {item_name}, synced {ago}]", file=sys.stderr)
-    except Exception:
-        pass
+
 

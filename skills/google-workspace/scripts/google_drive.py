@@ -609,7 +609,6 @@ def main() -> None:
     sp.add_argument("--id", required=True, help="File ID")
 
     args = parser.parse_args()
-    workspace_lib.show_sync_age("drive", "files")
 
     if args.command == "setup":
         tool = DriveTool(skip_auth=True)
