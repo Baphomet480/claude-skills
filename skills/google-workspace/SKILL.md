@@ -83,48 +83,10 @@ No migration required. If you already have legacy credentials, they still work.
 
 ---
 
-## Cache / Index
+## 🛑 Notice: No More SQLite Cache
 
-The cache provides a local SQLite index of your Google Workspace data. This lets the agent answer queries like "find my recent emails about invoices" or "what files are in my project folder" without API calls on every request.
-
-### How It Works
-
-- **SQLite database** at `~/.google_workspace/cache.db` with FTS5 full-text search.
-- **Incremental sync** using each service's change detection API (Gmail historyId, Calendar syncToken, Drive startPageToken, Contacts syncToken).
-- **Photos**: Full re-list by creation time (no change detection API available).
-- **Metadata only** — message bodies, file contents, and photos are fetched on demand, not cached.
-
-### Cache Commands
-
-```bash
-# Sync all services (incremental if previously synced, full on first run)
-uv run scripts/cache.py sync
-
-# Sync a specific service
-uv run scripts/cache.py sync --service gmail
-uv run scripts/cache.py sync --service drive
-uv run scripts/cache.py sync --service calendar
-uv run scripts/cache.py sync --service contacts
-uv run scripts/cache.py sync --service photos
-
-# Full-text search across all cached data
-uv run scripts/cache.py search "quarterly report"
-
-# Search within a specific service
-uv run scripts/cache.py search "invoice" --service gmail
-
-# Show cache status (last sync times, record counts)
-uv run scripts/cache.py status
-
-# Clear the entire cache (does not affect credentials)
-uv run scripts/cache.py clear
-```
-
-### When to Use the Cache
-
-- **Use cache** for browsing, searching, and getting an overview of what's available.
-- **Use service scripts directly** for CRUD operations (send email, create event, upload file).
-- **Sync before searching** if data freshness matters — `cache.py sync` takes seconds for incremental updates.
+The local SQLite caching system (`scripts/cache.py`) has been **removed** in favor of live API queries.
+**Do not** attempt to use `cache.py`, `sync`, or `search` against a local database. Always use the live API commands provided by the individual service scripts (e.g., `gmail.py search --query "..."`).
 
 ---
 
