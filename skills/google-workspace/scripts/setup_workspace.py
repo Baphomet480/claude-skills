@@ -8,7 +8,7 @@
 
 """
 Google Workspace Master Setup
-Authenticates ONCE for Gmail, Calendar, Contacts, Drive, and Photos.
+Authenticates ONCE for Gmail, Calendar, Contacts, Drive, Docs, Sheets, and Photos.
 
 Usage:
   uv run scripts/setup_workspace.py
@@ -43,7 +43,7 @@ def find_credentials():
 def main():
     print()
     print("Google Workspace Master Setup")
-    print("(Gmail + Calendar + Contacts + Drive + Photos)")
+    print("(Gmail + Calendar + Contacts + Drive + Docs + Sheets + Photos)")
     print()
 
     # 1. Find Client Secrets

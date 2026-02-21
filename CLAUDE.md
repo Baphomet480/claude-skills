@@ -36,7 +36,7 @@ Skills are consumed by both Claude (`.agent/skills/`) and Gemini (`~/.gemini/ant
 | `hugo-sveltia-cms`           | Hugo + Sveltia CMS integration                                                                                                           |
 | `pitolandia-visual-identity` | Pitolandia brand visual identity system                                                                                                  |
 | `remini-web`                 | Remini web enhancement workflow with manual login and browser-assisted upload/download automation                                        |
-| `google-workspace`           | Unified Google Workspace — Gmail, Calendar, Contacts, Drive, Photos with SQLite cache/index (replaces per-service skills)               |
+| `google-workspace`           | Unified Google Workspace — Gmail, Calendar, Contacts, Drive, Docs, Sheets, and Photos with robust auth (replaces per-service skills)               |
 
 ## Workflow
 

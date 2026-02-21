@@ -1,11 +1,11 @@
 ---
 name: google-workspace
-description: Unified Google Workspace skill — Gmail, Calendar, Contacts, Drive, and Photos with local SQLite cache/index for fast queries.
+description: Unified Google Workspace skill — Gmail, Calendar, Contacts, Drive, Docs, Sheets, and Photos.
 ---
 
 # Google Workspace Skill
 
-Unified Google Workspace management for AI agents. One skill, one auth, five services.
+Unified Google Workspace management for AI agents. One skill, one auth, seven services.
 
 > **Replaces**: `gmail`, `google-calendar`, `google-contacts`, `google-drive`, `google-photos`
 > Run `scripts/upgrade.sh` to migrate from the old per-service skills.
@@ -18,8 +18,9 @@ Unified Google Workspace management for AI agents. One skill, one auth, five ser
 | **Calendar** | `scripts/google_calendar.py` | List, get, search, create, update, delete events, quick-add, calendars  |
 | **Contacts** | `scripts/contacts.py` | Search, list, get, create, update, delete contacts                        |
 | **Drive**    | `scripts/google_drive.py` | List, search, upload, download, export, mkdir, move, copy, rename, trash, delete, share |
+| **Docs**     | `scripts/google_docs.py` | Read text, create documents, append text, replace text                  |
+| **Sheets**   | `scripts/google_sheets.py` | Read ranges, create spreadsheets, append rows, update ranges, clear ranges |
 | **Photos**   | `scripts/google_photos.py` | List, search, download, upload media, manage albums                     |
-| **Cache**    | `scripts/cache.py`    | Local SQLite index with incremental sync and full-text search             |
 
 ## Prerequisites
 
@@ -28,6 +29,8 @@ Unified Google Workspace management for AI agents. One skill, one auth, five ser
    - Google Calendar API
    - Google People API
    - Google Drive API
+   - Google Docs API
+   - Google Sheets API
    - Photos Library API
 2. **OAuth 2.0 Credentials** — Desktop app client (`credentials.json`).
 
@@ -49,6 +52,8 @@ gcloud auth application-default login \
 https://www.googleapis.com/auth/calendar,\
 https://www.googleapis.com/auth/contacts,\
 https://www.googleapis.com/auth/drive,\
+https://www.googleapis.com/auth/documents,\
+https://www.googleapis.com/auth/spreadsheets,\
 https://www.googleapis.com/auth/photoslibrary,\
 https://www.googleapis.com/auth/photoslibrary.sharing,\
 https://www.googleapis.com/auth/cloud-platform
@@ -61,6 +66,8 @@ uv run scripts/gmail.py verify
 uv run scripts/google_calendar.py verify
 uv run scripts/contacts.py verify
 uv run scripts/google_drive.py verify
+uv run scripts/google_docs.py verify
+uv run scripts/google_sheets.py verify
 uv run scripts/google_photos.py verify
 ```
 
@@ -356,6 +363,61 @@ uv run scripts/google_drive.py share --id "FILE_ID" --email "luke@tatooine.net" 
 uv run scripts/google_drive.py share --id "FILE_ID" --type anyone --role reader
 uv run scripts/google_drive.py permissions --id "FILE_ID"
 uv run scripts/google_drive.py unshare --id "FILE_ID" --permission-id "PERM_ID"
+```
+
+---
+
+## Docs
+
+Google Docs content manipulation. Read text, create documents, and modify text.
+
+### Read / Create
+
+```bash
+# Read text from a document
+uv run scripts/google_docs.py read --id "DOC_ID"
+
+# Create a new document
+uv run scripts/google_docs.py create --title "Project Requirements"
+```
+
+### Edit Text
+
+```bash
+# Append text to the end of the document
+uv run scripts/google_docs.py append --id "DOC_ID" --text "Additional requirements:\n1. Must be fast."
+
+# Replace text
+uv run scripts/google_docs.py replace --id "DOC_ID" --old "[COMPANY_NAME]" --new "Acme Corp"
+```
+
+---
+
+## Sheets
+
+Google Sheets manipulation. Read, append, update, and clear ranges.
+
+### Read / Create
+
+```bash
+# Read values from a specific range
+uv run scripts/google_sheets.py read --id "SHEET_ID" --range "Sheet1!A1:D10"
+
+# Create a new spreadsheet
+uv run scripts/google_sheets.py create --title "Q3 Budget"
+```
+
+### Update / Append / Clear
+
+```bash
+# Append a row (expects a 2D JSON array)
+uv run scripts/google_sheets.py append --id "SHEET_ID" --range "Sheet1!A:A" --values '[["2026-03-01", "Rent", 1200]]'
+
+# Update a specific range
+uv run scripts/google_sheets.py update --id "SHEET_ID" --range "Sheet1!A2:C2" --values '[["2026-03-02", "Utilities", 150]]'
+
+# Clear a range
+uv run scripts/google_sheets.py clear --id "SHEET_ID" --range "Sheet1!A2:D10"
 ```
 
 ---

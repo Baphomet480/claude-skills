@@ -19,6 +19,8 @@ ALL_SCOPES = [
     "https://www.googleapis.com/auth/calendar",
     "https://www.googleapis.com/auth/contacts",
     "https://www.googleapis.com/auth/drive",
+    "https://www.googleapis.com/auth/documents",
+    "https://www.googleapis.com/auth/spreadsheets",
     # Photos: old photoslibrary/photoslibrary.readonly scopes were killed March 2025.
     # These surviving scopes only cover app-uploaded content.
     "https://www.googleapis.com/auth/photoslibrary.appendonly",
