@@ -32,9 +32,9 @@ Produce Gemini Deep Research-quality output: rich artifacts with embedded screen
 **Goal**: Map the landscape. Find *what exists* before reading anything.
 
 1. Run **5-8 parallel searches** across different axes. Use at least two tools:
-   - `tavily_search` — broad topic queries
-   - `search_web` — alternate search perspective
-   - `tavily_research` — delegate an entire sub-question (powerful for "state of X" queries)
+   - `search` (Firecrawl) — broad topic queries
+   - `search_web` (Google) — alternate search perspective
+   - `search` with specific `scrapeOptions` — targeted discovery
 2. **Dev-specific breadth**:
    - `search_code` or `search_repositories` — find relevant GitHub repos
    - Search npm trends, bundle sizes, download counts when evaluating packages
@@ -50,8 +50,8 @@ Produce Gemini Deep Research-quality output: rich artifacts with embedded screen
 
 1. **Select the top 8-12 sources** from Phase 1 (prioritize S and A tier).
 2. **Full extraction** — get the complete page content:
-   - `tavily_extract` or `read_url_content` for text-heavy pages
-   - `tavily_crawl` to follow documentation multi-page structures
+   - `scrape` (Firecrawl) or `read_url_content` for text-heavy pages
+   - `crawl` (Firecrawl) to follow documentation multi-page structures
    - `browser_subagent` to **screenshot** key pages (UIs, dashboards, architecture diagrams)
    - `get_file_contents` (GitHub MCP) to read actual source code from repos
 3. **Analyze each source**:
@@ -103,10 +103,10 @@ Produce Gemini Deep Research-quality output: rich artifacts with embedded screen
 
 | Purpose | Primary | Fallback |
 |---------|---------|----------|
-| Topic discovery | `tavily_search` | `search_web` |
-| Delegated deep research | `tavily_research` | Manual multi-search |
-| Full page extraction | `tavily_extract` | `read_url_content` |
-| Multi-page docs | `tavily_crawl` | `tavily_map` + manual |
+| Topic discovery | `search` (Firecrawl) | `search_web` |
+| Delegated deep research | `search` + `scrape` | Manual multi-search |
+| Full page extraction | `scrape` (Firecrawl) | `read_url_content` |
+| Multi-page docs | `crawl` (Firecrawl) | `search` + manual |
 | Visual evidence | `browser_subagent` (screenshot) | `generate_image` |
 | GitHub analysis | `search_code`, `get_file_contents` | `read_url_content` on raw GitHub |
 | Architecture diagrams | Mermaid in markdown | `generate_image` |
