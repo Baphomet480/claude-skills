@@ -394,7 +394,8 @@ class GmailTool:
         references: Optional[str] = None,
     ) -> str:
         """Build a MIME message and return urlsafe-b64 encoded raw string."""
-        message = MIMEText(body, "plain", "utf-8")
+        mime_subtype = "html" if body.strip().lower().startswith("<html") or body.strip().lower().startswith("<!doctype html") else "plain"
+        message = MIMEText(body, mime_subtype, "utf-8")
         message["to"] = to
         message["from"] = self._get_user_email()
         message["subject"] = subject
