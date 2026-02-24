@@ -12,15 +12,15 @@ Unified Google Workspace management for AI agents. One skill, one auth, seven se
 
 ## Services
 
-| Service      | Script                | Capabilities                                                              |
-| ------------ | --------------------- | ------------------------------------------------------------------------- |
-| **Gmail**    | `scripts/gmail.py`    | Search, read, thread, draft, send, reply, reply-all, forward, trash, labels, attachments |
-| **Calendar** | `scripts/google_calendar.py` | List, get, search, create, update, delete events, quick-add, calendars  |
-| **Contacts** | `scripts/contacts.py` | Search, list, get, create, update, delete contacts                        |
-| **Drive**    | `scripts/google_drive.py` | List, search, upload, download, export, mkdir, move, copy, rename, trash, delete, share |
-| **Docs**     | `scripts/google_docs.py` | Read text, create documents, append text, replace text                  |
-| **Sheets**   | `scripts/google_sheets.py` | Read ranges, create spreadsheets, append rows, update ranges, clear ranges |
-| **Photos**   | `scripts/google_photos.py` | List, search, download, upload media, manage albums                     |
+| Service      | Script                       | Capabilities                                                                                                              |
+| ------------ | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| **Gmail**    | `scripts/gmail.py`           | Search, read, thread, draft, send, reply, reply-all, forward, trash, filters, empty-trash/spam                            |
+| **Calendar** | `scripts/google_calendar.py` | List, get, search, create (RRULE), update, delete, quick-add, secondary calendars, Drive attachments                      |
+| **Contacts** | `scripts/contacts.py`        | Search, list, get, create, update, delete contacts                                                                        |
+| **Drive**    | `scripts/google_drive.py`    | List, search, upload, download, export, mkdir, move, copy, rename, trash, delete, empty-trash, share, revisions, comments |
+| **Docs**     | `scripts/google_docs.py`     | Read text, create, append, replace, insert-heading, format-text, insert-image, comments                                   |
+| **Sheets**   | `scripts/google_sheets.py`   | Read, create, append, update, clear, tabs, format-range, freeze-panes, auto-resize                                        |
+| **Photos**   | `scripts/google_photos.py`   | List, search, download, upload media, manage albums                                                                       |
 
 ## Prerequisites
 
@@ -158,33 +158,47 @@ uv run scripts/gmail.py forward --id "18e..." --to "luke@tatooine.net" --body "F
 uv run scripts/gmail.py forward --id "18e..." --to "luke@tatooine.net" --send
 ```
 
-### Trash / Labels / Attachments
+### Trash / Labels / Attachments / Filters
 
 ```bash
 uv run scripts/gmail.py trash --id "18e..."
 uv run scripts/gmail.py untrash --id "18e..."
 
+# Empty Trash or Spam (permanent — no recovery)
+uv run scripts/gmail.py empty-trash
+uv run scripts/gmail.py empty-spam
+
 uv run scripts/gmail.py labels
 uv run scripts/gmail.py modify-labels --id "18e..." --add STARRED --remove UNREAD
 
 uv run scripts/gmail.py attachments --id "18e..." --output-dir ./downloads
+
+# Filters — auto-route or label incoming mail
+uv run scripts/gmail.py list-filters
+uv run scripts/gmail.py create-filter \
+  --from "noreply@galactic-senate.gov" --archive --mark-read
+uv run scripts/gmail.py create-filter \
+  --subject "URGENT" --add-label "IMPORTANT"
+uv run scripts/gmail.py delete-filter --filter-id "ANe1BmhV..."
 ```
 
 ### Safety Guidelines
 
 1. **Prefer `draft` over `send`** for new compositions — let the user review first.
 2. **Reply/Forward defaults to draft** — use `--send` only when explicitly requested.
-3. **Trash is reversible** — permanent deletion is not exposed.
+3. **Trash is reversible** — `empty-trash` is permanent, so confirm intent.
 
 ---
 
 ## Token Maintenance & Persistence
 
 ### 7-Day Expiry Fix (Important)
+
 If you are using a personal Gmail account with a "Testing" GCP project, your refresh token will expire every 7 days.
 To fix this, follow the guide at `references/GCP_SETUP.md` to set up a proper app or use an Internal app (Workspace users).
 
 ### Background Refresh
+
 To keep your 1-hour access token fresh and avoid CLI latency:
 
 ```bash
@@ -230,6 +244,23 @@ uv run scripts/google_calendar.py create \
 uv run scripts/google_calendar.py create \
   --summary "May the 4th" --start "2026-05-04" --end "2026-05-05" --all-day
 
+# Recurring event (RRULE — RFC 5545)
+uv run scripts/google_calendar.py create \
+  --summary "Weekly Stand-up" \
+  --start "2026-03-03T09:00:00" --end "2026-03-03T09:30:00" \
+  --rrule "RRULE:FREQ=WEEKLY;BYDAY=MO"
+
+uv run scripts/google_calendar.py create \
+  --summary "Monthly Report" \
+  --start "2026-03-01T14:00:00" --end "2026-03-01T15:00:00" \
+  --rrule "RRULE:FREQ=MONTHLY;BYMONTHDAY=1;COUNT=12"
+
+# Event with Drive file attachment
+uv run scripts/google_calendar.py create \
+  --summary "Design Review" \
+  --start "2026-03-10T14:00:00" --end "2026-03-10T15:00:00" \
+  --drive-files "FILE_ID_1" "FILE_ID_2"
+
 # Update (patch semantics — only provided fields change)
 uv run scripts/google_calendar.py update --id "abc123" --summary "Updated Meeting"
 
@@ -237,11 +268,21 @@ uv run scripts/google_calendar.py update --id "abc123" --summary "Updated Meetin
 uv run scripts/google_calendar.py delete --id "abc123"
 ```
 
-### Quick Add / Calendars
+### Quick Add / Calendar Management
 
 ```bash
 uv run scripts/google_calendar.py quick --text "Lunch with Padme tomorrow at noon"
+
+# List all calendars
 uv run scripts/google_calendar.py calendars
+
+# Subscribe to a secondary calendar (e.g. public holiday calendar)
+uv run scripts/google_calendar.py add-calendar \
+  --calendar-id "en.usa#holiday@group.v.calendar.google.com"
+
+# Unsubscribe
+uv run scripts/google_calendar.py remove-calendar \
+  --calendar-id "en.usa#holiday@group.v.calendar.google.com"
 ```
 
 ---
@@ -310,14 +351,17 @@ uv run scripts/google_drive.py copy --id "FILE_ID" --name "Copy of Plans"
 uv run scripts/google_drive.py rename --id "FILE_ID" --name "Updated Plans v2"
 ```
 
-### Trash / Delete / Share
+### Trash / Delete / Share / Revisions / Comments
 
 ```bash
 # Soft delete (reversible)
 uv run scripts/google_drive.py trash --id "FILE_ID"
 uv run scripts/google_drive.py untrash --id "FILE_ID"
 
-# Permanent delete (irreversible!)
+# Empty entire trash (permanent, no recovery)
+uv run scripts/google_drive.py empty-trash
+
+# Permanent delete of a specific file
 uv run scripts/google_drive.py delete --id "FILE_ID"
 
 # Share
@@ -325,6 +369,14 @@ uv run scripts/google_drive.py share --id "FILE_ID" --email "luke@tatooine.net" 
 uv run scripts/google_drive.py share --id "FILE_ID" --type anyone --role reader
 uv run scripts/google_drive.py permissions --id "FILE_ID"
 uv run scripts/google_drive.py unshare --id "FILE_ID" --permission-id "PERM_ID"
+
+# Revision history
+uv run scripts/google_drive.py list-revisions --id "FILE_ID"
+uv run scripts/google_drive.py restore-revision --id "FILE_ID" --revision-id "REV_ID"
+
+# Comments
+uv run scripts/google_drive.py list-comments --id "FILE_ID"
+uv run scripts/google_drive.py add-comment --id "FILE_ID" --content "LGTM, approved."
 ```
 
 ---
@@ -351,6 +403,23 @@ uv run scripts/google_docs.py append --id "DOC_ID" --text "Additional requiremen
 
 # Replace text
 uv run scripts/google_docs.py replace --id "DOC_ID" --old "[COMPANY_NAME]" --new "Acme Corp"
+
+# Insert a heading
+uv run scripts/google_docs.py insert-heading --id "DOC_ID" --text "Project Overview" --level 1
+
+# Format a text range (index-based)
+uv run scripts/google_docs.py format-text --id "DOC_ID" --start 0 --end 20 --bold
+uv run scripts/google_docs.py format-text --id "DOC_ID" --start 0 --end 20 --italic --underline
+
+# Insert a public image
+uv run scripts/google_docs.py insert-image --id "DOC_ID" --uri "https://example.com/banner.png"
+```
+
+### Comments
+
+```bash
+uv run scripts/google_docs.py list-comments --id "DOC_ID"
+uv run scripts/google_docs.py add-comment --id "DOC_ID" --content "Please review this section."
 ```
 
 ---
@@ -369,7 +438,7 @@ uv run scripts/google_sheets.py read --id "SHEET_ID" --range "Sheet1!A1:D10"
 uv run scripts/google_sheets.py create --title "Q3 Budget"
 ```
 
-### Update / Append / Clear
+### Update / Append / Clear / Format
 
 ```bash
 # Append a row (expects a 2D JSON array)
@@ -380,6 +449,22 @@ uv run scripts/google_sheets.py update --id "SHEET_ID" --range "Sheet1!A2:C2" --
 
 # Clear a range
 uv run scripts/google_sheets.py clear --id "SHEET_ID" --range "Sheet1!A2:D10"
+
+# Worksheet tab management
+uv run scripts/google_sheets.py list-sheets --id "SHEET_ID"
+uv run scripts/google_sheets.py add-sheet --id "SHEET_ID" --title "February"
+uv run scripts/google_sheets.py rename-sheet --id "SHEET_ID" --title "January" --new-title "Jan 2026"
+uv run scripts/google_sheets.py delete-sheet --id "SHEET_ID" --title "February"
+
+# Format a range (bold header, background color)
+uv run scripts/google_sheets.py format-range \
+  --id "SHEET_ID" --range "Sheet1!A1:D1" --bold --background-color "#4A90D9"
+
+# Freeze the first row and first column
+uv run scripts/google_sheets.py freeze-panes --id "SHEET_ID" --rows 1 --cols 1
+
+# Auto-resize columns to fit content
+uv run scripts/google_sheets.py auto-resize --id "SHEET_ID" --range "Sheet1!A:D"
 ```
 
 ---

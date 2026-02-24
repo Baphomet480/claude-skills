@@ -17,6 +17,13 @@ Commands:
   append         Append a row of values to a range
   update         Update values in a range
   clear          Clear values in a range
+  add-tab        Add a new worksheet tab
+  rename-tab     Rename an existing worksheet tab
+  delete-tab     Delete a worksheet tab (by sheet ID)
+  list-tabs      List all worksheet tabs
+  format-range   Apply bold/background-color to a cell range
+  freeze-panes   Freeze rows/columns
+  auto-resize    Auto-resize columns in a range
 """
 
 import argparse
@@ -198,6 +205,158 @@ class SheetsTool:
         ).execute()
         return {"spreadsheetId": spreadsheet_id, "clearedRange": result.get("clearedRange")}
 
+    # ────────────────────────────────────────────────────────────
+    # Tab management
+    # ────────────────────────────────────────────────────────────
+
+    def list_tabs(self, spreadsheet_id: str) -> Dict[str, Any]:
+        """List all worksheet tabs."""
+        self.ensure_service()
+        result = self.service.spreadsheets().get(
+            spreadsheetId=spreadsheet_id, fields="sheets.properties"
+        ).execute()
+        sheets = [
+            {"sheetId": s["properties"]["sheetId"], "title": s["properties"]["title"], "index": s["properties"]["index"]}
+            for s in result.get("sheets", [])
+        ]
+        return {"spreadsheetId": spreadsheet_id, "tabs": sheets}
+
+    def add_tab(self, spreadsheet_id: str, title: str) -> Dict[str, Any]:
+        """Add a new worksheet tab."""
+        self.ensure_service()
+        body = {"requests": [{"addSheet": {"properties": {"title": title}}}]}
+        result = self.service.spreadsheets().batchUpdate(
+            spreadsheetId=spreadsheet_id, body=body
+        ).execute()
+        new_props = result.get("replies", [{}])[0].get("addSheet", {}).get("properties", {})
+        return {"spreadsheetId": spreadsheet_id, "newTab": new_props}
+
+    def rename_tab(self, spreadsheet_id: str, sheet_id: int, new_title: str) -> Dict[str, Any]:
+        """Rename a worksheet tab by its numeric sheetId."""
+        self.ensure_service()
+        body = {
+            "requests": [{
+                "updateSheetProperties": {
+                    "properties": {"sheetId": sheet_id, "title": new_title},
+                    "fields": "title",
+                }
+            }]
+        }
+        self.service.spreadsheets().batchUpdate(
+            spreadsheetId=spreadsheet_id, body=body
+        ).execute()
+        return {"spreadsheetId": spreadsheet_id, "sheetId": sheet_id, "newTitle": new_title}
+
+    def delete_tab(self, spreadsheet_id: str, sheet_id: int) -> Dict[str, Any]:
+        """Delete a worksheet tab by its numeric sheetId."""
+        self.ensure_service()
+        body = {"requests": [{"deleteSheet": {"sheetId": sheet_id}}]}
+        self.service.spreadsheets().batchUpdate(
+            spreadsheetId=spreadsheet_id, body=body
+        ).execute()
+        return {"spreadsheetId": spreadsheet_id, "deletedSheetId": sheet_id}
+
+    # ────────────────────────────────────────────────────────────
+    # Formatting and layout
+    # ────────────────────────────────────────────────────────────
+
+    def freeze_panes(
+        self, spreadsheet_id: str, sheet_id: int, frozen_rows: int = 0, frozen_cols: int = 0
+    ) -> Dict[str, Any]:
+        """Freeze the top N rows and/or left M columns of a sheet."""
+        self.ensure_service()
+        body = {
+            "requests": [{
+                "updateSheetProperties": {
+                    "properties": {
+                        "sheetId": sheet_id,
+                        "gridProperties": {
+                            "frozenRowCount": frozen_rows,
+                            "frozenColumnCount": frozen_cols,
+                        },
+                    },
+                    "fields": "gridProperties.frozenRowCount,gridProperties.frozenColumnCount",
+                }
+            }]
+        }
+        self.service.spreadsheets().batchUpdate(
+            spreadsheetId=spreadsheet_id, body=body
+        ).execute()
+        return {"spreadsheetId": spreadsheet_id, "sheetId": sheet_id, "frozenRows": frozen_rows, "frozenCols": frozen_cols}
+
+    def auto_resize_columns(
+        self, spreadsheet_id: str, sheet_id: int, start_col: int = 0, end_col: int = 26
+    ) -> Dict[str, Any]:
+        """Auto-resize a range of columns to fit their content."""
+        self.ensure_service()
+        body = {
+            "requests": [{
+                "autoResizeDimensions": {
+                    "dimensions": {
+                        "sheetId": sheet_id,
+                        "dimension": "COLUMNS",
+                        "startIndex": start_col,
+                        "endIndex": end_col,
+                    }
+                }
+            }]
+        }
+        self.service.spreadsheets().batchUpdate(
+            spreadsheetId=spreadsheet_id, body=body
+        ).execute()
+        return {"spreadsheetId": spreadsheet_id, "sheetId": sheet_id, "resizedCols": f"{start_col}-{end_col}"}
+
+    def format_range(
+        self,
+        spreadsheet_id: str,
+        sheet_id: int,
+        start_row: int,
+        end_row: int,
+        start_col: int,
+        end_col: int,
+        bold: Optional[bool] = None,
+        bg_color_hex: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Apply basic formatting (bold, background color) to a cell range."""
+        self.ensure_service()
+        cell_format: Dict[str, Any] = {}
+        fields_parts: List[str] = []
+
+        if bold is not None:
+            cell_format.setdefault("textFormat", {})["bold"] = bold
+            fields_parts.append("userEnteredFormat.textFormat.bold")
+
+        if bg_color_hex:
+            r, g, b = (
+                int(bg_color_hex.lstrip("#")[i:i+2], 16) / 255.0
+                for i in (0, 2, 4)
+            )
+            cell_format["backgroundColor"] = {"red": r, "green": g, "blue": b}
+            fields_parts.append("userEnteredFormat.backgroundColor")
+
+        if not fields_parts:
+            raise ValueError("Specify at least one of --bold or --bg-color.")
+
+        body = {
+            "requests": [{
+                "repeatCell": {
+                    "range": {
+                        "sheetId": sheet_id,
+                        "startRowIndex": start_row,
+                        "endRowIndex": end_row,
+                        "startColumnIndex": start_col,
+                        "endColumnIndex": end_col,
+                    },
+                    "cell": {"userEnteredFormat": cell_format},
+                    "fields": ",".join(fields_parts),
+                }
+            }]
+        }
+        self.service.spreadsheets().batchUpdate(
+            spreadsheetId=spreadsheet_id, body=body
+        ).execute()
+        return {"spreadsheetId": spreadsheet_id, "formatted": fields_parts}
+
 
 # ────────────────────────────────────────────────────────────
 # CLI
@@ -226,7 +385,7 @@ def main() -> None:
     sp = subparsers.add_parser("append", help="Append a row of values to a range")
     sp.add_argument("--id", required=True, help="Spreadsheet ID")
     sp.add_argument("--range", required=True, help="A1 notation range (e.g. 'Sheet1!A1:D5')")
-    sp.add_argument("--values", required=True, nargs="+", help="JSON string representing a 2D array of values (e.g. '[["A", "B"]]')")
+    sp.add_argument("--values", required=True, nargs="+", help="JSON 2D array, e.g. [[A, B]]")
 
     # update
     sp = subparsers.add_parser("update", help="Update values in a range")
@@ -238,6 +397,51 @@ def main() -> None:
     sp = subparsers.add_parser("clear", help="Clear values in a range")
     sp.add_argument("--id", required=True, help="Spreadsheet ID")
     sp.add_argument("--range", required=True, help="A1 notation range (e.g. 'Sheet1!A1:D5')")
+
+    # list-tabs
+    sp = subparsers.add_parser("list-tabs", help="List all worksheet tabs")
+    sp.add_argument("--id", required=True, help="Spreadsheet ID")
+
+    # add-tab
+    sp = subparsers.add_parser("add-tab", help="Add a new worksheet tab")
+    sp.add_argument("--id", required=True, help="Spreadsheet ID")
+    sp.add_argument("--title", required=True, help="New tab name")
+
+    # rename-tab
+    sp = subparsers.add_parser("rename-tab", help="Rename a worksheet tab")
+    sp.add_argument("--id", required=True, help="Spreadsheet ID")
+    sp.add_argument("--sheet-id", required=True, type=int, help="Numeric sheet ID (from list-tabs)")
+    sp.add_argument("--title", required=True, help="New tab name")
+
+    # delete-tab
+    sp = subparsers.add_parser("delete-tab", help="Delete a worksheet tab")
+    sp.add_argument("--id", required=True, help="Spreadsheet ID")
+    sp.add_argument("--sheet-id", required=True, type=int, help="Numeric sheet ID (from list-tabs)")
+
+    # format-range
+    sp = subparsers.add_parser("format-range", help="Apply bold/background-color to a range")
+    sp.add_argument("--id", required=True, help="Spreadsheet ID")
+    sp.add_argument("--sheet-id", required=True, type=int, help="Numeric sheet ID")
+    sp.add_argument("--start-row", required=True, type=int, help="Start row index (0-based)")
+    sp.add_argument("--end-row", required=True, type=int, help="End row index (exclusive, 0-based)")
+    sp.add_argument("--start-col", required=True, type=int, help="Start col index (0-based)")
+    sp.add_argument("--end-col", required=True, type=int, help="End col index (exclusive, 0-based)")
+    sp.add_argument("--bold", action=argparse.BooleanOptionalAction, default=None)
+    sp.add_argument("--bg-color", help="Background color hex (e.g. #4285F4)")
+
+    # freeze-panes
+    sp = subparsers.add_parser("freeze-panes", help="Freeze rows and/or columns")
+    sp.add_argument("--id", required=True, help="Spreadsheet ID")
+    sp.add_argument("--sheet-id", required=True, type=int, help="Numeric sheet ID")
+    sp.add_argument("--rows", type=int, default=0, help="Number of rows to freeze")
+    sp.add_argument("--cols", type=int, default=0, help="Number of columns to freeze")
+
+    # auto-resize
+    sp = subparsers.add_parser("auto-resize", help="Auto-resize columns to fit content")
+    sp.add_argument("--id", required=True, help="Spreadsheet ID")
+    sp.add_argument("--sheet-id", required=True, type=int, help="Numeric sheet ID")
+    sp.add_argument("--start-col", type=int, default=0, help="Start col index (0-based)")
+    sp.add_argument("--end-col", type=int, default=26, help="End col index (exclusive)")
 
     args = parser.parse_args()
 
@@ -282,6 +486,39 @@ def main() -> None:
         elif args.command == "clear":
             result = tool.clear_values(args.id, args.range)
             workspace_lib.print_json({"status": "cleared", "result": result})
+
+        elif args.command == "list-tabs":
+            result = tool.list_tabs(args.id)
+            workspace_lib.print_json(result)
+
+        elif args.command == "add-tab":
+            result = tool.add_tab(args.id, args.title)
+            workspace_lib.print_json({"status": "tab_added", "result": result})
+
+        elif args.command == "rename-tab":
+            result = tool.rename_tab(args.id, args.sheet_id, args.title)
+            workspace_lib.print_json({"status": "tab_renamed", "result": result})
+
+        elif args.command == "delete-tab":
+            result = tool.delete_tab(args.id, args.sheet_id)
+            workspace_lib.print_json({"status": "tab_deleted", "result": result})
+
+        elif args.command == "format-range":
+            result = tool.format_range(
+                args.id, args.sheet_id,
+                args.start_row, args.end_row,
+                args.start_col, args.end_col,
+                bold=args.bold, bg_color_hex=args.bg_color,
+            )
+            workspace_lib.print_json({"status": "formatted", "result": result})
+
+        elif args.command == "freeze-panes":
+            result = tool.freeze_panes(args.id, args.sheet_id, args.rows, args.cols)
+            workspace_lib.print_json({"status": "frozen", "result": result})
+
+        elif args.command == "auto-resize":
+            result = tool.auto_resize_columns(args.id, args.sheet_id, args.start_col, args.end_col)
+            workspace_lib.print_json({"status": "resized", "result": result})
 
         else:
             parser.print_help()

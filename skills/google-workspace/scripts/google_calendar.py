@@ -10,16 +10,18 @@
 Google Calendar Skill - Full CRUD for AI agents.
 
 Commands:
-  verify         Check authentication status
-  setup          Run interactive OAuth flow
-  list           List upcoming events
-  get            Get a single event by ID
-  search         Search events by text query
-  create         Create a new event
-  update         Update an existing event
-  delete         Delete an event
-  calendars      List all available calendars
-  quick          Quick-add an event from natural language
+  verify              Check authentication status
+  setup               Run interactive OAuth flow
+  list                List upcoming events
+  get                 Get a single event by ID
+  search              Search events by text query
+  create              Create a new event (supports RRULE for recurring)
+  update              Update an existing event
+  delete              Delete an event
+  calendars           List all available calendars
+  add-calendar        Subscribe to a secondary calendar by ID
+  remove-calendar     Unsubscribe from a secondary calendar
+  quick               Quick-add an event from natural language
 """
 
 import argparse
@@ -201,13 +203,21 @@ class CalendarTool:
         calendar_id: str = "primary",
         timezone_str: str = "America/Phoenix",
         all_day: bool = False,
+        rrule: Optional[str] = None,
+        drive_file_ids: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
-        """Create a new calendar event."""
+        """Create a new calendar event.
+
+        Args:
+            rrule: RFC 5545 recurrence rule string, e.g.
+                'RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR'
+                'RRULE:FREQ=MONTHLY;BYMONTHDAY=1;COUNT=12'
+            drive_file_ids: List of Drive file IDs to attach to the event.
+        """
         self.ensure_service()
 
         if all_day:
-            # All-day events use 'date' instead of 'dateTime'
-            event = {
+            event: Dict[str, Any] = {
                 "summary": summary,
                 "description": description,
                 "location": location,
@@ -226,9 +236,21 @@ class CalendarTool:
         if attendees:
             event["attendees"] = [{"email": a} for a in attendees]
 
-        result = self.service.events().insert(
-            calendarId=calendar_id, body=event
-        ).execute()
+        if rrule:
+            # rrule should be a full RRULE string, e.g. "RRULE:FREQ=DAILY;COUNT=5"
+            event["recurrence"] = [rrule if rrule.startswith("RRULE:") else f"RRULE:{rrule}"]
+
+        if drive_file_ids:
+            event["attachments"] = [
+                {"fileUrl": f"https://drive.google.com/open?id={fid}"}
+                for fid in drive_file_ids
+            ]
+
+        kwargs: Dict[str, Any] = {"calendarId": calendar_id, "body": event}
+        if drive_file_ids:
+            kwargs["supportsAttachments"] = True
+
+        result = self.service.events().insert(**kwargs).execute()
         return self._normalize_event(result)
 
     def update_event(
@@ -305,8 +327,32 @@ class CalendarTool:
             ],
             "creator": event.get("creator"),
             "organizer": event.get("organizer"),
+            "recurrence": event.get("recurrence"),
             "recurringEventId": event.get("recurringEventId"),
+            "attachments": event.get("attachments"),
         }
+
+    # ────────────────────────────────────────────────────────────
+    # Secondary calendar management
+    # ────────────────────────────────────────────────────────────
+
+    def add_calendar(self, calendar_id: str) -> Dict[str, Any]:
+        """Subscribe to a secondary calendar by its calendar ID."""
+        self.ensure_service()
+        result = self.service.calendarList().insert(
+            body={"id": calendar_id}
+        ).execute()
+        return {
+            "id": result.get("id"),
+            "summary": result.get("summary"),
+            "accessRole": result.get("accessRole"),
+        }
+
+    def remove_calendar(self, calendar_id: str) -> Dict[str, str]:
+        """Unsubscribe from a secondary calendar."""
+        self.ensure_service()
+        self.service.calendarList().delete(calendarId=calendar_id).execute()
+        return {"status": "removed", "calendarId": calendar_id}
 
 
 # ────────────────────────────────────────────────────────────
@@ -357,6 +403,19 @@ def main() -> None:
     sp.add_argument("--calendar", default="primary", help="Calendar ID")
     sp.add_argument("--timezone", default="America/Phoenix", help="Timezone")
     sp.add_argument("--all-day", action="store_true", help="Create as all-day event")
+    sp.add_argument(
+        "--rrule",
+        help="RFC 5545 recurrence rule, e.g. 'RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR'",
+    )
+    sp.add_argument("--drive-files", nargs="*", help="Drive file IDs to attach")
+
+    # add-calendar
+    sp = subparsers.add_parser("add-calendar", help="Subscribe to a secondary calendar")
+    sp.add_argument("--calendar-id", required=True, help="Calendar ID to subscribe to")
+
+    # remove-calendar
+    sp = subparsers.add_parser("remove-calendar", help="Unsubscribe from a secondary calendar")
+    sp.add_argument("--calendar-id", required=True, help="Calendar ID to remove")
 
     # update
     sp = subparsers.add_parser("update", help="Update an existing event")
@@ -428,6 +487,8 @@ def main() -> None:
                 calendar_id=args.calendar,
                 timezone_str=args.timezone,
                 all_day=args.all_day,
+                rrule=args.rrule,
+                drive_file_ids=args.drive_files,
             )
             workspace_lib.print_json({"status": "created", "event": event})
 
@@ -452,6 +513,14 @@ def main() -> None:
         elif args.command == "quick":
             event = tool.quick_add(args.text, calendar_id=args.calendar)
             workspace_lib.print_json({"status": "created", "event": event})
+
+        elif args.command == "add-calendar":
+            result = tool.add_calendar(args.calendar_id)
+            workspace_lib.print_json({"status": "subscribed", "calendar": result})
+
+        elif args.command == "remove-calendar":
+            result = tool.remove_calendar(args.calendar_id)
+            workspace_lib.print_json(result)
 
         else:
             parser.print_help()

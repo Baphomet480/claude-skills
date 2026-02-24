@@ -22,9 +22,14 @@ Commands:
   forward        Forward a message to new recipients
   trash          Move a message to trash
   untrash        Remove a message from trash
+  empty-trash    Permanently delete all messages in Trash
+  empty-spam     Permanently delete all messages in Spam
   labels         List all labels
   modify-labels  Add/remove labels on a message
   attachments    Download attachments from a message
+  list-filters   List all Gmail filters
+  create-filter  Create a Gmail filter (with optional label/archive/delete actions)
+  delete-filter  Delete a Gmail filter by ID
 """
 
 import argparse
@@ -630,6 +635,106 @@ class GmailTool:
         self.ensure_service()
         return self.service.users().messages().untrash(userId="me", id=msg_id).execute()
 
+    def empty_label(self, label_id: str) -> Dict[str, Any]:
+        """Permanently delete all messages with a given label (e.g. TRASH, SPAM)."""
+        self.ensure_service()
+        # Batch-fetch IDs then batch-delete
+        deleted = 0
+        page_token: Optional[str] = None
+        while True:
+            kwargs = {"userId": "me", "labelIds": [label_id], "maxResults": 500}
+            if page_token:
+                kwargs["pageToken"] = page_token
+            result = self.service.users().messages().list(**kwargs).execute()
+            msg_ids = [m["id"] for m in result.get("messages", [])]
+            if not msg_ids:
+                break
+            self.service.users().messages().batchDelete(
+                userId="me", body={"ids": msg_ids}
+            ).execute()
+            deleted += len(msg_ids)
+            page_token = result.get("nextPageToken")
+            if not page_token:
+                break
+        return {"status": "emptied", "label": label_id, "deletedCount": deleted}
+
+    # ────────────────────────────────────────────────────────────
+    # Filters
+    # ────────────────────────────────────────────────────────────
+
+    def list_filters(self) -> List[Dict[str, Any]]:
+        """List all Gmail filters."""
+        self.ensure_service()
+        result = self.service.users().settings().filters().list(userId="me").execute()
+        return result.get("filter", [])
+
+    def create_filter(
+        self,
+        from_addr: Optional[str] = None,
+        to_addr: Optional[str] = None,
+        subject: Optional[str] = None,
+        query: Optional[str] = None,
+        has_words: Optional[str] = None,
+        exclude_words: Optional[str] = None,
+        has_attachment: bool = False,
+        add_label_id: Optional[str] = None,
+        remove_label_id: Optional[str] = None,
+        archive: bool = False,
+        mark_read: bool = False,
+        never_spam: bool = False,
+        delete: bool = False,
+    ) -> Dict[str, Any]:
+        """Create a Gmail filter with optional label/archive/delete actions."""
+        self.ensure_service()
+        criteria: Dict[str, Any] = {}
+        if from_addr:
+            criteria["from"] = from_addr
+        if to_addr:
+            criteria["to"] = to_addr
+        if subject:
+            criteria["subject"] = subject
+        if query:
+            criteria["query"] = query
+        if has_words:
+            criteria["hasWords"] = has_words
+        if exclude_words:
+            criteria["excludeChats"] = exclude_words
+        if has_attachment:
+            criteria["hasAttachment"] = True
+
+        action: Dict[str, Any] = {}
+        add_ids, remove_ids = [], []
+        if add_label_id:
+            add_ids.append(add_label_id)
+        if remove_label_id:
+            remove_ids.append(remove_label_id)
+        if archive:
+            remove_ids.append("INBOX")
+        if mark_read:
+            remove_ids.append("UNREAD")
+        if never_spam:
+            remove_ids.append("SPAM")
+        if delete:
+            add_ids.append("TRASH")
+        if add_ids:
+            action["addLabelIds"] = add_ids
+        if remove_ids:
+            action["removeLabelIds"] = remove_ids
+
+        filter_body = {"criteria": criteria, "action": action}
+        result = self.service.users().settings().filters().create(
+            userId="me", body=filter_body
+        ).execute()
+        return result
+
+    def delete_filter(self, filter_id: str) -> Dict[str, str]:
+        """Delete a Gmail filter by ID."""
+        self.ensure_service()
+        self.service.users().settings().filters().delete(
+            userId="me", id=filter_id
+        ).execute()
+        return {"status": "filter_deleted", "filterId": filter_id}
+
 
 # ────────────────────────────────────────────────────────────
 # CLI
@@ -716,6 +821,35 @@ def main() -> None:
     sp = subparsers.add_parser("untrash", help="Remove a message from trash")
     sp.add_argument("--id", required=True, help="Message ID")
 
+    # empty-trash
+    subparsers.add_parser("empty-trash", help="Permanently delete all messages in Trash")
+
+    # empty-spam
+    subparsers.add_parser("empty-spam", help="Permanently delete all messages in Spam")
+
+    # list-filters
+    subparsers.add_parser("list-filters", help="List all Gmail filters")
+
+    # create-filter
+    sp = subparsers.add_parser("create-filter", help="Create a Gmail filter")
+    sp.add_argument("--from", dest="from_addr", help="Sender address to match")
+    sp.add_argument("--to", dest="to_addr", help="Recipient address to match")
+    sp.add_argument("--subject", help="Subject text to match")
+    sp.add_argument("--query", help="Full Gmail query string")
+    sp.add_argument("--has-words", help="Message must contain these words")
+    sp.add_argument("--exclude-words", help="Message must not contain these words")
+    sp.add_argument("--has-attachment", action="store_true", help="Match messages with attachments")
+    sp.add_argument("--add-label", help="Label ID to apply")
+    sp.add_argument("--remove-label", help="Label ID to remove")
+    sp.add_argument("--archive", action="store_true", help="Skip inbox (remove INBOX label)")
+    sp.add_argument("--mark-read", action="store_true", help="Mark as read")
+    sp.add_argument("--never-spam", action="store_true", help="Never mark as spam")
+    sp.add_argument("--delete", dest="filter_delete", action="store_true", help="Move matched mail to trash")
+
+    # delete-filter
+    sp = subparsers.add_parser("delete-filter", help="Delete a Gmail filter")
+    sp.add_argument("--filter-id", required=True, help="Filter ID (from list-filters)")
+
     # labels
     subparsers.add_parser("labels", help="List all labels")
 
@@ -786,6 +920,40 @@ def main() -> None:
         elif args.command == "untrash":
             result = tool.untrash_message(args.id)
             workspace_lib.print_json({"status": "untrashed", "message": result})
+
+        elif args.command == "empty-trash":
+            result = tool.empty_label("TRASH")
+            workspace_lib.print_json(result)
+
+        elif args.command == "empty-spam":
+            result = tool.empty_label("SPAM")
+            workspace_lib.print_json(result)
+
+        elif args.command == "list-filters":
+            filters = tool.list_filters()
+            workspace_lib.print_json(filters)
+
+        elif args.command == "create-filter":
+            result = tool.create_filter(
+                from_addr=args.from_addr,
+                to_addr=args.to_addr,
+                subject=args.subject,
+                query=args.query,
+                has_words=args.has_words,
+                exclude_words=args.exclude_words,
+                has_attachment=args.has_attachment,
+                add_label_id=args.add_label,
+                remove_label_id=args.remove_label,
+                archive=args.archive,
+                mark_read=args.mark_read,
+                never_spam=args.never_spam,
+                delete=args.filter_delete,
+            )
+            workspace_lib.print_json({"status": "filter_created", "filter": result})
+
+        elif args.command == "delete-filter":
+            result = tool.delete_filter(args.filter_id)
+            workspace_lib.print_json(result)
 
         elif args.command == "labels":
             labels = tool.list_labels()

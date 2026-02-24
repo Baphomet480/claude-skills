@@ -10,24 +10,29 @@
 Google Drive Skill - Full CRUD for AI agents.
 
 Commands:
-  verify         Check authentication status
-  setup          Run interactive OAuth flow
-  list           List files in a folder (default: root)
-  search         Search files by name or full-text content
-  get            Get file metadata by ID
-  upload         Upload a local file to Drive
-  download       Download a file from Drive to local disk
-  mkdir          Create a folder
-  move           Move a file to a different folder
-  copy           Copy a file
-  rename         Rename a file
-  trash          Move a file to trash
-  untrash        Restore a file from trash
-  delete         Permanently delete a file
-  share          Share a file (add permission)
-  unshare        Remove a permission from a file
-  permissions    List permissions on a file
-  export         Export a Google Workspace doc (Docs/Sheets/Slides) to a local format
+  verify             Check authentication status
+  setup              Run interactive OAuth flow
+  list               List files in a folder (default: root)
+  search             Search files by name or full-text content
+  get                Get file metadata by ID
+  upload             Upload a local file to Drive
+  download           Download a file from Drive to local disk
+  mkdir              Create a folder
+  move               Move a file to a different folder
+  copy               Copy a file
+  rename             Rename a file
+  trash              Move a file to trash
+  untrash            Restore a file from trash
+  empty-trash        Permanently delete all trashed files
+  delete             Permanently delete a specific file
+  share              Share a file (add permission)
+  unshare            Remove a permission from a file
+  permissions        List permissions on a file
+  export             Export a Google Workspace doc to a local format
+  list-revisions     List revision history of a file
+  restore-revision   Restore a file to a prior revision
+  list-comments      List comments on a file
+  add-comment        Add a comment to a file
 """
 
 import argparse
@@ -504,6 +509,75 @@ class DriveTool:
         ).execute()
         return {"status": "permission_removed", "permissionId": permission_id}
 
+    # ────────────────────────────────────────────────────────────
+    # Trash management
+    # ────────────────────────────────────────────────────────────
+
+    def empty_trash(self) -> Dict[str, str]:
+        """Permanently delete all files in the user's Drive trash."""
+        self.ensure_service()
+        self.service.files().emptyTrash().execute()
+        return {"status": "trash_emptied"}
+
+    # ────────────────────────────────────────────────────────────
+    # Revisions
+    # ────────────────────────────────────────────────────────────
+
+    def list_revisions(self, file_id: str) -> List[Dict[str, Any]]:
+        """List revision history of a file."""
+        self.ensure_service()
+        result = self.service.revisions().list(
+            fileId=file_id,
+            fields="revisions(id,modifiedTime,lastModifyingUser,keepForever,size)",
+        ).execute()
+        return result.get("revisions", [])
+
+    def restore_revision(
+        self, file_id: str, revision_id: str, keep_forever: bool = False
+    ) -> Dict[str, Any]:
+        """Restore a file to a revision by marking it as keepForever and downloading it.
+
+        Note: Drive v3 does not directly 'restore' revisions via API.
+        The pattern is: (1) mark the target revision keepForever, (2) export/download it,
+        (3) re-upload as the current version. This method marks the revision
+        keepForever and returns its download URI for the caller to act on.
+        """
+        self.ensure_service()
+        result = self.service.revisions().update(
+            fileId=file_id,
+            revisionId=revision_id,
+            body={"keepForever": True},
+            fields="id,modifiedTime,keepForever",
+        ).execute()
+        return {
+            "fileId": file_id,
+            "revision": result,
+            "note": "Revision marked keepForever. Download with: drive download --id FILE_ID then re-upload.",
+        }
+
+    # ────────────────────────────────────────────────────────────
+    # File Comments
+    # ────────────────────────────────────────────────────────────
+
+    def list_comments(self, file_id: str) -> List[Dict[str, Any]]:
+        """List all comments on a file."""
+        self.ensure_service()
+        result = self.service.comments().list(
+            fileId=file_id,
+            fields="comments(id,content,author,createdTime,resolved)",
+        ).execute()
+        return result.get("comments", [])
+
+    def add_comment(self, file_id: str, content: str) -> Dict[str, Any]:
+        """Add a top-level comment to a file."""
+        self.ensure_service()
+        result = self.service.comments().create(
+            fileId=file_id,
+            body={"content": content},
+            fields="id,content,author,createdTime",
+        ).execute()
+        return result
+
 
 # ────────────────────────────────────────────────────────────
 # CLI
@@ -607,6 +681,27 @@ def main() -> None:
     # permissions
     sp = subparsers.add_parser("permissions", help="List permissions on a file")
     sp.add_argument("--id", required=True, help="File ID")
+
+    # empty-trash
+    subparsers.add_parser("empty-trash", help="Permanently delete all trashed files")
+
+    # list-revisions
+    sp = subparsers.add_parser("list-revisions", help="List revision history of a file")
+    sp.add_argument("--id", required=True, help="File ID")
+
+    # restore-revision
+    sp = subparsers.add_parser("restore-revision", help="Mark a revision keepForever")
+    sp.add_argument("--id", required=True, help="File ID")
+    sp.add_argument("--revision-id", required=True, help="Revision ID (from list-revisions)")
+
+    # list-comments
+    sp = subparsers.add_parser("list-comments", help="List comments on a file")
+    sp.add_argument("--id", required=True, help="File ID")
+
+    # add-comment
+    sp = subparsers.add_parser("add-comment", help="Add a comment to a file")
+    sp.add_argument("--id", required=True, help="File ID")
+    sp.add_argument("--content", required=True, help="Comment text")
 
     args = parser.parse_args()
 
@@ -712,6 +807,26 @@ def main() -> None:
         elif args.command == "permissions":
             perms = tool.list_permissions(args.id)
             workspace_lib.print_json(perms)
+
+        elif args.command == "empty-trash":
+            result = tool.empty_trash()
+            workspace_lib.print_json(result)
+
+        elif args.command == "list-revisions":
+            revisions = tool.list_revisions(args.id)
+            workspace_lib.print_json(revisions)
+
+        elif args.command == "restore-revision":
+            result = tool.restore_revision(args.id, args.revision_id)
+            workspace_lib.print_json(result)
+
+        elif args.command == "list-comments":
+            comments = tool.list_comments(args.id)
+            workspace_lib.print_json(comments)
+
+        elif args.command == "add-comment":
+            comment = tool.add_comment(args.id, args.content)
+            workspace_lib.print_json({"status": "commented", "comment": comment})
 
         else:
             parser.print_help()
