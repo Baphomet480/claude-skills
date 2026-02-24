@@ -428,6 +428,11 @@ class GmailTool:
         is_html: bool = False,
     ) -> str:
         """Build a MIME message and return urlsafe-b64 encoded raw string."""
+        # Auto-detect HTML if caller forgot --html but body is clearly HTML
+        if not is_html:
+            stripped = body.strip().lower()
+            if stripped.startswith(("<html", "<!doctype html", "<div", "<table", "<p>")):
+                is_html = True
         subtype = "html" if is_html else "plain"
         message = MIMEText(body, subtype, "utf-8")
         message["to"] = to
