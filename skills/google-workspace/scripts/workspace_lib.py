@@ -13,6 +13,44 @@ import google.auth
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 
+LOG_DIR = WORKSPACE_DIR / "logs"
+
+
+def report_crash(script_name: str, exc: Exception) -> None:
+    """Log an unhandled exception to disk and emit an Agent Directive to stdout.
+
+    Call this inside the outermost except block of a script's main().
+    It writes the full traceback to ~/.google_workspace/logs/error.log and
+    prints structured JSON that agents can parse and act on.
+    """
+    import traceback
+    import time
+
+    err_msg = str(exc) or repr(exc)
+    tb = traceback.format_exc()
+
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
+    log_file = LOG_DIR / "error.log"
+
+    with open(log_file, "a") as f:
+        f.write(
+            f"--- UNHANDLED EXCEPTION [{script_name}] ---\n"
+            f"{time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())}\n"
+            f"Command: {' '.join(sys.argv)}\n"
+            f"{tb}\n"
+        )
+
+    print_json({
+        "status": "error",
+        "type": "UnhandledException",
+        "message": err_msg,
+        "fix": (
+            f"AGENT DIRECTIVE: This is an internal bug in {script_name}. "
+            "Document this failure in the skill's KNOWN_BUGS.md and notify the user."
+        ),
+        "logFile": str(log_file),
+    })
+
 # The superset of scopes for all skills
 ALL_SCOPES = [
     "https://mail.google.com/",

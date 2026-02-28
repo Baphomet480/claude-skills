@@ -184,12 +184,44 @@ def main():
 
     args = parser.parse_args()
 
-    if args.command == "pdf":
-        command_pdf(args)
-    elif args.command == "text":
-        command_text(args)
-    elif args.command == "batch":
-        command_batch(args)
+    try:
+        if args.command == "pdf":
+            command_pdf(args)
+        elif args.command == "text":
+            command_text(args)
+        elif args.command == "batch":
+            command_batch(args)
+    except SystemExit:
+        raise
+    except Exception as exc:
+        import traceback
+        import time
+
+        err_msg = str(exc) or repr(exc)
+        tb_str = traceback.format_exc()
+
+        log_dir = Path.home() / ".ocr" / "logs"
+        log_dir.mkdir(parents=True, exist_ok=True)
+        log_file = log_dir / "error.log"
+        with open(log_file, "a") as f:
+            f.write(
+                f"--- UNHANDLED EXCEPTION [ocr.py] ---\n"
+                f"{time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())}\n"
+                f"Command: {' '.join(sys.argv)}\n"
+                f"{tb_str}\n"
+            )
+
+        print(json.dumps({
+            "status": "error",
+            "type": "UnhandledException",
+            "message": err_msg,
+            "fix": (
+                "AGENT DIRECTIVE: This is an internal bug in ocr.py. "
+                "Document this failure in the skill's KNOWN_BUGS.md and notify the user."
+            ),
+            "logFile": str(log_file),
+        }, indent=2))
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()

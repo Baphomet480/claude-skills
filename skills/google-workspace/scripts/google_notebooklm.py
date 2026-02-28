@@ -699,7 +699,40 @@ def main() -> None:
     if handler is None:
         parser.print_help()
         sys.exit(1)
-    sys.exit(asyncio.run(handler(args)))
+
+    try:
+        sys.exit(asyncio.run(handler(args)))
+    except SystemExit:
+        raise
+    except Exception as exc:
+        import traceback
+        import time
+
+        err_msg = str(exc) or repr(exc)
+        tb_str = traceback.format_exc()
+
+        log_dir = Path.home() / ".google_workspace" / "logs"
+        log_dir.mkdir(parents=True, exist_ok=True)
+        log_file = log_dir / "error.log"
+        with open(log_file, "a") as f:
+            f.write(
+                f"--- UNHANDLED EXCEPTION [google_notebooklm.py] ---\n"
+                f"{time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())}\n"
+                f"Command: {' '.join(sys.argv)}\n"
+                f"{tb_str}\n"
+            )
+
+        _out({
+            "status": "error",
+            "type": "UnhandledException",
+            "message": err_msg,
+            "fix": (
+                "AGENT DIRECTIVE: This is an internal bug in google_notebooklm.py. "
+                "Document this failure in the skill's KNOWN_BUGS.md and notify the user."
+            ),
+            "logFile": str(log_file),
+        })
+        sys.exit(1)
 
 
 if __name__ == "__main__":

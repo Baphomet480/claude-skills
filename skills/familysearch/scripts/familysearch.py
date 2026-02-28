@@ -344,13 +344,39 @@ def run_auth_flow(cfg: dict[str, Any], username: str | None = None, password: st
         print("Authenticated successfully. Token saved to ~/.familysearch/token.json")
 
 
-# ── Output helper ─────────────────────────────────────────────────────
+# ── Output helpers ────────────────────────────────────────────────────
+
+LOG_DIR = CONFIG_DIR / "logs"
 
 
 def emit(data: Any) -> None:
     """Print JSON to stdout."""
     json.dump(data, sys.stdout, indent=2, ensure_ascii=False)
     print()
+
+
+def emit_table(headers: list[str], rows: list[list[str]]) -> None:
+    """Print a compact, pipe-delimited table to stdout.
+
+    Falls back gracefully if rows are empty.
+    """
+    if not rows:
+        print("(no results)")
+        return
+
+    # Calculate column widths
+    col_widths = [len(h) for h in headers]
+    for row in rows:
+        for i, cell in enumerate(row):
+            col_widths[i] = max(col_widths[i], len(cell))
+
+    def fmt_row(cells: list[str]) -> str:
+        return " | ".join(c.ljust(w) for c, w in zip(cells, col_widths))
+
+    print(fmt_row(headers))
+    print("-+-".join("-" * w for w in col_widths))
+    for row in rows:
+        print(fmt_row(row))
 
 
 # ── Person helpers ────────────────────────────────────────────────────
@@ -653,11 +679,24 @@ def cmd_search(args: argparse.Namespace) -> None:
                 "score": entry.get("score"),
             })
 
-    emit({
-        "totalResults": data.get("totalCount", data.get("results", len(results))),
-        "returned": len(results),
-        "persons": results,
-    })
+    if getattr(args, "summary", False):
+        headers = ["PID", "Name", "Lifespan", "Birth Place", "Score"]
+        rows = []
+        for p in results:
+            rows.append([
+                p.get("id") or "",
+                p.get("name") or "",
+                p.get("lifespan") or "",
+                p.get("birthPlace") or "",
+                str(p.get("score") or ""),
+            ])
+        emit_table(headers, rows)
+    else:
+        emit({
+            "totalResults": data.get("totalCount", data.get("results", len(results))),
+            "returned": len(results),
+            "persons": results,
+        })
 
 
 def cmd_search_records(args: argparse.Namespace) -> None:
@@ -894,11 +933,23 @@ def cmd_memories(args: argparse.Namespace) -> None:
             "description": (sd.get("description") or [{}])[0].get("value") if sd.get("description") else None,
         })
 
-    emit({
-        "personId": args.pid,
-        "totalMemories": len(results),
-        "memories": results,
-    })
+    if getattr(args, "summary", False):
+        headers = ["ID", "Title", "Type", "URL"]
+        rows = []
+        for m in results:
+            rows.append([
+                m.get("id") or "",
+                m.get("title") or "(untitled)",
+                m.get("mediaType") or "",
+                m.get("about") or "",
+            ])
+        emit_table(headers, rows)
+    else:
+        emit({
+            "personId": args.pid,
+            "totalMemories": len(results),
+            "memories": results,
+        })
 
 
 def cmd_download_memory(args: argparse.Namespace) -> None:
@@ -1050,6 +1101,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--death-place", help="Death place")
     p.add_argument("--sex", choices=["M", "F"], help="Sex filter")
     p.add_argument("--limit", type=int, default=10, help="Max results (default: 10)")
+    p.add_argument("--summary", action="store_true", help="Output a compact table instead of full JSON")
 
     # search-records
     p = sub.add_parser("search-records", help="Search historical record collections")
@@ -1086,6 +1138,7 @@ def build_parser() -> argparse.ArgumentParser:
     # memories
     p = sub.add_parser("memories", help="List memories attached to a person")
     p.add_argument("--pid", required=True, help="Person ID")
+    p.add_argument("--summary", action="store_true", help="Output a compact table instead of full JSON")
 
     # download-memory
     p = sub.add_parser("download-memory", help="Download a memory artifact")
@@ -1133,11 +1186,41 @@ def main() -> None:
         parser.print_help()
         sys.exit(1)
 
-    handler = COMMAND_MAP.get(args.command)
-    if handler:
-        handler(args)
-    else:
+    cmd_fn = COMMAND_MAP.get(args.command)
+    if cmd_fn is None:
         parser.print_help()
+        sys.exit(1)
+
+    try:
+        cmd_fn(args)
+    except SystemExit:
+        raise  # let argparse / sys.exit propagate
+    except Exception as exc:
+        import traceback as _tb
+
+        err_msg = str(exc) or repr(exc)
+        tb_str = _tb.format_exc()
+
+        LOG_DIR.mkdir(parents=True, exist_ok=True)
+        log_file = LOG_DIR / "error.log"
+        with open(log_file, "a") as f:
+            f.write(
+                f"--- UNHANDLED EXCEPTION [familysearch.py] ---\n"
+                f"{time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())}\n"
+                f"Command: {' '.join(sys.argv)}\n"
+                f"{tb_str}\n"
+            )
+
+        emit({
+            "status": "error",
+            "type": "UnhandledException",
+            "message": err_msg,
+            "fix": (
+                "AGENT DIRECTIVE: This is an internal bug in familysearch.py. "
+                "Document this failure in the skill's KNOWN_BUGS.md and notify the user."
+            ),
+            "logFile": str(log_file),
+        })
         sys.exit(1)
 
 

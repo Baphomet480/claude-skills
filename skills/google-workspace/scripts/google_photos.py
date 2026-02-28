@@ -425,6 +425,72 @@ class PhotosTool:
 
 
 # ────────────────────────────────────────────────────────────
+# Summary helpers
+# ────────────────────────────────────────────────────────────
+
+def _emit_table(headers: List[str], rows: List[List[str]]) -> None:
+    """Print a compact pipe-delimited table to stdout."""
+    widths = [len(h) for h in headers]
+    for row in rows:
+        for i, cell in enumerate(row):
+            if i < len(widths):
+                widths[i] = max(widths[i], len(cell))
+    fmt = " | ".join(f"{{:<{w}}}" for w in widths)
+    sep = "-+-".join("-" * w for w in widths)
+    print(fmt.format(*headers))
+    print(sep)
+    for row in rows:
+        padded = row + [""] * (len(headers) - len(row))
+        print(fmt.format(*padded))
+
+
+def _summarize_items(result: Dict[str, Any]) -> None:
+    """Print a compact summary table for media items."""
+    items = result.get("items", [])
+    if not items:
+        print("(no items)")
+        return
+    headers = ["ID", "Filename", "Type", "Created", "Dimensions"]
+    rows = []
+    for item in items:
+        dims = f"{item.get('width', '?')}x{item.get('height', '?')}"
+        media_type = "video" if item.get("isVideo") else "photo"
+        created = (item.get("creationTime") or "")[:10]
+        rows.append([
+            item.get("id", "")[:20] + "…" if len(item.get("id", "")) > 20 else item.get("id", ""),
+            item.get("filename", ""),
+            media_type,
+            created,
+            dims,
+        ])
+    _emit_table(headers, rows)
+    npt = result.get("nextPageToken")
+    if npt:
+        print(f"\n(more results available, pass --page-token {npt})")
+
+
+def _summarize_albums(result: Dict[str, Any]) -> None:
+    """Print a compact summary table for albums."""
+    albums = result.get("albums", [])
+    if not albums:
+        print("(no albums)")
+        return
+    headers = ["ID", "Title", "Items", "Writeable"]
+    rows = []
+    for a in albums:
+        rows.append([
+            a.get("id", ""),
+            a.get("title", ""),
+            str(a.get("mediaItemsCount", "0")),
+            "yes" if a.get("isWriteable") else "no",
+        ])
+    _emit_table(headers, rows)
+    npt = result.get("nextPageToken")
+    if npt:
+        print(f"\n(more results available, pass --page-token {npt})")
+
+
+# ────────────────────────────────────────────────────────────
 # CLI
 # ────────────────────────────────────────────────────────────
 
@@ -443,6 +509,7 @@ def main() -> None:
     sp = subparsers.add_parser("list", help="List media items")
     sp.add_argument("--limit", type=int, default=25, help="Max results")
     sp.add_argument("--page-token", help="Page token for pagination")
+    sp.add_argument("--summary", action="store_true", help="Print a compact table instead of JSON")
 
     # search
     sp = subparsers.add_parser("search", help="Search media items")
@@ -451,6 +518,7 @@ def main() -> None:
     sp.add_argument("--categories", nargs="*", help=f"Content categories: {', '.join(CONTENT_CATEGORIES[:8])}...")
     sp.add_argument("--limit", type=int, default=25, help="Max results")
     sp.add_argument("--page-token", help="Page token for pagination")
+    sp.add_argument("--summary", action="store_true", help="Print a compact table instead of JSON")
 
     # get
     sp = subparsers.add_parser("get", help="Get media item by ID")
@@ -471,6 +539,7 @@ def main() -> None:
     sp = subparsers.add_parser("albums", help="List all albums")
     sp.add_argument("--limit", type=int, default=50, help="Max results")
     sp.add_argument("--page-token", help="Page token for pagination")
+    sp.add_argument("--summary", action="store_true", help="Print a compact table instead of JSON")
 
     # album-get
     sp = subparsers.add_parser("album-get", help="Get album details and contents")
@@ -509,7 +578,10 @@ def main() -> None:
 
         elif args.command == "list":
             result = tool.list_items(limit=args.limit, page_token=args.page_token)
-            workspace_lib.print_json(result)
+            if args.summary:
+                _summarize_items(result)
+            else:
+                workspace_lib.print_json(result)
 
         elif args.command == "search":
             result = tool.search_items(
@@ -519,7 +591,10 @@ def main() -> None:
                 categories=args.categories,
                 page_token=args.page_token,
             )
-            workspace_lib.print_json(result)
+            if args.summary:
+                _summarize_items(result)
+            else:
+                workspace_lib.print_json(result)
 
         elif args.command == "get":
             item = tool.get_item(args.id)
@@ -539,7 +614,10 @@ def main() -> None:
 
         elif args.command == "albums":
             result = tool.list_albums(limit=args.limit, page_token=args.page_token)
-            workspace_lib.print_json(result)
+            if args.summary:
+                _summarize_albums(result)
+            else:
+                workspace_lib.print_json(result)
 
         elif args.command == "album-get":
             album = tool.get_album(args.id)
@@ -563,8 +641,10 @@ def main() -> None:
         else:
             parser.print_help()
 
+    except workspace_lib.AuthError as e:
+        workspace_lib.json_error("google_photos", str(e), fix=e.fix)
     except Exception as e:
-        workspace_lib.print_json({"status": "error", "message": str(e), "type": type(e).__name__})
+        workspace_lib.report_crash("google_photos.py", e)
 
 
 if __name__ == "__main__":

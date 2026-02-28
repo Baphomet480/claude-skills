@@ -52,3 +52,17 @@ Skills are consumed by both Claude (`.agent/skills/`) and Gemini (`~/.gemini/ant
 - Franchise placeholder: Star Wars (use for sample data, form labels, empty states)
 - `.skill` files are standard ZIP archives renamed for clarity
 - Always edit in `skills/`, never edit `dist/` directly
+
+## Bug Filing Protocol
+
+When a skill script returns a JSON response with `"type": "UnhandledException"`, the agent must:
+
+1. **Read the `fix` field** for an Agent Directive with specific instructions.
+2. **Document the bug** by appending a row to the skill's `KNOWN_BUGS.md` file with: date, the command that was run, the error message, and status "open".
+3. **Notify the user** that an internal bug was caught and logged.
+4. **Check the `logFile` field** for the path to the full traceback on disk. Reference this path when documenting the bug.
+
+Each skill with scripts has a `KNOWN_BUGS.md` at its root (`skills/<name>/KNOWN_BUGS.md`). Error logs are persisted to disk:
+- FamilySearch: `~/.familysearch/logs/error.log`
+- Google Workspace: `~/.google_workspace/logs/error.log`
+- OCR: `~/.ocr/logs/error.log`

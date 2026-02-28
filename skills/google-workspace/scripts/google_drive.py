@@ -832,8 +832,10 @@ def main() -> None:
         else:
             parser.print_help()
 
+    except workspace_lib.AuthError as e:
+        workspace_lib.json_error("google_drive", str(e), fix=e.fix)
     except Exception as e:
-        workspace_lib.print_json({"status": "error", "message": str(e), "type": type(e).__name__})
+        workspace_lib.report_crash("google_drive.py", e)
 
 
 if __name__ == "__main__":
