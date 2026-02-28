@@ -35,9 +35,42 @@ ALL_SCOPES = [
 # Primary unified directory
 WORKSPACE_DIR = Path(os.environ.get("GOOGLE_WORKSPACE_DIR", Path.home() / ".google_workspace"))
 
+class AuthError(Exception):
+    """Raised when authentication fails, with a machine-readable fix suggestion."""
+    def __init__(self, message: str, fix: str = ""):
+        super().__init__(message)
+        self.fix = fix
+
+
 def print_json(data: Any) -> None:
     """Print data as JSON to stdout."""
     print(json.dumps(data, indent=2, default=str))
+
+
+def json_error(service: str, error: str, fix: str = "", exit_code: int = 1) -> None:
+    """Print a structured JSON error to stdout and exit.
+
+    Agents can parse this to detect failures and take corrective action.
+    """
+    print_json({
+        "status": "error",
+        "service": service,
+        "error": error,
+        "fix": fix,
+    })
+    sys.exit(exit_code)
+
+
+def ensure_authenticated(service_obj: Any, service_name: str) -> None:
+    """Check that a service object was successfully built.
+
+    Raises AuthError with a fix suggestion if auth failed.
+    """
+    if service_obj is None:
+        raise AuthError(
+            f"{service_name} API not authenticated.",
+            fix="Run: uv run scripts/preflight.py  (to diagnose), then: uv run scripts/setup_workspace.py  (to authenticate)",
+        )
 
 def find_credentials_dir(
     env_var: Optional[str] = None,

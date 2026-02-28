@@ -120,8 +120,9 @@ class ContactsTool:
 
     def ensure_service(self) -> None:
         if not self.service:
-            raise RuntimeError(
-                "Contacts API not authenticated. Run 'setup' command or configure ADC."
+            raise workspace_lib.AuthError(
+                "Contacts API not authenticated.",
+                fix="Run: uv run scripts/preflight.py  (to diagnose), then: uv run scripts/setup_workspace.py  (to authenticate)",
             )
 
     # ────────────────────────────────────────────────────────────

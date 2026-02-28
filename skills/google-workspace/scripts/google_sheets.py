@@ -122,8 +122,9 @@ class SheetsTool:
 
     def ensure_service(self) -> None:
         if not self.service:
-            raise RuntimeError(
-                "Sheets API not authenticated. Run 'setup' command or configure ADC."
+            raise workspace_lib.AuthError(
+                "Sheets API not authenticated.",
+                fix="Run: uv run scripts/preflight.py  (to diagnose), then: uv run scripts/setup_workspace.py  (to authenticate)",
             )
 
     # ────────────────────────────────────────────────────────────
@@ -471,7 +472,8 @@ def main() -> None:
             try:
                 values_array = json.loads(values_str)
             except json.JSONDecodeError as e:
-                raise ValueError(f"Failed to parse values JSON: {e}. Please provide a valid JSON array like '[["A", "B"]]'")
+                msg = "Failed to parse values JSON: " + str(e) + ". Provide a valid JSON 2D array."
+                raise ValueError(msg)
             
             if not isinstance(values_array, list) or not all(isinstance(row, list) for row in values_array):
                 raise ValueError("Values must be a 2D array (a list of lists).")

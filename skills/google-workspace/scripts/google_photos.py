@@ -164,8 +164,9 @@ class PhotosTool:
 
     def ensure_service(self) -> None:
         if not self._session or not self.creds:
-            raise RuntimeError(
-                "Photos API not authenticated. Run 'setup' command or configure ADC."
+            raise workspace_lib.AuthError(
+                "Photos API not authenticated.",
+                fix="Run: uv run scripts/preflight.py  (to diagnose), then: uv run scripts/setup_workspace.py  (to authenticate)",
             )
         self._ensure_fresh_token()
 

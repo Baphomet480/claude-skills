@@ -1,26 +1,27 @@
 ---
 name: google-workspace
-description: Unified Google Workspace skill — Gmail, Calendar, Contacts, Drive, Docs, Sheets, and Photos.
+description: Unified Google Workspace skill — Gmail, Calendar, Contacts, Drive, Docs, Sheets, Photos, and NotebookLM.
 ---
 
 # Google Workspace Skill
 
-Unified Google Workspace management for AI agents. One skill, one auth, seven services.
+Unified Google Workspace management for AI agents. One skill, one auth, eight services.
 
 > **Replaces**: `gmail`, `google-calendar`, `google-contacts`, `google-drive`, `google-photos`
 > Run `scripts/upgrade.sh` to migrate from the old per-service skills.
 
 ## Services
 
-| Service      | Script                       | Capabilities                                                                                                              |
-| ------------ | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| **Gmail**    | `scripts/gmail.py`           | Search, read, thread, draft, send, reply, reply-all, forward, trash, filters, empty-trash/spam                            |
-| **Calendar** | `scripts/google_calendar.py` | List, get, search, create (RRULE), update, delete, quick-add, secondary calendars, Drive attachments                      |
-| **Contacts** | `scripts/contacts.py`        | Search, list, get, create, update, delete contacts                                                                        |
-| **Drive**    | `scripts/google_drive.py`    | List, search, upload, download, export, mkdir, move, copy, rename, trash, delete, empty-trash, share, revisions, comments |
-| **Docs**     | `scripts/google_docs.py`     | Read text, create, append, replace, insert-heading, format-text, insert-image, comments                                   |
-| **Sheets**   | `scripts/google_sheets.py`   | Read, create, append, update, clear, tabs, format-range, freeze-panes, auto-resize                                        |
-| **Photos**   | `scripts/google_photos.py`   | List, search, download, upload media, manage albums                                                                       |
+| Service          | Script                           | Capabilities                                                                                                              |
+| ---------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| **Gmail**        | `scripts/gmail.py`               | Search, read, thread, draft, send, reply, reply-all, forward, trash, filters, empty-trash/spam                            |
+| **Calendar**     | `scripts/google_calendar.py`     | List, get, search, create (RRULE), update, delete, quick-add, secondary calendars, Drive attachments                      |
+| **Contacts**     | `scripts/contacts.py`            | Search, list, get, create, update, delete contacts                                                                        |
+| **Drive**        | `scripts/google_drive.py`        | List, search, upload, download, export, mkdir, move, copy, rename, trash, delete, empty-trash, share, revisions, comments |
+| **Docs**         | `scripts/google_docs.py`         | Read text, create, append, replace, insert-heading, format-text, insert-image, comments                                   |
+| **Sheets**       | `scripts/google_sheets.py`       | Read, create, append, update, clear, tabs, format-range, freeze-panes, auto-resize                                        |
+| **Photos**       | `scripts/google_photos.py`       | List, search, download, upload media, manage albums                                                                       |
+| **NotebookLM**   | `scripts/google_notebooklm.py`   | Create/manage notebooks, add sources (URL/file/text/Drive), chat, generate audio/reports/quizzes/flashcards               |
 
 ## Prerequisites
 
@@ -59,7 +60,30 @@ https://www.googleapis.com/auth/photoslibrary.sharing,\
 https://www.googleapis.com/auth/cloud-platform
 ```
 
+### Install Token Maintenance (recommended)
+
+Prevents hourly token expiry by running a systemd timer that refreshes the access token every 45 minutes:
+
+```bash
+bash scripts/install_services.sh
+systemctl --user enable --now workspace-token-maintainer.timer
+```
+
 ### Verify
+
+Run the preflight check first. It validates credentials, token, scopes, systemd timer, and API reachability in one command:
+
+```bash
+# Full check (credentials + token + API pings for all services)
+uv run scripts/preflight.py
+
+# Quick check (credentials + token only, no API pings)
+uv run scripts/preflight.py --quick
+```
+
+The output is structured JSON with `ok`, `error`, and `fix` fields for each check. If all checks pass, exit code is 0.
+
+You can also verify individual services:
 
 ```bash
 uv run scripts/gmail.py verify
@@ -527,6 +551,100 @@ The upgrade script:
 
 ---
 
+## NotebookLM
+
+Manage Google NotebookLM notebooks, sources, artifacts, and chat.
+
+**Auth**: NotebookLM uses browser cookie auth (not OAuth). Auth state is stored at `~/.notebooklm/storage_state.json`.
+
+### Setup
+
+```bash
+# Interactive setup: copies your __Secure-1PSID cookie from an open browser session
+uv run scripts/google_notebooklm.py setup
+
+# Or set the cookie value directly
+uv run scripts/google_notebooklm.py setup --cookie "YOUR_COOKIE_VALUE"
+```
+
+### Common Commands
+
+```bash
+# List notebooks
+uv run scripts/google_notebooklm.py list
+
+# Create a notebook
+uv run scripts/google_notebooklm.py create --title "Death Star Schematics"
+
+# Add sources
+uv run scripts/google_notebooklm.py add-url --id NOTEBOOK_ID --url "https://example.com/article"
+uv run scripts/google_notebooklm.py add-file --id NOTEBOOK_ID --file ./document.pdf
+uv run scripts/google_notebooklm.py add-text --id NOTEBOOK_ID --title "Notes" --text "Key findings..."
+uv run scripts/google_notebooklm.py add-drive --id NOTEBOOK_ID --drive-id "DRIVE_FILE_ID"
+
+# Chat with a notebook
+uv run scripts/google_notebooklm.py chat --id NOTEBOOK_ID --message "Summarize the main themes"
+
+# Generate artifacts
+uv run scripts/google_notebooklm.py generate-audio --id NOTEBOOK_ID
+uv run scripts/google_notebooklm.py generate-report --id NOTEBOOK_ID --type "study_guide"
+uv run scripts/google_notebooklm.py generate-quiz --id NOTEBOOK_ID
+uv run scripts/google_notebooklm.py generate-flashcards --id NOTEBOOK_ID
+
+# Download generated artifacts
+uv run scripts/google_notebooklm.py list-artifacts --id NOTEBOOK_ID
+uv run scripts/google_notebooklm.py download-audio --id NOTEBOOK_ID --output ./overview.mp3
+uv run scripts/google_notebooklm.py download-report --id NOTEBOOK_ID --output ./report.md
+```
+
+---
+
 ## JSON Output
 
 All commands produce JSON for easy parsing. See the individual service sections above for output schemas.
+
+All error outputs include structured JSON with `status`, `error`, and `type` fields. Auth errors additionally include a `fix` field with the exact command to run:
+
+```json
+{
+  "status": "error",
+  "message": "Gmail API not authenticated.",
+  "type": "AuthError"
+}
+```
+
+---
+
+## Troubleshooting
+
+### Token expired / 401 errors
+
+Access tokens expire after 1 hour. If the systemd timer is running, tokens refresh automatically. If not:
+
+```bash
+# Check timer status
+systemctl --user status workspace-token-maintainer.timer
+
+# Install and enable if missing
+bash scripts/install_services.sh
+systemctl --user enable --now workspace-token-maintainer.timer
+```
+
+### 7-day refresh token expiry (@gmail.com accounts)
+
+GCP projects in "Testing" status cause refresh tokens to expire every 7 days. Options:
+1. **Publish the app** in GCP Console (OAuth consent screen > Publish) to get permanent refresh tokens.
+2. **Re-authenticate weekly**: `uv run scripts/setup_workspace.py`
+3. **Use a Google Workspace account** instead of @gmail.com.
+
+### Missing scopes
+
+If a service returns scope errors, re-run the unified setup to request all scopes:
+
+```bash
+uv run scripts/setup_workspace.py
+```
+
+### credentials.json not found
+
+Download OAuth client secret from GCP Console > APIs & Services > Credentials, then save to `~/.google_workspace/credentials.json`. See `references/GCP_SETUP.md` for step-by-step instructions.

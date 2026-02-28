@@ -54,15 +54,10 @@ import workspace_lib
 
 def _find_credentials_dir() -> Path:
     """Check env var, then unified workspace dir, then legacy dir."""
-    if os.environ.get("GMAIL_CREDENTIALS_DIR"):
-        return Path(os.environ["GMAIL_CREDENTIALS_DIR"])
-    workspace = Path(os.environ.get("GOOGLE_WORKSPACE_DIR", Path.home() / ".google_workspace"))
-    if (workspace / "token.json").exists():
-        return workspace
-    legacy = Path.home() / ".gmail_credentials"
-    if (legacy / "token.json").exists():
-        return legacy
-    return workspace  # default to unified dir for fresh installs
+    return workspace_lib.find_credentials_dir(
+        env_var="GMAIL_CREDENTIALS_DIR",
+        legacy_dir_name=".gmail_credentials"
+    )
 
 CREDENTIALS_DIR = _find_credentials_dir()
 TOKEN_FILE = CREDENTIALS_DIR / "token.json"
@@ -169,8 +164,9 @@ class GmailTool:
 
     def ensure_service(self) -> None:
         if not self.service:
-            raise RuntimeError(
-                "Gmail API not authenticated. Run 'setup' command or configure ADC."
+            raise workspace_lib.AuthError(
+                "Gmail API not authenticated.",
+                fix="Run: uv run scripts/preflight.py  (to diagnose), then: uv run scripts/setup_workspace.py  (to authenticate)",
             )
 
     # ────────────────────────────────────────────────────────────

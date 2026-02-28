@@ -128,8 +128,9 @@ class DocsTool:
 
     def ensure_service(self) -> None:
         if not self.service:
-            raise RuntimeError(
-                "Docs API not authenticated. Run 'setup' command or configure ADC."
+            raise workspace_lib.AuthError(
+                "Docs API not authenticated.",
+                fix="Run: uv run scripts/preflight.py  (to diagnose), then: uv run scripts/setup_workspace.py  (to authenticate)",
             )
 
     # ────────────────────────────────────────────────────────────
@@ -319,7 +320,10 @@ class DocsTool:
     def list_comments(self, document_id: str) -> Dict[str, Any]:
         """List all comments on a document via the Drive v3 Comments API."""
         if not self.drive_service:
-            raise RuntimeError("Drive service not initialized. Re-run setup to add drive.file scope.")
+            raise workspace_lib.AuthError(
+                "Drive service not initialized for Docs comments.",
+                fix="Re-run setup to add drive.file scope: uv run scripts/setup_workspace.py",
+            )
         result = self.drive_service.comments().list(
             fileId=document_id,
             fields="comments(id,content,author,createdTime,resolved)",
@@ -329,7 +333,10 @@ class DocsTool:
     def add_comment(self, document_id: str, content: str) -> Dict[str, Any]:
         """Add a top-level comment to a document via the Drive v3 Comments API."""
         if not self.drive_service:
-            raise RuntimeError("Drive service not initialized. Re-run setup to add drive.file scope.")
+            raise workspace_lib.AuthError(
+                "Drive service not initialized for Docs comments.",
+                fix="Re-run setup to add drive.file scope: uv run scripts/setup_workspace.py",
+            )
         result = self.drive_service.comments().create(
             fileId=document_id,
             body={"content": content},
