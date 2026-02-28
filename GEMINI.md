@@ -36,6 +36,7 @@ Skills are consumed by both Claude (`.agent/skills/`) and Gemini (`~/.gemini/ant
 | `hugo-sveltia-cms`           | Hugo + Sveltia CMS integration                                                                                                           |
 | `pitolandia-visual-identity` | Pitolandia brand visual identity system                                                                                                  |
 | `google-workspace`           | Unified Gmail, Calendar, Contacts, Drive, Docs, Sheets, and Photos — includes HTML email support and robust auth maintenance.                                                |
+| `familysearch`               | FamilySearch API — person lookup, pedigree trees, record search, sources, and memories                                                                                       |
 
 ## Workflow
 
