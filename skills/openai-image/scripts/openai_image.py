@@ -24,9 +24,11 @@ import argparse
 import base64
 import json
 import os
+import struct
 import sys
 import time
 import traceback
+import zlib
 from pathlib import Path
 
 # ── Structured output helpers ────────────────────────────────────────
@@ -110,6 +112,38 @@ def apply_prefix(prompt: str, prefix: str | None) -> str:
     if not prefix:
         return prompt
     return f"{prefix.rstrip()} {prompt}"
+
+
+def embed_png_metadata(path: Path, metadata: dict):
+    """Write key-value pairs as PNG tEXt chunks before the IEND chunk."""
+    data = path.read_bytes()
+    if data[:8] != b'\x89PNG\r\n\x1a\n':
+        return
+    iend_idx = data.rfind(b'IEND')
+    if iend_idx < 4:
+        return
+    iend_start = iend_idx - 4  # start of length field
+    chunks = b''
+    for key, value in metadata.items():
+        chunk_data = key.encode('latin-1', errors='replace') + b'\x00' + value.encode('latin-1', errors='replace')
+        length = struct.pack('>I', len(chunk_data))
+        crc = struct.pack('>I', zlib.crc32(b'tEXt' + chunk_data) & 0xFFFFFFFF)
+        chunks += length + b'tEXt' + chunk_data + crc
+    path.write_bytes(data[:iend_start] + chunks + data[iend_start:])
+
+
+def tag_image(path: Path, fmt: str, prompt: str, model: str,
+              quality: str = "auto", size: str = "auto"):
+    """Embed generation metadata in PNG files. No-op for other formats."""
+    if fmt != "png":
+        return
+    embed_png_metadata(path, {
+        "Software": "openai-image-skill",
+        "Description": prompt[:500],
+        "model": model,
+        "quality": quality,
+        "size": size,
+    })
 
 
 # ── Retry wrapper ────────────────────────────────────────────────────
@@ -226,6 +260,91 @@ STYLE_PRESETS = {
 
 STYLE_CHOICES = list(STYLE_PRESETS.keys()) + ["custom"]
 
+PRESETS = {
+    "draft": {"model": "gpt-image-1-mini", "quality": "low"},
+    "balanced": {"model": "gpt-image-1.5", "quality": "medium"},
+    "final": {"model": "gpt-image-1.5", "quality": "high"},
+}
+
+COST_TABLE = {
+    "gpt-image-1.5": {
+        "low": {"square": 0.009, "rect": 0.013},
+        "medium": {"square": 0.034, "rect": 0.050},
+        "high": {"square": 0.133, "rect": 0.200},
+    },
+    "gpt-image-1": {
+        "low": {"square": 0.009, "rect": 0.013},
+        "medium": {"square": 0.034, "rect": 0.050},
+        "high": {"square": 0.133, "rect": 0.200},
+    },
+    "gpt-image-1-mini": {
+        "low": {"square": 0.005, "rect": 0.006},
+        "medium": {"square": 0.011, "rect": 0.015},
+        "high": {"square": 0.036, "rect": 0.052},
+    },
+    "dall-e-3": {
+        "standard": {"square": 0.040, "rect": 0.080},
+        "hd": {"square": 0.080, "rect": 0.120},
+    },
+}
+
+
+def estimate_cost(model: str, quality: str, size: str) -> float:
+    """Estimate per-image cost in USD. Returns 0.0 for unknown combos."""
+    model_costs = COST_TABLE.get(model)
+    if not model_costs:
+        return 0.0
+    q = quality if quality != "auto" else "medium"
+    quality_costs = model_costs.get(q)
+    if not quality_costs:
+        return 0.0
+    is_rect = size in ("1536x1024", "1024x1536", "1792x1024", "1024x1792")
+    return quality_costs["rect" if is_rect else "square"]
+
+
+def handle_dry_run(args, items=None):
+    """If --dry-run is set, print cost estimate and exit."""
+    if not getattr(args, "dry_run", False):
+        return
+    if items is None:
+        n = getattr(args, "n", 1)
+        items = [{
+            "model": getattr(args, "model", "gpt-image-1.5"),
+            "quality": getattr(args, "quality", "auto"),
+            "size": getattr(args, "size", "auto"),
+            "n": n,
+        }]
+    breakdown = []
+    total = 0.0
+    for item in items:
+        per_image = estimate_cost(item["model"], item["quality"], item["size"])
+        n = item.get("n", 1)
+        cost = per_image * n
+        total += cost
+        entry = {"model": item["model"], "quality": item["quality"],
+                 "size": item["size"], "n": n, "cost_usd": round(cost, 4)}
+        if "name" in item:
+            entry = {"name": item["name"], **entry}
+        breakdown.append(entry)
+    print(json.dumps({
+        "status": "dry_run",
+        "estimated_cost_usd": round(total, 4),
+        "breakdown": breakdown,
+    }, indent=2))
+    sys.exit(0)
+
+
+def apply_preset(args):
+    """Apply --preset to model and quality if user didn't explicitly override."""
+    preset_name = getattr(args, "preset", None)
+    if not preset_name:
+        return
+    preset = PRESETS[preset_name]
+    if getattr(args, "model", "gpt-image-1.5") == "gpt-image-1.5":
+        args.model = preset["model"]
+    if getattr(args, "quality", "auto") == "auto":
+        args.quality = preset["quality"]
+
 
 # ── Vision helper ────────────────────────────────────────────────────
 
@@ -247,6 +366,7 @@ def encode_image(image_path):
 # ── Generate command ─────────────────────────────────────────────────
 
 def command_generate(args):
+    handle_dry_run(args)
     client = get_client()
     prompt = apply_prefix(args.prompt, getattr(args, "prefix", None))
 
@@ -285,6 +405,7 @@ def command_generate(args):
             out_path = default_output_path("gen", args.format, i, output_dir)
         save_image(b64, out_path, args.format)
         verify_output(out_path)
+        tag_image(out_path, args.format, prompt, args.model, args.quality, args.size)
         saved.append({"index": i, "path": str(out_path)})
 
     success({
@@ -297,6 +418,7 @@ def command_generate(args):
 # ── Edit command ─────────────────────────────────────────────────────
 
 def command_edit(args):
+    handle_dry_run(args)
     client = get_client()
     prompt = apply_prefix(args.prompt, getattr(args, "prefix", None))
 
@@ -365,6 +487,7 @@ def command_edit(args):
             out_path = default_output_path("edit", args.format, i, output_dir)
         save_image(b64, out_path, args.format)
         verify_output(out_path)
+        tag_image(out_path, args.format, prompt, args.model, args.quality, args.size)
         saved.append({"index": i, "path": str(out_path)})
 
     success({
@@ -441,6 +564,7 @@ def command_describe(args):
 # ── Background remove command ────────────────────────────────────────
 
 def command_bg_remove(args):
+    handle_dry_run(args)
     client = get_client()
 
     image_path = Path(args.image).resolve()
@@ -481,6 +605,7 @@ def command_bg_remove(args):
     if b64:
         save_image(b64, out_path, "png")
         verify_output(out_path)
+        tag_image(out_path, "png", "background removal", args.model, args.quality, "auto")
         success({
             "message": f"Background removed from {image_path.name}",
             "model": args.model,
@@ -497,6 +622,7 @@ def command_bg_remove(args):
 # ── Style transfer command ───────────────────────────────────────────
 
 def command_style_transfer(args):
+    handle_dry_run(args)
     client = get_client()
 
     image_path = Path(args.image).resolve()
@@ -555,6 +681,7 @@ def command_style_transfer(args):
     if b64:
         save_image(b64, out_path, fmt)
         verify_output(out_path)
+        tag_image(out_path, fmt, prompt, args.model, args.quality, args.size)
         success({
             "message": f"Applied {args.style} style to {image_path.name}",
             "model": args.model,
@@ -573,6 +700,7 @@ def command_style_transfer(args):
 # ── Restore command ──────────────────────────────────────────────────
 
 def command_restore(args):
+    handle_dry_run(args)
     client = get_client()
 
     image_path = Path(args.image).resolve()
@@ -619,6 +747,7 @@ def command_restore(args):
     if b64:
         save_image(b64, out_path, fmt)
         verify_output(out_path)
+        tag_image(out_path, fmt, "photo restoration", args.model, args.quality, args.size)
         success({
             "message": f"Restored {image_path.name}",
             "model": args.model,
@@ -635,6 +764,7 @@ def command_restore(args):
 # ── Thumbnail command ────────────────────────────────────────────────
 
 def command_thumbnail(args):
+    handle_dry_run(args)
     client = get_client()
 
     fmt = args.format
@@ -708,6 +838,7 @@ def command_thumbnail(args):
     if b64:
         save_image(b64, out_path, fmt)
         verify_output(out_path)
+        tag_image(out_path, fmt, args.prompt or "thumbnail", args.model, args.quality, "1024x1024")
         success({
             "message": f"Thumbnail {'from image' if args.from_image else 'generated'}",
             "model": args.model,
@@ -721,6 +852,66 @@ def command_thumbnail(args):
             "model": args.model,
             "images": [{"index": 0, "url": result.data[0].url}],
         })
+
+
+def generate_gallery_html(output_dir, results, manifest):
+    """Generate an index.html gallery for batch results."""
+    def esc(s):
+        return str(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+
+    style_prefix = manifest.get("style_prefix", "")
+    jobs = manifest.get("jobs", [])
+    job_map = {j.get("name", f"job_{i}"): j for i, j in enumerate(jobs)}
+    succeeded = sum(1 for r in results if r.get("status") == "success")
+
+    rows = []
+    for r in results:
+        name = r.get("name", "")
+        job = job_map.get(name, {})
+        prompt = job.get("prompt", "")
+        path = r.get("path")
+
+        if r.get("status") == "success" and path:
+            fname = Path(path).name
+            img_tag = f'<img src="{esc(fname)}" alt="{esc(name)}" loading="lazy">'
+        else:
+            err_msg = r.get("message", "failed")
+            img_tag = f'<div class="error">{esc(err_msg)}</div>'
+
+        rows.append(
+            f'<div class="card">\n'
+            f'  {img_tag}\n'
+            f'  <div class="info"><strong>{esc(name)}</strong>'
+            f'<p>{esc(prompt)}</p></div>\n'
+            f'</div>'
+        )
+
+    prefix_note = f' | prefix: {esc(style_prefix[:80])}' if style_prefix else ''
+    html = (
+        '<!DOCTYPE html>\n<html lang="en"><head>\n'
+        '<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">\n'
+        '<title>Batch Gallery</title>\n<style>\n'
+        '  *{margin:0;padding:0;box-sizing:border-box}\n'
+        '  body{font-family:system-ui,-apple-system,sans-serif;background:#111;color:#eee;padding:2rem}\n'
+        '  h1{margin-bottom:.5rem;font-size:1.5rem}\n'
+        '  .meta{color:#888;margin-bottom:2rem;font-size:.9rem}\n'
+        '  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1.5rem}\n'
+        '  .card{background:#1a1a1a;border-radius:8px;overflow:hidden}\n'
+        '  .card img{width:100%;height:auto;display:block}\n'
+        '  .card .error{padding:3rem 1rem;text-align:center;color:#f87171;background:#1c1c1c}\n'
+        '  .info{padding:.75rem 1rem}\n'
+        '  .info strong{display:block;margin-bottom:.25rem}\n'
+        '  .info p{color:#aaa;font-size:.85rem;line-height:1.4}\n'
+        '</style></head><body>\n'
+        f'<h1>Batch Gallery</h1>\n'
+        f'<p class="meta">{succeeded}/{len(results)} succeeded{prefix_note}</p>\n'
+        f'<div class="grid">\n{"".join(rows)}\n</div>\n'
+        '</body></html>'
+    )
+
+    gallery_path = output_dir / "index.html"
+    gallery_path.write_text(html)
+    return str(gallery_path)
 
 
 # ── Batch command ────────────────────────────────────────────────────
@@ -741,6 +932,17 @@ def command_batch(args):
     jobs = manifest.get("jobs", [])
     if not jobs:
         error("Manifest contains no jobs.", "ManifestError")
+
+    # Dry-run: estimate cost without making API calls
+    if getattr(args, "dry_run", False):
+        dry_items = []
+        for idx, job in enumerate(jobs):
+            job_name = job.get("name", f"job_{idx}")
+            m = job.get("model", defaults.get("model", "gpt-image-1.5"))
+            q = job.get("quality", defaults.get("quality", "auto"))
+            s = job.get("size", defaults.get("size", "auto"))
+            dry_items.append({"name": job_name, "model": m, "quality": q, "size": s, "n": 1})
+        handle_dry_run(args, dry_items)
 
     output_dir = Path(args.output_dir).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -826,6 +1028,7 @@ def command_batch(args):
             if b64:
                 save_image(b64, out_path, fmt)
                 verify_output(out_path)
+                tag_image(out_path, fmt, prompt, model, quality, size)
                 results.append({"name": job_name, "status": "success", "path": str(out_path)})
             else:
                 url = result.data[0].url
@@ -839,10 +1042,14 @@ def command_batch(args):
     succeeded = sum(1 for r in results if r["status"] == "success")
     failed = len(results) - succeeded
 
+    # Generate HTML gallery
+    gallery_path = generate_gallery_html(output_dir, results, manifest)
+
     # Don't use success() here because we want to include failures too
     print(json.dumps({
         "status": "success" if failed == 0 else "partial",
         "message": f"Batch complete: {succeeded}/{len(results)} succeeded",
+        "gallery": gallery_path,
         "results": results,
     }, indent=2))
     sys.exit(0 if failed == 0 else 1)
@@ -861,6 +1068,14 @@ def main():
     parser.add_argument(
         "--prefix",
         help="Style prefix prepended to prompts (generate, edit, style-transfer)",
+    )
+    parser.add_argument(
+        "--preset", choices=["draft", "balanced", "final"],
+        help="Quality preset: draft (mini/low), balanced (1.5/medium), final (1.5/high)",
+    )
+    parser.add_argument(
+        "--dry-run", action="store_true",
+        help="Estimate cost without making API calls",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -1042,6 +1257,7 @@ def main():
     batch_parser.add_argument("--output-dir", default=".", help="Base directory for output files")
 
     args = parser.parse_args()
+    apply_preset(args)
 
     try:
         if args.command == "generate":

@@ -1,6 +1,6 @@
 ---
 name: openai-image
-version: 1.1.0
+version: 1.2.0
 description: Generate, edit, describe, restyle, restore, thumbnail, and batch-process images using the OpenAI Images API and GPT-4o vision. Use this skill whenever the user asks to generate, create, make, draw, or design an image or picture using AI, or wants to edit, modify, transform, restyle, composite, or inpaint an existing image. Also handles image description and alt-text generation, background removal, style transfer, photo restoration, thumbnail creation, and batch generation from JSON manifests. Trigger when the user mentions DALL-E, gpt-image, OpenAI image generation, or wants AI-generated visuals for any purpose (logos, mockups, illustrations, thumbnails, icons, concept art, memes). Also trigger for batch image generation, generating a set or series of images, processing multiple images from a manifest, or creating consistent image collections. If the user says "make me an image of...", "generate a picture", "edit this photo to...", "describe this image", "remove the background", "make this look like watercolor", "restore this old photo", "create a thumbnail", "generate a batch of images", or "process this image manifest", this is the skill to use.
 ---
 
@@ -214,6 +214,8 @@ Manifest format (`drinks.json`):
 
 Each job inherits from `defaults` and can override any field. Jobs with `input` use the edit API (reference-based generation); jobs without `input` use generate. The `style_prefix` is prepended to every job's prompt.
 
+Batch also generates an `index.html` gallery in the output directory with thumbnails and job info. Open it in a browser to review all results at a glance.
+
 Output is a summary JSON with per-job status:
 ```json
 {
@@ -237,11 +239,50 @@ These flags go *before* the subcommand name:
 |------|--------|---------|-------|
 | `--retries` | `0`-`10` | `0` | Retry transient API errors with exponential backoff (1s, 2s, 4s... capped at 30s) |
 | `--prefix` | string | none | Style preamble prepended to prompts in generate, edit, and style-transfer |
+| `--preset` | `draft`, `balanced`, `final` | none | Quality preset. `draft` = mini/low ($0.005), `balanced` = 1.5/medium ($0.034), `final` = 1.5/high ($0.133). Explicit `--model`/`--quality` override. |
+| `--dry-run` | flag | off | Estimate cost in USD without making API calls. Works with all commands and batch. |
 
 ```bash
 # Example: retry up to 3 times with a style prefix
 python3 scripts/openai_image.py --retries 3 --prefix "Photorealistic, 8K, shallow depth of field." generate "a cup of coffee" -o coffee.png
+
+# Use a preset for quick iteration
+python3 scripts/openai_image.py --preset draft generate "concept sketch of a robot" -o robot_draft.png
+
+# Estimate cost before running
+python3 scripts/openai_image.py --preset final --dry-run generate "hero image" -n 4
+
+# Dry-run a whole batch manifest
+python3 scripts/openai_image.py --dry-run batch drinks.json
 ```
+
+#### Presets
+
+Presets map to model + quality combinations. Use them to switch between iteration and production without remembering flag combos:
+
+| Preset | Model | Quality | Approx. Cost (square) |
+|--------|-------|---------|-----------------------|
+| `draft` | `gpt-image-1-mini` | `low` | $0.005 |
+| `balanced` | `gpt-image-1.5` | `medium` | $0.034 |
+| `final` | `gpt-image-1.5` | `high` | $0.133 |
+
+If you pass `--model` or `--quality` explicitly, those override the preset values.
+
+#### Dry Run
+
+`--dry-run` calculates the estimated cost without calling the API. The output is JSON:
+
+```json
+{
+  "status": "dry_run",
+  "estimated_cost_usd": 0.532,
+  "breakdown": [
+    {"model": "gpt-image-1.5", "quality": "high", "size": "1024x1024", "n": 1, "cost_usd": 0.133}
+  ]
+}
+```
+
+For batch manifests, the breakdown includes each job by name. When `--quality` is `auto`, the estimate uses `medium` pricing as a reasonable midpoint.
 
 ### Generation & Editing flags
 
@@ -329,7 +370,7 @@ Per-image costs in USD (as of late 2025). Check [OpenAI pricing](https://openai.
 - **Edit costs the same as generate.** Using a reference photo does not add cost but dramatically improves quality. Always prefer edit with a reference photo over blind generation.
 - **Avoid DALL-E 3.** It is deprecated (shutdown May 2026), costs 4x more than `gpt-image-1.5` at standard quality, and produces lower-quality results. Use `gpt-image-1.5` for everything.
 
-## Prompt Tips
+## Prompt Engineering
 
 The GPT image models respond well to detailed, specific prompts. A few things that help:
 
@@ -339,6 +380,27 @@ The GPT image models respond well to detailed, specific prompts. A few things th
 - **Include context**: "on a white background", "in a forest setting", "floating in space"
 
 For edits, describe the full desired result rather than just the change. "A portrait of a person wearing a red hat in a garden" works better than "add a hat".
+
+### Prompt Spec Scaffold
+
+When building prompts for image generation, use this structured template. Fill in each segment that applies, skip the rest. The agent should compose the final prompt by concatenating the filled segments into a single string.
+
+```
+[SUBJECT]     What is the main focus? e.g. "A Bengal cat sitting on a stack of old books"
+[STYLE]       Art style or medium. e.g. "Hyper-real photograph" or "Ukiyo-e woodblock print"
+[COMPOSITION] Camera angle and framing. e.g. "Close-up, shallow depth of field, rule of thirds"
+[LIGHTING]    Light source and quality. e.g. "Warm golden hour side-lighting, long shadows"
+[COLOR]       Palette or mood. e.g. "Muted earth tones with a pop of teal"
+[BACKGROUND]  Setting and context. e.g. "In a dimly lit library with leather-bound volumes"
+[CONSTRAINTS] Technical limits. e.g. "No text, no watermarks, transparent background"
+```
+
+Example assembled prompt:
+> A Bengal cat sitting on a stack of old books. Hyper-real photograph. Close-up, shallow depth of field, rule of thirds. Warm golden hour side-lighting, long shadows. Muted earth tones with a pop of teal. In a dimly lit library with leather-bound volumes. No text, no watermarks.
+
+The agent should auto-enhance user prompts by filling in missing segments. If the user says "make me a picture of a cat", the agent adds style, composition, lighting, and color based on context. No API call needed for prompt enhancement -- the agent does it.
+
+See `references/sample-prompts.md` for curated examples by category.
 
 ## Consistent Series
 
@@ -390,6 +452,8 @@ All commands return structured JSON:
 ```
 
 The `describe` command returns text instead of images:
+PNG output files include embedded metadata (tEXt chunks) with the prompt, model, quality, and size used to generate them. View with `identify -verbose file.png` (ImageMagick) or any PNG metadata viewer.
+
 ```json
 {
   "status": "success",
