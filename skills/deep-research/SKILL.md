@@ -1,5 +1,6 @@
 ---
 name: deep-research
+version: 1.0.0
 description: Conduct comprehensive, multi-round research that produces rich visual reports. Use when asked for "deep research", "comprehensive analysis", "compare frameworks", "evaluate options", "research the state of X", or any task requiring investigation across 10+ sources. NOT for quick lookups — this is a 5-15 minute deep dive that produces a briefing-quality artifact with screenshots, diagrams, tables, and cited findings.
 ---
 

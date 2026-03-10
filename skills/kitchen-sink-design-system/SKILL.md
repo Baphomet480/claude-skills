@@ -1,5 +1,6 @@
 ---
 name: kitchen-sink-design-system
+version: 1.0.0
 description: Kitchen Sink design system workflow for any frontend stack — Next.js, Hugo, Astro, SvelteKit, Nuxt, or plain HTML. Use when asked for a Kitchen Sink page, Design System, UI Audit, Style Guide, or Component Inventory, or when a project needs a component inventory plus component creation and a sink page implementation.
 ---
 

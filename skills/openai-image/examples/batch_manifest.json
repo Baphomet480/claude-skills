@@ -1,0 +1,33 @@
+{
+  "style_prefix": "Vivid, hyper-real 1920s cinematic movie still. Rich jewel tones, warm golden lighting, film grain.",
+  "defaults": {
+    "model": "gpt-image-1.5",
+    "quality": "high",
+    "size": "1024x1024",
+    "format": "png"
+  },
+  "jobs": [
+    {
+      "name": "cocktail_blue",
+      "input": "ref_coupe.jpg",
+      "prompt": "Blue butterfly pea tea cocktail with violet-shifting ice cubes, condensation on glass, lime wheel garnish"
+    },
+    {
+      "name": "cocktail_amber",
+      "input": "ref_rocks.jpg",
+      "prompt": "Golden amber old fashioned with a large ice sphere, orange peel garnish, smoke wisps rising"
+    },
+    {
+      "name": "hero_banner",
+      "prompt": "Elegant dark bar counter with three cocktails backlit by warm Edison bulbs, shallow depth of field",
+      "size": "1536x1024",
+      "output": "hero_banner.png"
+    },
+    {
+      "name": "menu_bg",
+      "prompt": "Subtle dark textured background with faint Art Deco geometric patterns, suitable as a menu backdrop",
+      "quality": "medium",
+      "output": "menu_background.png"
+    }
+  ]
+}

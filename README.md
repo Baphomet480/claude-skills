@@ -6,15 +6,12 @@ Portable AI agent skill distribution. Skills are framework-agnostic instruction 
 
 | Skill                          | Description                                                                                                                                                      |
 | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **google-workspace**           | Unified Gmail, Calendar, Contacts, Drive, Docs, Sheets, and Photos skill with robust auth and HTML email support.                                         |
-| **kitchen-sink-design-system** | Framework-agnostic Kitchen Sink design system workflow — component inventory, tiered checklists, CVA patterns, voice/tone, image reinterpretation, motion tokens |
-| **nextjs-tinacms**             | Next.js 16 + React 19 + TinaCMS — scaffolding through production, 247-task day 0–2 checklist                                                                     |
 | **cloudflare-pages**           | Cloudflare Pages deployment and configuration                                                                                                                    |
 | **deep-research**              | Structured deep research methodology                                                                                                                             |
 | **design-lookup**              | Design system discovery and reference                                                                                                                            |
-| **hugo-sveltia-cms**           | Hugo + Sveltia CMS integration                                                                                                                                   |
-| **pitolandia-visual-identity** | Pitolandia brand visual identity system                                                                                                                          |
-| **remini-web**                 | Remini web enhancement workflow with manual login and browser-assisted upload/download automation                                                                |
+| **kitchen-sink-design-system** | Framework-agnostic Kitchen Sink design system workflow — component inventory, tiered checklists, CVA patterns, voice/tone, image reinterpretation, motion tokens |
+| **nextjs-tinacms**             | Next.js 16 + React 19 + TinaCMS — scaffolding through production, 247-task day 0–2 checklist                                                                     |
+| **openai-image**               | OpenAI image generation, editing, vision, batch processing, and transforms                                                                                       |
 
 ## Structure
 

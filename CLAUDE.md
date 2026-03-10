@@ -16,7 +16,7 @@ hooks/pre-commit ← Auto-packages modified skills into dist/ on commit
 
 Each skill is a self-contained directory under `skills/` with:
 
-- **SKILL.md** (required) — YAML frontmatter (`name`, `description`) + detailed markdown instructions
+- **SKILL.md** (required) — YAML frontmatter (`name`, `description`, `version`) + detailed markdown instructions
 - **references/** — Deep technical docs, checklists, and lookup material
 - **templates/** — Starter code files agents can copy into projects
 - **examples/** — Reference implementations
@@ -26,32 +26,37 @@ Skills are consumed by both Claude (`.agent/skills/`) and Gemini (`~/.gemini/ant
 
 ## Current Skills
 
-| Skill                        | Purpose                                                                                                                                  |
-| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `kitchen-sink-design-system` | Framework-agnostic Kitchen Sink design system workflow — component inventory, tiered checklists, CVA patterns, voice/tone, motion tokens |
-| `nextjs-tinacms`             | Next.js 16 + React 19 + TinaCMS — scaffolding through production deployment, 247-task checklist                                          |
-| `cloudflare-pages`           | Cloudflare Pages deployment and configuration                                                                                            |
-| `deep-research`              | Structured deep research methodology                                                                                                     |
-| `design-lookup`              | Design system discovery and reference                                                                                                    |
-| `hugo-sveltia-cms`           | Hugo + Sveltia CMS integration                                                                                                           |
-| `pitolandia-visual-identity` | Pitolandia brand visual identity system                                                                                                  |
-| `remini-web`                 | Remini web enhancement workflow with manual login and browser-assisted upload/download automation                                        |
-| `google-workspace`           | Unified Google Workspace — Gmail, Calendar, Contacts, Drive, Docs, Sheets, and Photos with robust auth (replaces per-service skills)               |
+| Skill                        | Purpose                                                                      |
+| ---------------------------- | ---------------------------------------------------------------------------- |
+| `cloudflare-pages`           | Cloudflare Pages deployment, custom domains, and CI/CD                       |
+| `deep-research`              | Multi-round deep research producing visual reports with citations            |
+| `design-lookup`              | CSS components, SVG icons, and design pattern discovery from the web         |
+| `kitchen-sink-design-system` | Framework-agnostic Kitchen Sink design system workflow and component inventory|
+| `nextjs-tinacms`             | Next.js 16 + React 19 + TinaCMS -- scaffolding through production deployment |
+| `openai-image`               | OpenAI image generation, editing, vision, batch processing, and transforms   |
 
 ## Workflow
 
 1. Edit skill source in `skills/<name>/`
-2. Commit — the pre-commit hook auto-packages changed skills into `dist/<name>.skill`
-3. Install — copy skill directory to target agent's skill location:
+2. Commit -- the pre-commit hook auto-packages changed skills into `dist/<name>.skill`
+3. Install -- copy or symlink skill directory to target agent's skill location:
    - Claude: `<project>/.agent/skills/<name>/`
    - Gemini: `~/.gemini/antigravity/skills/<name>/`
 
 ## Conventions
 
-- No build system — this repo has no `package.json` or runtime dependencies
+- No build system -- this repo has no `package.json` or runtime dependencies
 - Franchise placeholder: Star Wars (use for sample data, form labels, empty states)
 - `.skill` files are standard ZIP archives renamed for clarity
 - Always edit in `skills/`, never edit `dist/` directly
+
+## Versioning
+
+Each SKILL.md frontmatter includes a `version` field using semver (`major.minor.patch`). When you modify a skill's SKILL.md or scripts, bump the version:
+
+- **Patch** (1.0.0 -> 1.0.1): bug fixes, typo corrections, doc clarifications
+- **Minor** (1.0.0 -> 1.1.0): new features, new commands, new sections
+- **Major** (1.0.0 -> 2.0.0): breaking changes to script CLI, manifest format, or skill structure
 
 ## Bug Filing Protocol
 
@@ -64,5 +69,5 @@ When a skill script returns a JSON response with `"type": "UnhandledException"`,
 
 Each skill with scripts has a `KNOWN_BUGS.md` at its root (`skills/<name>/KNOWN_BUGS.md`). Error logs are persisted to disk:
 - FamilySearch: `~/.familysearch/logs/error.log`
-- Google Workspace: `~/.google_workspace/logs/error.log`
 - OCR: `~/.ocr/logs/error.log`
+- OpenAI Image: `~/.openai_image/logs/error.log`

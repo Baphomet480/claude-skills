@@ -1,5 +1,6 @@
 ---
 name: design-lookup
+version: 1.0.0
 description: Search and retrieve CSS components, SVG icons, design patterns, and visual inspiration from the web. Use when the user asks to find, look up, or search for CSS snippets, SVG icons, UI components, loading spinners, animations, design inspiration, or any visual/frontend design resource. Triggers on requests like "find me a CSS button", "look up an SVG spinner", "search for a card component", "find a wave divider SVG", or "get design inspiration for a dashboard".
 ---
 
