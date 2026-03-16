@@ -1,325 +1,164 @@
 ---
 name: nextjs-tinacms
-version: 1.0.0
+version: 2.0.0
 description: Build Next.js 16 + React 19 + TinaCMS sites with visual editing, blocks-based page builder, and complete SEO. Use this skill whenever the user mentions TinaCMS, Tina CMS, Next.js with a CMS, visual editing with Next.js, click-to-edit, content-managed Next.js site, blocks pattern page builder, or migrating to Next.js + TinaCMS. Also trigger for TinaCMS schema design, self-hosted TinaCMS, TinaCMS media configuration, or any TinaCMS troubleshooting. Covers Day 0-2 setup from scaffolding through production deployment on Vercel.
 ---
 
-# Next.js 16 + React 19 + TinaCMS Skill
+# Next.js 16 + React 19 + TinaCMS + Vercel
 
-Two primary workflows:
-1. **New Project**: Scaffold Next.js 16 + TinaCMS with blocks page builder, visual editing, complete SEO, Tailwind CSS 4, shadcn/ui
-2. **Add CMS**: Integrate TinaCMS into an existing Next.js 15/16 project
+Opinionated for: **Next.js App Router + TinaCMS + Tina Cloud + Vercel + Tailwind CSS 4 + shadcn/ui**.
 
-## Why This Stack
+Two workflows: **New Project** (scaffold from scratch) or **Add CMS** (integrate into existing Next.js 15/16 project).
 
-- **Next.js 16** — Turbopack default, `"use cache"` directive, `proxy.ts` replaces middleware, async params required, React 19.2
-- **TinaCMS 3.x** — Git-backed headless CMS, visual click-to-edit, GraphQL API from code-first schema, admin UI at `/admin`
-- **React 19.2** — Server Components stable, Actions, `use()` hook, View Transitions, React Compiler (opt-in)
-- **Tailwind CSS 4** — CSS-first config, `@import "tailwindcss"`, no `tailwind.config.js` needed
-- **shadcn/ui** — Copy-paste components, works with Tailwind, not a versioned package
+## Stack
 
-## Critical Knowledge
+| Technology | Version | Key Feature |
+|-----------|---------|-------------|
+| Next.js | 16.x | Turbopack default, `"use cache"`, `proxy.ts`, async params |
+| TinaCMS | 3.x | Git-backed CMS, visual click-to-edit, GraphQL schema API, ESM-only |
+| React | 19.x | Server Components, Actions, `use()`, `useEffectEvent` |
+| Tailwind CSS | 4.x | CSS-first config (`@import "tailwindcss"`), no JS config needed |
+| shadcn/ui | CLI v4 | Copy-paste components, `npx shadcn create`, `tw-animate-css` |
+| Vercel | -- | Deploy target. `@vercel/analytics`, `@vercel/speed-insights`, Deploy Hooks |
+| Tina Cloud | -- | Default CMS backend. Free tier (2 users), editorial workflow on Team Plus+ |
 
-1. **Server-Client split is mandatory.** `useTina()` requires `"use client"`. Every editable page needs a Server Component (data fetcher) and a Client Component (visual editing wrapper). No global `TinaProvider` needed in TinaCMS v2+.
-2. **Build order matters.** Always `"build": "tinacms build && next build"`. Running `next build` first → `Cannot find module '../tina/__generated__/client'`.
-3. **Pin exact TinaCMS versions.** No caret ranges. UI assets partially served from CDN and drift from local CLI. Keep all `tinacms` and `@tinacms/*` synced via RenovateBot grouping.
-4. **`tina/__generated__/` MUST be committed.** Files `_graphql.json`, `_lookup.json`, `_schema.json`, and `tina-lock.json` are needed for production builds.
-5. **Async params in Next.js 16.** Every `page.tsx`, `layout.tsx`, `route.ts` must `await params` — sync access fully removed.
-6. **`proxy.ts` replaces `middleware.ts` in Next.js 16.** Auth, redirects, and request manipulation move to `app/proxy.ts` running on Node.js runtime.
-7. **Node.js ≥ 20.9.0 required.** Next.js 16 dropped Node 18.
-8. **Field names: alphanumeric + underscores only.** Hyphens/spaces in schema field names cause build errors.
-9. **pnpm required for TinaCMS ≥ 2.7.3.** npm/yarn may have module resolution issues.
-10. **Dev command is `tinacms dev -c "next dev"`.** Never `next dev` alone — the local GraphQL server won't run.
-11. **Self-hosted TinaCMS does NOT work in Edge Runtime** (Cloudflare Workers, Vercel Edge Functions). Marked wontfix.
-12. **`useTina()` returns props.data unchanged in production** — zero overhead. Only subscribes to live updates in edit mode.
-
-## Version Floors
-
-Before scaffolding, look up current stable versions (`npm view <pkg> version`). Minimum floors:
-
-| Package | Minimum | Why |
-|---------|---------|-----|
-| `next` | ≥ 16.0.10 | Security patches |
-| `tinacms` | ≥ 3.3.x | Visual selector, current schema API |
-| `@tinacms/cli` | ≥ 2.1.x | Current build toolchain |
-| `react` / `react-dom` | ≥ 19.2.x | View Transitions, useEffectEvent |
-| `tailwindcss` | ≥ 4.x | CSS-first config (v3.4.x also acceptable) |
-| Node.js | ≥ 20.9.0 | Next.js 16 requirement |
-| TypeScript | ≥ 5.1.0 | Required for Next.js 16 types |
-
-## Workflow: New Project
-
-Follow the **247-task checklist** in `references/day0-2-checklist.md` task-by-task. The sections below summarize the architecture — the checklist has the exhaustive implementation details.
-
-### Step 1: Scaffold & Install
+## Quick Start
 
 ```bash
-npx create-next-app@latest my-site --typescript --tailwind --app --src-dir --turbopack
+npx create-next-app@latest my-site --typescript --tailwind --app --src-dir
 cd my-site
 npx @tinacms/cli@latest init
 ```
 
-Verify: `tinacms dev` → confirm `/admin` loads at `http://localhost:3000/admin/index.html`.
+Verify: `tinacms dev` then open `http://localhost:3000/admin/index.html`.
 
-### Step 2: Configure Package Management
+**Local dev runs in local-only mode** -- content reads/writes directly to the filesystem, no Tina Cloud connection needed. Production builds connect to Tina Cloud via `NEXT_PUBLIC_TINA_CLIENT_ID` and `TINA_TOKEN` env vars on Vercel.
 
-Pin exact TinaCMS versions. Add `renovate.json` — see `references/day0-2-checklist.md § Stack Versions` for config.
+## Critical Knowledge
 
-### Step 3: Schema Design in `tina/config.ts`
+1. **Server-Client split is mandatory.** `useTina()` requires `"use client"`. Every editable page needs a Server Component (data fetcher) + Client Component (visual editing wrapper).
+2. **Build order matters.** Always `"build": "tinacms build && next build"`. Wrong order breaks with `Cannot find module '../tina/__generated__/client'`.
+3. **Pin exact TinaCMS versions.** No caret ranges. UI assets drift from CDN. Keep `tinacms` and `@tinacms/*` synced via package grouping (RenovateBot or Dependabot).
+4. **`tina/__generated__/` should be gitignored.** Only `tina-lock.json` must be committed. The `__generated__/` folder is rebuilt by `tinacms build`.
+5. **TinaCMS 3.x is ESM-only.** Config files must use `import` syntax. Set `"type": "module"` in `package.json` or use `.ts` extensions.
+6. **Async params in Next.js 16.** Every `page.tsx`, `layout.tsx`, `route.ts` must `await params` -- sync access fully removed.
+7. **`proxy.ts` replaces `middleware.ts`.** Lives at project root, exports `proxy` function, runs Node.js runtime only. Codemod: `npx @next/codemod@canary middleware-to-proxy .`
+8. **Security: @tinacms/cli >= 2.1.8 required.** CVE-2026-28792 (Critical, CVSS 9.6) -- drive-by attacks via CORS + path traversal in older versions.
+9. **Dev command is `tinacms dev -c "next dev"`.** Never `next dev` alone -- the local GraphQL server won't run.
 
-Read `references/nextjs16-react19-tinacms-reference.md § Schema Design Patterns` for full examples. Use `templates/tina-config-starter.ts` as starting point.
+## Version Floors
 
-**Required collections:**
+Look up current stable versions before scaffolding (`npm view <pkg> version`).
 
-| Collection | Type | Purpose |
-|-----------|------|---------|
-| `pages` | Folder + blocks | Dynamic pages with visual page builder |
-| `posts` | Folder | Blog/articles with structured fields |
-| `authors` | Folder | Referenced by posts |
-| `global` | Single doc | Site-wide settings, SEO defaults, social links |
-| `navigation` | Single doc | Editable nav structure |
-| `footer` | Single doc | Footer content and link groups |
-| `notFound` | Single doc | Customizable 404 page content |
+| Package | Minimum | Why |
+|---------|---------|-----|
+| `next` | >= 16.0.10 | Security patches |
+| `tinacms` | >= 3.3.x | Visual selector, ESM-only, current schema API |
+| `@tinacms/cli` | >= 2.1.8 | CVE-2026-28792 fix |
+| `react` / `react-dom` | >= 19.0.x | Server Components, Actions (19.2.x for `useEffectEvent`) |
+| `tailwindcss` | >= 4.x | CSS-first config (v3.4.x also acceptable) |
+| Node.js | >= 20.9.0 | Next.js 16 requirement |
 
-**Singleton pattern:**
-```typescript
-ui: { global: true, allowedActions: { create: false, delete: false } }
-```
+## Key Imports
 
-**Blocks pattern:**
-```typescript
-{
-  type: 'object', list: true, name: 'blocks', label: 'Page Sections',
-  ui: { visualSelector: true },
-  templates: [heroBlock, featuresBlock, contentBlock, ctaBlock, faqBlock],
-}
-```
+| Import | From | Used For |
+|--------|------|----------|
+| `defineConfig` | `tinacms` | Schema configuration in `tina/config.ts` |
+| `useTina` | `tinacms/dist/react` | Live editing in Client Components |
+| `tinaField` | `tinacms/dist/react` | Click-to-edit data attributes |
+| `TinaMarkdown` | `tinacms/dist/rich-text` | Rich text rendering |
+| `client` | `@/tina/__generated__/client` | GraphQL queries (auto-generated) |
 
-Every block template needs: `ui.previewSrc`, `ui.defaultItem`, section style group (layout/background/height/textColor as enums mapped to Tailwind classes).
+## Collections
 
-**Field quality — enforce on every field:**
-- `isTitle: true` on title fields, `required: true` on mandatory fields
-- `ui.validate` for character limits, format validation
-- `ui.description` for editorial guidance
-- `ui.itemProps` on **every** list field with meaningful labels
-- `ui.component: 'textarea'` on multi-line strings, `'group'` for collapsible groups
+Add based on project needs:
 
-**Reusable field groups** — extract as shared variables: `seoFields`, `ctaFields`, `linkFields`, `responsiveImageFields`, `sectionStyleFields`.
+| Collection | Type | When Needed |
+|-----------|------|-------------|
+| `pages` | Folder + blocks | Always |
+| `global` | Singleton | Always (site settings, SEO defaults) |
+| `navigation` | Singleton | Always (can include footer links) |
+| `posts` | Folder | If site has a blog |
+| `authors` | Folder | If site has a blog |
+| `footer` | Singleton | If footer warrants its own collection |
+| `notFound` | Singleton | Optional |
 
-**Content hooks:**
-```typescript
-ui: {
-  beforeSubmit: async ({ values }) => ({
-    ...values,
-    slug: values.title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
-    modifiedDate: new Date().toISOString(),
-  }),
-}
-```
+## Common Tasks
 
-### Step 4: Server-Client Page Pattern
+### Create a new block
 
-See `templates/page-server-client.tsx` for the complete pattern.
+Add a template object to the blocks field's `templates` array in `tina/config.ts`. Every block needs `ui.defaultItem`. Optional: `ui.previewSrc` for visual selector thumbnails.
 
-```typescript
-// app/[...slug]/page.tsx — Server Component
-import client from '@/tina/__generated__/client'
-import PageClient from './client-page'
+### Add visual editing to a page
 
-export default async function Page({ params }: { params: Promise<{ slug: string[] }> }) {
-  const { slug } = await params
-  const relativePath = `${slug.join('/')}.md`
-  const { data, query, variables } = await client.queries.page({ relativePath })
-  return <PageClient data={data} query={query} variables={variables} />
-}
+1. Server Component fetches `{ data, query, variables }` from Tina client
+2. Client Component calls `useTina()` with those props
+3. Add `data-tina-field={tinaField(data.page, 'fieldName')}` on DOM elements
 
-export async function generateStaticParams() {
-  const pages = await client.queries.pageConnection()
-  return pages.data.pageConnection.edges?.map((edge) => ({
-    slug: edge?.node?._sys.breadcrumbs,
-  })) ?? []
-}
-```
+### Enable caching
 
-```typescript
-// app/[...slug]/client-page.tsx — Client Component
-'use client'
-import { useTina, tinaField } from 'tinacms/dist/react'
-import { Blocks } from '@/components/blocks'
+Set `cacheComponents: true` in `next.config.ts`, then use `"use cache"` directive with `cacheLife()` presets: `seconds`, `minutes`, `hours`, `days`, `weeks`, `max`.
 
-export default function PageClient(props: { data: any; query: string; variables: any }) {
-  const { data } = useTina(props)
-  return (
-    <main data-tina-field={tinaField(data.page, 'blocks')}>
-      <Blocks blocks={data.page.blocks} />
-    </main>
-  )
-}
-```
+### Deploy to Vercel
 
-### Step 5: Visual Editing & Draft Mode
+1. Build command: `tinacms build && next build`
+2. Set Vercel env vars: `NEXT_PUBLIC_TINA_CLIENT_ID`, `TINA_TOKEN`, `NEXT_PUBLIC_TINA_BRANCH`
+3. Install `@vercel/analytics` + `@vercel/speed-insights`, render `<Analytics />` and `<SpeedInsights />` in root layout
+4. Set up a Deploy Hook for content change rebuilds
+5. Use Vercel Team Environment Variables to share keys across preview/production
 
-**Draft Mode API route** (`app/api/preview/route.ts`):
-```typescript
-import { draftMode } from 'next/headers'
-import { redirect } from 'next/navigation'
+**Always use Tina Cloud** unless the project has a specific reason to self-host. See `references/deployment.md` for self-hosted as a secondary option.
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url)
-  const slug = searchParams.get('slug') || '/'
-  ;(await draftMode()).enable()
-  redirect(slug)
-}
-```
+## Claude Code Automations
 
-**Visual editing debug checklist** — if click-to-edit doesn't work:
-1. Draft mode enabled? (`/api/preview`)
-2. Component is `"use client"`?
-3. `useTina()` called with correct `{ data, query, variables }` props?
-4. `data-tina-field={tinaField(data.page, 'fieldName')}` on DOM elements (not wrapper components)?
-5. Tina dev server running? (`tinacms dev`)
-6. Types generated and current? (`tina/__generated__/`)
-
-**`ui.router` on every content collection** for contextual editing preview:
-```typescript
-ui: { router: ({ document }) => `/blog/${document._sys.filename}` }
-```
-
-### Step 6: Complete SEO Implementation
-
-Read `references/day0-2-checklist.md` — Day 1 tasks 1.16–1.98 for the exhaustive 80+ SEO field specs covering global settings singleton, per-page SEO object, article fields, JSON-LD schemas, OG tags, Twitter cards, discovery files.
-
-**Key patterns:**
-
-**SEO description waterfall:**
-1. `metaDescription` (explicit) → 2. `excerpt` → 3. Auto-truncated content → 4. `siteDescription` (global)
-
-**`generateMetadata()` in every page:**
-```typescript
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { slug } = await params
-  const { data } = await client.queries.page({ relativePath: `${slug}.md` })
-  const seo = data.page.seo
-  const global = await client.queries.global({ relativePath: 'settings.json' })
-  return {
-    title: seo?.metaTitle || data.page.title,
-    description: resolveDescription(seo, data.page, global.data.global),
-    openGraph: {
-      images: resolveOgImage(seo, global.data.global),
-      type: 'website',
-      siteName: global.data.global.siteName,
-    },
-    robots: { index: !seo?.noIndex, follow: !seo?.noFollow },
-    alternates: { canonical: seo?.canonical || `${global.data.global.siteUrl}/${slug}` },
-  }
-}
-```
-
-**JSON-LD** — on every page: `Organization`, `WebSite` (homepage), `WebPage`, `Article`/`BlogPosting` (posts), `BreadcrumbList`, `FAQPage` (FAQ blocks).
-
-**Discovery files:**
-- `app/sitemap.ts` — dynamic from all collections, respects `noIndex`/`draft`
-- `app/robots.ts` — disallows `/admin`, `/api/preview`
-- `app/feed.xml/route.ts` — RSS for blog
-
-### Step 7: Caching Strategy
-
-```typescript
-async function getPage(slug: string) {
-  'use cache'
-  cacheLife({ stale: 300, revalidate: 60, expire: 3600 })
-  const { data } = await client.queries.page({ relativePath: `${slug}.md` })
-  return data
-}
-```
-
-Draft mode bypasses all caches (confirmed after Next.js PR #77141). Next.js 15+ changed `fetch()` default to `no-store` — explicitly opt into caching.
-
-### Step 8: Media Management
-
-| Provider | Best For | Setup |
-|----------|----------|-------|
-| Repo-based (`tina: { mediaRoot, publicFolder }`) | Small sites, blogs | 2 lines in config |
-| Cloudinary (`next-tinacms-cloudinary`) | Media-heavy | Package + API route + 3 env vars |
-| S3/R2 (`next-tinacms-s3`) | Enterprise | Package + IAM + bucket config |
-
-All providers integrate with `next/image` — add `images.remotePatterns` in `next.config.js`.
-
-### Step 9: Build & Deploy
+Set up in `.claude/settings.json` early in Day 0:
 
 ```json
 {
-  "scripts": {
-    "dev": "tinacms dev -c \"next dev\"",
-    "build": "tinacms build && next build",
-    "start": "next start"
+  "hooks": {
+    "PreToolUse": [{
+      "matcher": "Edit|Write",
+      "hooks": [{
+        "type": "prompt",
+        "prompt": "If the file path contains 'tina/__generated__/' or ends with 'tina-lock.json', BLOCK this edit. These files are auto-generated by tinacms build and must not be manually edited."
+      }]
+    }],
+    "PostToolUse": [{
+      "matcher": "Edit|Write",
+      "hooks": [{
+        "type": "command",
+        "command": "npx prettier --write $CLAUDE_FILE_PATH 2>/dev/null || true"
+      }]
+    }]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(npx tinacms dev:*)",
+      "Bash(npx tinacms build:*)",
+      "Bash(pnpm dev:*)",
+      "Bash(pnpm build:*)",
+      "Bash(npx shadcn@latest add:*)"
+    ]
   }
 }
 ```
 
-**Vercel env vars for Tina Cloud:**
-```
-NEXT_PUBLIC_TINA_CLIENT_ID=<from app.tina.io>
-TINA_TOKEN=<read-only token>
-NEXT_PUBLIC_TINA_BRANCH=main
-```
+**MCP servers:**
+- `claude mcp add context7 -- npx -y @upstash/context7-mcp@latest` -- live TinaCMS/Next.js/React/Tailwind docs
+- `claude mcp add playwright -- npx -y @anthropic-ai/mcp-server-playwright@latest` -- test visual editing in browser
 
-**Vercel env vars for self-hosted:**
-```
-TINA_PUBLIC_IS_LOCAL=false
-GITHUB_PERSONAL_ACCESS_TOKEN=ghp_xxx
-NEXTAUTH_SECRET=<random-secret>
-KV_REST_API_URL=https://xxx.kv.vercel-storage.com
-KV_REST_API_TOKEN=xxx
-```
-
-## Workflow: Self-Hosted TinaCMS
-
-Three pluggable components: **database adapter** (Vercel KV / MongoDB / custom), **git provider** (GitHub), **auth provider** (AuthJS/Clerk).
-
-Read `references/nextjs16-react19-tinacms-reference.md § Self-Hosted TinaCMS` for `database.ts` configuration.
-
-**Choose self-hosting** for: full control, cost sensitivity, open-source purity.
-**Choose Tina Cloud** for: quick setup, non-technical teams, built-in editorial workflow ($29-599/mo).
-
-## Common Gotchas
-
-| Problem | Cause | Fix |
-|---------|-------|-----|
-| `Cannot find module '../tina/__generated__/client'` | Wrong build order | `tinacms build && next build` |
-| `Schema Not Successfully Built` | Frontend imports in `tina/config.ts` | Keep imports minimal |
-| `Field name contains invalid characters` | Hyphens/spaces | Alphanumeric + underscores only |
-| `GetCollection failed: template name not provided` | Missing `_template` in frontmatter | Add when using `templates` array |
-| Visual editing not working | Multiple causes | Run debug checklist (Step 5) |
-| `Expected workUnitAsyncStorage` | Turbopack prerendering bug | `--webpack` fallback |
-| List items show "Item 0" | Missing `ui.itemProps` | Add meaningful label function |
-| Reference dropdown slow/503 | Large collections | Custom field with pagination |
-| SCSS modules broken | TinaCMS esbuild issue | CSS modules or Tailwind |
-| Mismatched package versions | Tina packages out of sync | Pin exact, RenovateBot grouping |
-| Content stale after Git push | Database index not updated | Re-index from dashboard |
-| iOS share sheet broken (iMessage, AirDrop) | `manifest.json` with `display: "standalone"` | Use `"display": "browser"` or omit manifest; `<meta name="theme-color">` handles tinting |
-
-## Anti-Patterns
-
-| Don't | Do Instead |
-|-------|-----------|
-| Single rich-text for page body | Blocks list with templates |
-| Expose CSS values in schema | Enums mapped to Tailwind classes |
-| Generic wrapper components | Purpose-built components accepting Tina types |
-| `useTina` in Server Components | Client Component wrapper |
-| Dependabot for Tina packages | RenovateBot with grouping |
-| Inline media (base64) | External media provider |
-| No block fallback | Default case in renderer |
-| Hardcoded SEO | SEO object in schema with waterfall |
-| Missing `ui.itemProps` on lists | Meaningful label functions |
-| Sync `params` access | `await params` everywhere |
-| Manifest `display: "standalone"` on non-PWA sites | `"display": "browser"` or omit; use `<meta name="theme-color">` for tinting |
+**Consider creating project-level skills for repeated tasks:**
+- `/new-block` -- scaffold a block template + component + renderer mapping
+- `/tinacms-check` -- audit schema for missing `ui.itemProps`, broken `tinaField`, version drift
 
 ## Reference Files
 
-| File | Purpose |
-|------|---------|
-| `references/day0-2-checklist.md` | **247-task checklist** — follow task-by-task for complete setup |
-| `references/nextjs16-react19-tinacms-reference.md` | Deep technical reference: schema patterns, field types, blocks, SEO, React 19, caching, self-hosting, custom components, deployment |
-| `templates/tina-config-starter.ts` | Production `tina/config.ts` with reusable SEO fields, 5 block templates, 7 collections |
-| `templates/page-server-client.tsx` | Complete server-client page pattern with metadata, static params, block renderer |
+| File | When To Read |
+|------|-------------|
+| `references/schema-design.md` | Designing collections, blocks, fields, content hooks |
+| `references/visual-editing.md` | Server/client split, draft mode, click-to-edit debugging |
+| `references/seo-meta.md` | Metadata, JSON-LD, OG tags, sitemaps, RSS |
+| `references/deployment.md` | Tina Cloud vs self-hosted, media providers, env vars |
+| `references/setup-checklist.md` | Phased implementation checklist (MVP / Polish / Comprehensive) |
+| `templates/tina-config-starter.ts` | Production `tina/config.ts` with 5 block templates |
+| `templates/page-server-client.tsx` | Server/client page pattern with metadata and static params |

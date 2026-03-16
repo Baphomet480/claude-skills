@@ -33,6 +33,7 @@ const seoFields = [
     description: '1200×630px recommended.',
   },
   { name: 'noIndex', label: 'Hide from Search Engines', type: 'boolean' as const },
+  { name: 'noFollow', label: 'No Follow Links', type: 'boolean' as const },
   { name: 'canonicalUrl', label: 'Canonical URL', type: 'string' as const },
 ]
 

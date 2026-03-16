@@ -1,6 +1,8 @@
 // =============================================================================
 // Next.js 16 + TinaCMS Page Pattern
 // Server Component fetches data → Client Component enables visual editing
+//
+// This template contains 4 files. Copy each section into the indicated path.
 // =============================================================================
 
 // --- FILE 1: app/[slug]/page.tsx (Server Component) ---
@@ -51,11 +53,11 @@ export default async function Page({
 
 
 // --- FILE 2: app/[slug]/PageClient.tsx (Client Component) ---
+// Copy this into its own file.
 
 // 'use client'
 //
 // import { useTina, tinaField } from 'tinacms/dist/react'
-// import { TinaMarkdown } from 'tinacms/dist/rich-text'
 // import { BlockRenderer } from '@/components/blocks/BlockRenderer'
 //
 // interface PageClientProps {
@@ -87,6 +89,7 @@ export default async function Page({
 
 
 // --- FILE 3: lib/metadata.ts (Reusable metadata helper) ---
+// Copy this into its own file.
 
 // import type { Metadata } from 'next'
 //
@@ -100,6 +103,7 @@ export default async function Page({
 //     ogDescription?: string
 //     twitterCard?: 'summary_large_image' | 'summary'
 //     noIndex?: boolean
+//     noFollow?: boolean
 //     canonicalUrl?: string
 //   }
 // }
@@ -112,7 +116,10 @@ export default async function Page({
 //   return {
 //     title,
 //     description,
-//     robots: seo?.noIndex ? { index: false, follow: false } : { index: true, follow: true },
+//     robots: {
+//       index: !seo?.noIndex,
+//       follow: !seo?.noFollow,
+//     },
 //     alternates: seo?.canonicalUrl ? { canonical: seo.canonicalUrl } : undefined,
 //     openGraph: {
 //       title: seo?.ogTitle || title,
@@ -131,6 +138,7 @@ export default async function Page({
 
 
 // --- FILE 4: app/[slug]/opengraph-image.tsx (Dynamic OG Image) ---
+// Copy this into its own file. Optional — only needed if you want auto-generated OG images.
 
 // import { ImageResponse } from 'next/og'
 // import { client } from '@/tina/__generated__/client'

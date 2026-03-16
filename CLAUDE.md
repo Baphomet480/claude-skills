@@ -22,7 +22,7 @@ Each skill is a self-contained directory under `skills/` with:
 - **examples/** — Reference implementations
 - **scripts/** — Helper scripts (scanners, generators, etc.)
 
-Skills are consumed by both Claude (`.agent/skills/`) and Gemini (`~/.gemini/antigravity/skills/`).
+Skills are consumed by both Claude (`~/.claude/skills/`) and Gemini (`~/.gemini/antigravity/skills/`).
 
 ## Current Skills
 
@@ -31,17 +31,20 @@ Skills are consumed by both Claude (`.agent/skills/`) and Gemini (`~/.gemini/ant
 | `cloudflare-pages`           | Cloudflare Pages deployment, custom domains, and CI/CD                       |
 | `deep-research`              | Multi-round deep research producing visual reports with citations            |
 | `design-lookup`              | CSS components, SVG icons, and design pattern discovery from the web         |
+| `google-workspace`           | Google Workspace (Drive, Docs, Sheets, Gmail, Calendar) via the `gws` CLI   |
 | `kitchen-sink-design-system` | Framework-agnostic Kitchen Sink design system workflow and component inventory|
-| `nextjs-tinacms`             | Next.js 16 + React 19 + TinaCMS -- scaffolding through production deployment |
+| `nextjs-tinacms`             | Next.js 16 + TinaCMS + Tina Cloud + Vercel -- visual editing, blocks, SEO   |
 | `openai-image`               | OpenAI image generation, editing, vision, batch processing, and transforms   |
 
 ## Workflow
 
 1. Edit skill source in `skills/<name>/`
 2. Commit -- the pre-commit hook auto-packages changed skills into `dist/<name>.skill`
-3. Install -- copy or symlink skill directory to target agent's skill location:
-   - Claude: `<project>/.agent/skills/<name>/`
-   - Gemini: `~/.gemini/antigravity/skills/<name>/`
+3. Install -- copy or symlink skill directory to target location:
+   - Canonical: `~/.agents/skills/<name>/` (agent-agnostic, shared by all AIs)
+   - Claude reads from `~/.claude/skills/` (symlinks to `~/.agents/skills/`)
+   - Gemini reads from `~/.gemini/antigravity/skills/`
+   - Or publish via `npx skills` ecosystem (see https://skills.sh/)
 
 ## Conventions
 
@@ -67,7 +70,5 @@ When a skill script returns a JSON response with `"type": "UnhandledException"`,
 3. **Notify the user** that an internal bug was caught and logged.
 4. **Check the `logFile` field** for the path to the full traceback on disk. Reference this path when documenting the bug.
 
-Each skill with scripts has a `KNOWN_BUGS.md` at its root (`skills/<name>/KNOWN_BUGS.md`). Error logs are persisted to disk:
-- FamilySearch: `~/.familysearch/logs/error.log`
-- OCR: `~/.ocr/logs/error.log`
+Skills with scripts may have a `KNOWN_BUGS.md` at their root (`skills/<name>/KNOWN_BUGS.md`). Error logs are persisted to disk:
 - OpenAI Image: `~/.openai_image/logs/error.log`
