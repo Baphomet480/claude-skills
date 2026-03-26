@@ -1,6 +1,6 @@
 ---
 name: openai-image
-version: 1.2.0
+version: 1.4.0
 description: Generate, edit, describe, restyle, restore, thumbnail, and batch-process images using the OpenAI Images API and GPT-4o vision. Use this skill whenever the user asks to generate, create, make, draw, or design an image or picture using AI, or wants to edit, modify, transform, restyle, composite, or inpaint an existing image. Also handles image description and alt-text generation, background removal, style transfer, photo restoration, thumbnail creation, and batch generation from JSON manifests. Trigger when the user mentions DALL-E, gpt-image, OpenAI image generation, or wants AI-generated visuals for any purpose (logos, mockups, illustrations, thumbnails, icons, concept art, memes). Also trigger for batch image generation, generating a set or series of images, processing multiple images from a manifest, or creating consistent image collections. If the user says "make me an image of...", "generate a picture", "edit this photo to...", "describe this image", "remove the background", "make this look like watercolor", "restore this old photo", "create a thumbnail", "generate a batch of images", or "process this image manifest", this is the skill to use.
 ---
 
@@ -76,6 +76,8 @@ The `--input-fidelity` flag controls how much the output preserves the source im
 
 Rule of thumb: if the edit prompt describes *changing what's in the image*, omit fidelity. If it describes *changing how the image looks*, use `high`.
 
+**Exception:** When the image contains a person whose likeness must be preserved, **always use `high`** regardless of the edit type. See [Preserving Likeness](#preserving-likeness-people-in-photos).
+
 #### Reference-Based Generation
 
 The most powerful edit pattern is using a photo as a **structural anchor** while completely reimagining its contents. Feed a product photo to `edit` not to modify the product, but to let the AI use its shape and proportions as a scaffold for something new.
@@ -140,6 +142,8 @@ python3 scripts/openai_image.py bg-remove product.jpg -o product-nobg.png
 ### Style Transfer
 
 Apply an art style to an image. 10 built-in presets plus custom.
+
+**Warning:** Style transfer stylizes the entire image including faces. It will **not** preserve a person's likeness. If the user wants to stylize a photo of a person while keeping their face recognizable, use `edit` with the [Identity Preservation Framework](#preserving-likeness-people-in-photos) instead. For example, use `edit` with the 3-layer identity lock and a style directive like "Style: watercolor painting. Real textures." rather than `style-transfer`.
 
 ```bash
 # Built-in styles: watercolor, oil-painting, pixel-art, pencil-sketch,
@@ -342,6 +346,7 @@ Output dimensions vary by model, quality, and `--size`. This table shows what to
 | `gpt-image-1-mini` | `low`, `medium`, `high`, `auto` | 1024x1024, 1536x1024, 1024x1536, `auto` | Budget option, all sizes supported |
 | `dall-e-3` | `standard`, `hd` | 1024x1024, 1792x1024, 1024x1792 | **Deprecated.** Shutdown 2026-05-12 |
 | `dall-e-2` | `standard` | 256x256, 512x512, 1024x1024 | **Deprecated.** Shutdown 2026-05-12 |
+| `chatgpt-image-latest` | same as 1.5 | same as 1.5 | Model alias for Responses API only. Not usable with this script. |
 
 When `--size auto` (the default), the API picks the best size for the prompt. For predictable output, set size explicitly. Use `1536x1024` for landscape backgrounds and hero images, `1024x1024` for product shots and thumbnails, `1024x1536` for portrait/mobile.
 
@@ -349,7 +354,7 @@ When `--size auto` (the default), the API picks the best size for the prompt. Fo
 
 ### Cost Guidance
 
-Per-image costs in USD (as of late 2025). Check [OpenAI pricing](https://openai.com/api/pricing/) for current rates.
+Per-image costs in USD (verified March 2026). Check [OpenAI pricing](https://openai.com/api/pricing/) for current rates.
 
 | Model | Quality | Square (1024x1024) | Landscape/Portrait (1536x) |
 |-------|---------|-------------------|--------------------------|
@@ -401,6 +406,124 @@ Example assembled prompt:
 The agent should auto-enhance user prompts by filling in missing segments. If the user says "make me a picture of a cat", the agent adds style, composition, lighting, and color based on context. No API call needed for prompt enhancement -- the agent does it.
 
 See `references/sample-prompts.md` for curated examples by category.
+
+## Preserving Likeness (People in Photos)
+
+When the user provides a photo of themselves or another person and wants to generate new images that preserve their identity, use the **Identity Preservation Framework**. This is a prompt structure, not an API feature -- the model's ability to retain facial likeness depends entirely on how the prompt is constructed.
+
+### The 3-Layer Identity Lock
+
+Every prompt that references a person's photo must include these three layers before any creative direction:
+
+```
+1. SUBJECT REFERENCE  → "Use the uploaded image of me as the subject reference."
+2. IDENTITY LOCK      → "Preserve my facial features, proportions, age, skin texture, hairstyle, and expression exactly."
+3. STYLE EXCLUSION    → "Do not stylise the face. Do not cartoonise. Do not anime."
+```
+
+**Why all three?** The subject reference tells the model which pixels matter. The identity lock closes the biggest failure mode (the model "improving" or smoothing faces). The style exclusion bans the shortcuts the model defaults to when given creative freedom.
+
+### Full Identity-Preserving Prompt Template
+
+```bash
+python3 scripts/openai_image.py edit \
+  "Use the uploaded image of me as the subject reference. \
+Preserve my facial features, proportions, age, skin texture, hairstyle, and expression exactly. \
+Do not stylise the face. Do not cartoonise. Do not anime. \
+Style: Photorealistic, cinematic photography. Real textures. Natural skin. No illustration, no CGI look. \
+[YOUR SCENE/ACTION/ENVIRONMENT DESCRIPTION HERE]. \
+Lighting: [LIGHTING DESCRIPTION]. \
+Composition: [FRAMING DESCRIPTION]." \
+  -i person_photo.jpg --input-fidelity high --quality high -o result.png
+```
+
+### When to Use `--input-fidelity high`
+
+For any edit involving a person's face, **always use `--input-fidelity high`**. This preserves the spatial layout of the source image, which includes facial geometry.
+
+- `high` -- Face structure, proportions, and pose are preserved. Use for portraits, headshots, and any edit where the person must remain recognizable.
+- `low` (default) -- Face is treated as a loose reference. The model may alter proportions, smooth features, or "improve" the face. Only use `low` when you want the person's photo as rough inspiration, not identity preservation.
+
+### Defensive Prompting for Faces
+
+The model takes creative shortcuts when given room. Prevent specific failure modes:
+
+| Failure Mode | Defensive Prompt Line |
+|---|---|
+| Plastic/smoothed skin | "Natural skin texture. No smoothing. No airbrushing." |
+| Age modification | "Preserve exact age appearance. No de-aging." |
+| Face flattening under contrast | "Natural shadows on the face. Preserve facial depth." |
+| Stylization creep | "Do not stylise the face. Do not cartoonise. Do not anime." |
+| Unwanted "glow-up" | "No beautification. No enhancement. Exact likeness only." |
+| Hair changes | "Preserve exact hairstyle, color, and texture." |
+
+### Multi-Person Limitations
+
+**Known limitation:** Identity preservation degrades significantly with multiple people.
+
+- **Single person** -- Works well. Facial structure, proportions, and overall identity are generally preserved.
+- **Two people** -- Partial success. One face may drift while the other is preserved.
+- **Group photos (3+)** -- Unreliable. Faces tend toward averaged or hallucinated results. The identity pipeline is optimized for single-subject scenarios.
+
+**Workaround for groups:** Generate each person separately against the same background, then composite. Or edit one person at a time using masks.
+
+### Example: Action Figure / Stylized Portrait
+
+```bash
+python3 scripts/openai_image.py edit \
+  "Use the uploaded image of me as the subject reference. \
+Preserve my facial features, proportions, age, skin texture, hairstyle, and expression exactly. \
+Do not stylise the face. Do not cartoonise. Do not anime. \
+Create a photorealistic action figure of me in a clear plastic blister pack. \
+The figure should be in a heroic pose wearing tactical gear. \
+The packaging should read 'LIMITED EDITION'. \
+The face on the figure must match my exact likeness. \
+Studio lighting, product photography, white background." \
+  -i selfie.jpg --input-fidelity high --quality high -o action_figure.png
+```
+
+### Example: Professional Headshot from Casual Photo
+
+```bash
+python3 scripts/openai_image.py edit \
+  "Use the uploaded image of me as the subject reference. \
+Preserve my facial features, proportions, age, skin texture, hairstyle, and expression exactly. \
+Do not stylise the face. No smoothing. No beautification. \
+Professional corporate headshot. Shoulders up. \
+Dark charcoal suit jacket, white dress shirt, no tie. \
+Neutral grey gradient background. \
+Soft, even studio lighting. Slight catchlight in eyes. \
+Composition: Centered, slight head tilt, natural relaxed expression." \
+  -i casual_photo.jpg --input-fidelity high --quality high -o headshot.png
+```
+
+### Describe-First Workflow
+
+When crafting an edit prompt for a person's photo, first analyze the image to understand what you're working with:
+
+```bash
+# Analyze the source photo before editing
+python3 scripts/openai_image.py describe person_photo.jpg --mode detailed
+```
+
+Use the description to write a more precise identity lock. Instead of generic "preserve my facial features," you can reference specifics from the analysis: "Preserve the subject's angular jaw, close-cropped dark hair, light stubble, and deep-set brown eyes exactly."
+
+This also helps identify whether the photo has multiple people, poor lighting, or other factors that affect likeness preservation.
+
+### Agent Behavior When User Provides a Photo of a Person
+
+When the user provides a photo and asks you to generate images using their likeness:
+
+1. **Run `describe --mode detailed`** on the photo first to understand the subject.
+2. **Always use `edit`** (not `generate`) with their photo as input.
+3. **Always include the 3-layer identity lock** in the prompt, enhanced with specifics from the description.
+4. **Always use `--input-fidelity high`**.
+5. **Auto-enhance the prompt** with defensive lines from the table above.
+6. **Warn about multi-person limitations** if the photo contains multiple people.
+7. **Use `--quality high`** for final outputs involving faces (low quality degrades likeness).
+8. **Never use `style-transfer`** on photos of people when likeness matters. Use `edit` with a style directive instead.
+
+---
 
 ## Consistent Series
 
@@ -476,3 +599,31 @@ PNG output files include embedded metadata (tEXt chunks) with the prompt, model,
 - **DALL-E 3 format errors**: DALL-E 3 does not support `--format` or `--background`. Omit those flags or use a GPT image model.
 - **Transient API errors (connection, timeout, 502/503)**: The OpenAI Images API has a roughly 10-20% transient failure rate under load. Use `--retries 3` to automatically retry with exponential backoff (1s, 2s, 4s delays). Retry status is logged to stderr so you can monitor progress. For batch jobs, always use `--retries 3`.
 - **Empty output file**: The script now verifies every saved file is non-empty. If you see a `WriteError`, the API returned empty data. Retry the command or check your API quota.
+
+## Responses API (Advanced)
+
+OpenAI also offers a **Responses API** that wraps image generation as a tool inside a conversational model call. This skill's script uses the **Image API** (direct generation/edit), which is simpler and more predictable for agent workflows.
+
+The Responses API adds:
+- **Multi-turn editing**: Iteratively edit images in a conversation ("now make the sky darker") without re-uploading
+- **`action` parameter**: `auto` (let model decide), `generate` (force new image), `edit` (force editing an image in context)
+- **`chatgpt-image-latest` model alias**: Tracks the latest image generation model for conversational use
+
+**When to use which:**
+- **Image API** (this script): Single-shot generation, batch processing, automated pipelines, predictable output
+- **Responses API**: Interactive design sessions, multi-turn refinement, conversational image editing
+
+The Responses API requires using the OpenAI SDK directly (not this script). Example:
+
+```python
+from openai import OpenAI
+client = OpenAI()
+
+response = client.responses.create(
+    model="gpt-5",
+    input="Generate an image of a modern dashboard with dark theme",
+    tools=[{"type": "image_generation", "action": "generate"}],
+)
+```
+
+This skill does not wrap the Responses API. Use it directly when multi-turn editing is needed.

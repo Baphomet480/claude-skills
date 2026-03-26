@@ -35,6 +35,8 @@ Skills are consumed by both Claude (`~/.claude/skills/`) and Gemini (`~/.gemini/
 | `kitchen-sink-design-system` | Framework-agnostic Kitchen Sink design system workflow and component inventory|
 | `nextjs-tinacms`             | Next.js 16 + TinaCMS + Tina Cloud + Vercel -- visual editing, blocks, SEO   |
 | `openai-image`               | OpenAI image generation, editing, vision, batch processing, and transforms   |
+| `print-css`                  | Print stylesheets: @page, page breaks, colors, images, Next.js/Tailwind     |
+| `stitch-mcp`                 | Google Stitch MCP for UI design: screens, design systems, variants, prompts  |
 
 ## Workflow
 
