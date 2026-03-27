@@ -1,6 +1,6 @@
 ---
 name: openai-image
-version: 1.4.0
+version: 1.6.0
 description: Generate, edit, describe, restyle, restore, thumbnail, and batch-process images using the OpenAI Images API and GPT-4o vision. Use this skill whenever the user asks to generate, create, make, draw, or design an image or picture using AI, or wants to edit, modify, transform, restyle, composite, or inpaint an existing image. Also handles image description and alt-text generation, background removal, style transfer, photo restoration, thumbnail creation, and batch generation from JSON manifests. Trigger when the user mentions DALL-E, gpt-image, OpenAI image generation, or wants AI-generated visuals for any purpose (logos, mockups, illustrations, thumbnails, icons, concept art, memes). Also trigger for batch image generation, generating a set or series of images, processing multiple images from a manifest, or creating consistent image collections. If the user says "make me an image of...", "generate a picture", "edit this photo to...", "describe this image", "remove the background", "make this look like watercolor", "restore this old photo", "create a thumbnail", "generate a batch of images", or "process this image manifest", this is the skill to use.
 ---
 
@@ -154,6 +154,35 @@ python3 scripts/openai_image.py style-transfer photo.jpg --style pixel-art -o pi
 # Custom style
 python3 scripts/openai_image.py style-transfer photo.jpg --style custom --custom-style "1920s art nouveau poster" -o nouveau.png
 ```
+
+#### Color Palette Control
+
+**Important:** The built-in style presets apply technique only, not color palette. The `watercolor` preset produces cool, washed-out lavender tones by default. If you are building a cohesive page where style-transferred photos need to match AI-generated illustrations, the color mismatch will be visible.
+
+Two fixes:
+
+**1. Steer color with `--prefix`** (works with any preset):
+```bash
+# Warm watercolor instead of the default cool tones
+python3 scripts/openai_image.py --prefix "Warm golden amber and coral tones. Rich saturated palette." \
+  style-transfer venue.jpg --style watercolor -o venue_warm.png
+
+# Apply the same color direction across a batch for consistency
+PREFIX="Warm watercolor in golden amber, coral, and cream tones. Saturated, not washed out."
+python3 scripts/openai_image.py --prefix "$PREFIX" style-transfer photo1.jpg --style watercolor -o art1.png
+python3 scripts/openai_image.py --prefix "$PREFIX" style-transfer photo2.jpg --style watercolor -o art2.png
+python3 scripts/openai_image.py --prefix "$PREFIX" style-transfer photo3.jpg --style watercolor -o art3.png
+```
+
+**2. Use `--style custom`** for full control when presets aren't enough:
+```bash
+python3 scripts/openai_image.py style-transfer venue.jpg \
+  --style custom \
+  --custom-style "Warm watercolor illustration. Golden amber, coral, and cream palette. Visible brush strokes, soft washes of color, paper texture. Rich saturated tones, not cool or washed out." \
+  -o venue_watercolor.png
+```
+
+**When building cohesive visual pages**, always use `--prefix` or `--style custom` with explicit color direction. The bare presets are fine for one-off transformations but produce inconsistent palettes across a series.
 
 ### Restore
 
@@ -375,6 +404,127 @@ Per-image costs in USD (verified March 2026). Check [OpenAI pricing](https://ope
 - **Edit costs the same as generate.** Using a reference photo does not add cost but dramatically improves quality. Always prefer edit with a reference photo over blind generation.
 - **Avoid DALL-E 3.** It is deprecated (shutdown May 2026), costs 4x more than `gpt-image-1.5` at standard quality, and produces lower-quality results. Use `gpt-image-1.5` for everything.
 
+## Photo-First: Edit Over Generate
+
+**The single most important principle in this skill: always prefer editing a real photo over generating from scratch.** No text prompt, no matter how detailed, can capture what a photograph captures -- the specific geometry of a building, the exact way light falls across a bar counter, the grain of a wood table, or the proportions of a person's face. A photo grounds the generation in reality. Without one, the model hallucinates every detail.
+
+This applies to:
+- **Real places** -- venues, buildings, landscapes, interiors, storefronts
+- **Real products** -- bottles, packaging, dishes, glassware, merchandise
+- **Real people** -- portraits, headshots, action figures, stylized likenesses
+- **Real events** -- setups, table arrangements, stage configurations
+
+### Why this matters
+
+`generate` creates from nothing. The model invents proportions, invents lighting, invents spatial relationships. Even with a perfect prompt, the result is a plausible fiction. `edit` and `style-transfer` start from truth -- the actual photo -- and transform it. The difference is visible immediately and becomes critical when the output represents something real that people will recognize.
+
+Edit costs the same as generate. There is zero cost penalty for using a reference photo. The only cost is asking the user for one.
+
+### Decision tree
+
+```
+Does a real-world photo of the subject exist (or could the user take one)?
+  YES → Use edit or style-transfer with the photo as input
+    Is the goal to apply a uniform art style to the whole image?
+      YES → style-transfer (watercolor, pixel-art, oil-painting, etc.)
+      NO  → edit with a descriptive prompt
+        Does the image contain a person whose face must be recognizable?
+          YES → edit with identity lock (see Preserving Likeness section)
+          NO  → edit with appropriate --input-fidelity
+  NO → Use generate with a detailed prompt (Prompt Spec Scaffold below)
+```
+
+### Common scenarios
+
+**Illustrations of a real venue or place:**
+```bash
+# WRONG: generates a generic bar that looks nothing like the real one
+python3 scripts/openai_image.py generate "watercolor illustration of The Lavender Farms cocktail bar" -o bar.png
+
+# RIGHT: transforms the actual venue into a watercolor
+python3 scripts/openai_image.py style-transfer venue_photo.jpg --style watercolor -o bar_watercolor.png
+
+# RIGHT: more control over the transformation
+python3 scripts/openai_image.py edit \
+  "Transform into a warm watercolor illustration. Preserve the room layout, bar position, and window placement. Soft washes of color, visible brush strokes, paper texture." \
+  -i venue_photo.jpg --input-fidelity high --quality high -o bar_watercolor.png
+```
+
+**Product photography in a new context:**
+```bash
+# WRONG: generates a generic bottle shape
+python3 scripts/openai_image.py generate "artisanal hot sauce bottle on marble counter" -o product.png
+
+# RIGHT: uses the actual bottle with its real label, shape, and proportions
+python3 scripts/openai_image.py edit \
+  "Place on a white marble counter. Soft diffused studio lighting from above. Subtle shadow beneath. Clean white background." \
+  -i real_bottle_photo.jpg --quality high -o product_styled.png
+```
+
+**Menu art from real dishes:**
+```bash
+# Style-transfer for uniform illustration style across a menu
+python3 scripts/openai_image.py style-transfer risotto_photo.jpg --style watercolor -o menu_risotto.png
+python3 scripts/openai_image.py style-transfer steak_photo.jpg --style watercolor -o menu_steak.png
+
+# Or edit for more photographic polish
+python3 scripts/openai_image.py edit \
+  "Fine dining food photography. Enhance plating, adjust lighting to warm directional from 10 o'clock. Deepen background blur." \
+  -i dish_photo.jpg --input-fidelity high --quality high -o menu_hero.png
+```
+
+**Real building in a different context:**
+```bash
+# Preserve architecture, change the surroundings
+python3 scripts/openai_image.py edit \
+  "Cover in fresh snow. Overcast winter sky. Warm light glowing from the windows. Footprints in the snow leading to the front door." \
+  -i storefront_summer.jpg --input-fidelity high --quality high -o storefront_winter.png
+```
+
+### When you genuinely need `generate`
+
+Use `generate` only when no reference photo exists or could exist:
+- Fictional subjects (fantasy creatures, imagined places, concept art)
+- Abstract visuals (textures, patterns, backgrounds, gradients)
+- Icons and UI elements (app icons, empty states, illustrations)
+- Subjects the user cannot photograph (historical scenes, future concepts)
+
+Even then, consider whether a *similar* photo could serve as a structural anchor via `edit`.
+
+### Finding reference photos
+
+When the user doesn't have a photo, the agent can search for one. Real places, landmarks, products, and public buildings all have photos available online. Use web search or image search to find a reference, download it, and feed it into `edit` or `style-transfer`.
+
+```bash
+# Search for a reference photo of a real place
+firecrawl search "The Alamo San Antonio exterior photo" --sources images -o .firecrawl/alamo-ref.json --json
+
+# Download the best result
+curl -sL "$IMAGE_URL" -o ref_alamo.jpg
+
+# Now use it as a reference for the illustration
+python3 scripts/openai_image.py style-transfer ref_alamo.jpg --style watercolor -o alamo_watercolor.png
+```
+
+This works for:
+- **Landmarks and buildings** -- search by name, download exterior/interior shots
+- **Products** -- search for the brand/product name, use official product photos
+- **Dishes and food** -- search for the dish name, use a well-shot example as a base
+- **Venues** -- search the business name, pull from their website or review photos
+
+The downloaded reference does not need to be perfect. Even a mediocre photo of the right subject gives the model more to work with than the best text prompt describing it from scratch.
+
+### Agent behavior
+
+When the user asks for an image of something real:
+1. **Ask if they have a photo.** A phone snapshot is enough.
+2. **If they don't, search for one.** Use web/image search to find a reference photo of the subject. Download it and use as input.
+3. If they provide a photo (or you found one), choose between `style-transfer` (uniform art style) and `edit` (selective control).
+4. If the photo contains a person whose likeness matters, follow the [Preserving Likeness](#preserving-likeness-people-in-photos) protocol.
+5. Only use `generate` from scratch as a last resort -- when no reference photo exists, can be taken, or can be found online.
+
+---
+
 ## Prompt Engineering
 
 The GPT image models respond well to detailed, specific prompts. A few things that help:
@@ -548,6 +698,8 @@ python3 scripts/openai_image.py --retries 3 batch drinks.json --output-dir ./pub
 **4. Use reference photos as structural anchors.** Feed the same glass, product, or venue photo into multiple `edit` calls with different prompts. The shared geometry keeps the series grounded. See "Reference-Based Generation" above.
 
 **5. The "Mise en place" method.** When generating images that involve multiple steps, variations, or use the same recurring elements (like ingredients for a recipe, tools for a craft, or parts of a product), first generate a single "mise en place" style image that contains all the individual elements laid out clearly on a flat, neutral surface. You can then use this initial "ingredients" image as a structural anchor (using `edit` with `--input-fidelity`) for subsequent generations, ensuring visual consistency of the core components across the entire series.
+
+**6. Mixing generated and style-transferred images.** When a page combines AI-generated illustrations with style-transferred photos, use `--prefix` with explicit color direction on the style-transfers to match the generated palette. Without this, style-transfer presets (especially `watercolor`) produce cooler, more washed-out tones than generated images, creating a visible mismatch. See [Color Palette Control](#color-palette-control) above.
 
 ## Masks
 

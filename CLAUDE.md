@@ -28,6 +28,7 @@ Skills are consumed by both Claude (`~/.claude/skills/`) and Gemini (`~/.gemini/
 
 | Skill                        | Purpose                                                                      |
 | ---------------------------- | ---------------------------------------------------------------------------- |
+| `buffer-api`                 | Schedule, create, and manage social media posts via the Buffer GraphQL API   |
 | `cloudflare-pages`           | Cloudflare Pages deployment, custom domains, and CI/CD                       |
 | `deep-research`              | Multi-round deep research producing visual reports with citations            |
 | `design-lookup`              | CSS components, SVG icons, and design pattern discovery from the web         |
