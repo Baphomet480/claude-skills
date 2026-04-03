@@ -1,0 +1,99 @@
+/* gs-brand.css */
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
+
+:root {
+  --color-gs-amber: #D4A843;
+  --color-gs-near-black: #0A0A0A;
+  --color-gs-warm-white: #F5F0EB;
+  --color-gs-light-accent: #7A5C0F;
+  --color-gs-sys-grey: #6B6B6B;
+  --color-gs-body-grey: #808080;
+}
+
+body {
+  font-family: 'IBM Plex Mono', monospace;
+  color: var(--color-gs-near-black);
+  background-color: var(--color-gs-warm-white);
+  line-height: 1.6;
+  font-size: 15px; /* Minimum 15px per GEMINI.md */
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: var(--color-gs-near-black);
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  font-weight: 600;
+}
+
+h1 { 
+  font-size: 2.2em; 
+  border-bottom: 2px solid var(--color-gs-amber); 
+  padding-bottom: 0.2em; 
+}
+h2 { font-size: 1.8em; }
+h3 { font-size: 1.4em; }
+
+a { 
+  color: var(--color-gs-light-accent); 
+  text-decoration: none; 
+  border-bottom: 1px solid var(--color-gs-amber); 
+}
+a:hover { 
+  background-color: var(--color-gs-amber); 
+  color: var(--color-gs-near-black); 
+}
+
+blockquote {
+  border-left: 4px solid var(--color-gs-amber);
+  margin: 1.5em 0;
+  padding: 0.5em 1em;
+  background-color: #EBE6E1;
+  color: var(--color-gs-sys-grey);
+}
+
+code {
+  font-family: 'IBM Plex Mono', monospace;
+  background-color: #EBE6E1;
+  padding: 0.2em 0.4em;
+  border-radius: 3px;
+  font-size: 13px; /* Minimum 13px per GEMINI.md */
+}
+
+pre {
+  background-color: var(--color-gs-near-black);
+  color: var(--color-gs-warm-white);
+  padding: 1em;
+  border-radius: 4px;
+  overflow-x: auto;
+}
+pre code {
+  background-color: transparent;
+  color: inherit;
+  padding: 0;
+}
+
+table { width: 100%; border-collapse: collapse; margin: 1.5em 0; }
+th, td { border: 1px solid var(--color-gs-sys-grey); padding: 0.75em; text-align: left; }
+th { background-color: var(--color-gs-near-black); color: var(--color-gs-warm-white); font-weight: 600; }
+tr:nth-child(even) { background-color: #EBE6E1; }
+
+hr {
+  border: 0;
+  height: 1px;
+  background-color: var(--color-gs-sys-grey);
+  margin: 2em 0;
+}
+
+/* Print specific adjustments */
+@media print {
+  body { background-color: white; font-size: 11pt; }
+  h1 { border-bottom-color: var(--color-gs-amber); }
+  @page { margin: 25mm 20mm; }
+  a { border-bottom: none; text-decoration: none; color: var(--color-gs-near-black); }
+  pre { background-color: #f5f5f5; color: black; border: 1px solid #ccc; }
+  
+  /* Avoid breaking inside block elements */
+  pre, blockquote, table, img, h1, h2, h3, h4 {
+    page-break-inside: avoid;
+  }
+}
