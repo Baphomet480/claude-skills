@@ -33,6 +33,7 @@ Skills are consumed by both Claude (`~/.claude/skills/`) and Gemini (`~/.gemini/
 | `cloudflare-pages`           | Cloudflare Pages deployment, custom domains, and CI/CD                       |
 | `deep-research`              | Multi-round deep research producing visual reports with citations            |
 | `design-lookup`              | CSS components, SVG icons, and design pattern discovery from the web         |
+| `gemini-translate`           | Batch-translate content files using Gemini CLI subagent with glossary support|
 | `google-workspace`           | Google Workspace (Drive, Docs, Sheets, Gmail, Calendar) via the `gws` CLI   |
 | `gs-brand-doc`               | Generate branded PDF documents using GS brand assets                         |
 | `kitchen-sink-design-system` | Framework-agnostic Kitchen Sink design system workflow and component inventory|
