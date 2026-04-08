@@ -29,3 +29,9 @@ token.json
 
 .gemini/
 gha-creds-*.json
+
+# Claude Code local/user-specific
+.claude/settings.local.json
+
+# Firecrawl research cache
+.firecrawl/

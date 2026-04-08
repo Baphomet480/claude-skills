@@ -57,9 +57,34 @@ def error(message: str, typ: str = "Error", fix: str | None = None):
     sys.exit(1)
 
 
+# ── Provider config ─────────────────────────────────────────────────
+
+PROVIDERS = {
+    "xai": {
+        "base_url": "https://api.x.ai/v1",
+        "env_key": "XAI_API_KEY",
+        "default_model": "grok-imagine-image-pro",
+        "vision_model": "gpt-4o-mini",  # xAI doesn't have vision; fall back to OpenAI
+    },
+    "openai": {
+        "base_url": None,  # OpenAI SDK default
+        "env_key": "OPENAI_API_KEY",
+        "default_model": "gpt-image-1.5",
+        "vision_model": "gpt-4o-mini",
+    },
+}
+
+# Resolved at parse time by --provider flag
+_active_provider = "xai"
+
+
+def get_provider():
+    return PROVIDERS[_active_provider]
+
+
 # ── Client init ──────────────────────────────────────────────────────
 
-def get_client():
+def get_client(provider_name: str | None = None):
     try:
         from openai import OpenAI
     except ImportError:
@@ -69,15 +94,39 @@ def get_client():
             fix="pip install openai",
         )
 
-    api_key = os.environ.get("OPENAI_API_KEY")
+    prov = PROVIDERS[provider_name or _active_provider]
+    api_key = os.environ.get(prov["env_key"])
     if not api_key:
         error(
-            "OPENAI_API_KEY environment variable is not set.",
+            f"{prov['env_key']} environment variable is not set.",
             "AuthError",
-            fix="Export your key: export OPENAI_API_KEY='sk-...'",
+            fix=f"Export your key: export {prov['env_key']}='...'",
         )
 
-    return OpenAI(api_key=api_key)
+    kwargs = {"api_key": api_key}
+    if prov["base_url"]:
+        kwargs["base_url"] = prov["base_url"]
+    return OpenAI(**kwargs)
+
+
+def get_describe_client():
+    """Vision/describe always uses OpenAI (xAI has no vision endpoint)."""
+    if _active_provider == "xai":
+        # Need OpenAI key for vision even when xAI is default
+        api_key = os.environ.get("OPENAI_API_KEY")
+        if api_key:
+            from openai import OpenAI
+            return OpenAI(api_key=api_key)
+    return get_client()
+
+
+def is_xai():
+    return _active_provider == "xai"
+
+
+def is_gpt_image_model(model: str) -> bool:
+    """Check if model uses GPT Image API params (output_format, etc.)."""
+    return model.startswith("gpt-image")
 
 
 # ── Save helper ──────────────────────────────────────────────────────
@@ -266,6 +315,13 @@ PRESETS = {
     "final": {"model": "gpt-image-1.5", "quality": "high"},
 }
 
+# xAI presets override model names when xAI is active
+XAI_PRESETS = {
+    "draft": {"model": "grok-imagine-image", "quality": "low"},
+    "balanced": {"model": "grok-imagine-image", "quality": "medium"},
+    "final": {"model": "grok-imagine-image-pro", "quality": "high"},
+}
+
 COST_TABLE = {
     "gpt-image-1.5": {
         "low": {"square": 0.009, "rect": 0.013},
@@ -285,6 +341,17 @@ COST_TABLE = {
     "dall-e-3": {
         "standard": {"square": 0.040, "rect": 0.080},
         "hd": {"square": 0.080, "rect": 0.120},
+    },
+    # xAI flat-rate pricing (same cost regardless of quality/resolution/size)
+    "grok-imagine-image": {
+        "low": {"square": 0.02, "rect": 0.02},
+        "medium": {"square": 0.02, "rect": 0.02},
+        "high": {"square": 0.02, "rect": 0.02},
+    },
+    "grok-imagine-image-pro": {
+        "low": {"square": 0.07, "rect": 0.07},
+        "medium": {"square": 0.07, "rect": 0.07},
+        "high": {"square": 0.07, "rect": 0.07},
     },
 }
 
@@ -339,8 +406,10 @@ def apply_preset(args):
     preset_name = getattr(args, "preset", None)
     if not preset_name:
         return
-    preset = PRESETS[preset_name]
-    if getattr(args, "model", "gpt-image-1.5") == "gpt-image-1.5":
+    presets = XAI_PRESETS if is_xai() else PRESETS
+    preset = presets[preset_name]
+    default_model = get_provider()["default_model"]
+    if getattr(args, "model", default_model) == default_model:
         args.model = preset["model"]
     if getattr(args, "quality", "auto") == "auto":
         args.quality = preset["quality"]
@@ -365,27 +434,64 @@ def encode_image(image_path):
 
 # ── Generate command ─────────────────────────────────────────────────
 
-def command_generate(args):
-    handle_dry_run(args)
-    client = get_client()
-    prompt = apply_prefix(args.prompt, getattr(args, "prefix", None))
+def _build_xai_kwargs(args, prompt):
+    """Build kwargs for xAI image generation (different param names)."""
+    kwargs = {
+        "model": args.model,
+        "prompt": prompt,
+        "n": args.n,
+        "response_format": "b64_json",
+    }
+    # xAI uses aspect_ratio and resolution in extra_body instead of size
+    size = getattr(args, "size", "auto")
+    size_to_aspect = {
+        "1024x1024": "1:1", "1536x1024": "3:2", "1024x1536": "2:3",
+        "1792x1024": "16:9", "1024x1792": "9:16",
+    }
+    extra = {}
+    if size != "auto" and size in size_to_aspect:
+        extra["aspect_ratio"] = size_to_aspect[size]
+    resolution = getattr(args, "resolution", "auto")
+    if resolution != "auto":
+        extra["resolution"] = resolution
+    if extra:
+        kwargs["extra_body"] = extra
+    # xAI supports quality (low/medium/high)
+    quality = getattr(args, "quality", "high")
+    if quality not in ("auto",):
+        kwargs["quality"] = quality
+    return kwargs
 
+
+def _build_openai_kwargs(args, prompt):
+    """Build kwargs for OpenAI image generation."""
     kwargs = {
         "model": args.model,
         "prompt": prompt,
         "n": args.n,
     }
-
     if args.size != "auto":
         kwargs["size"] = args.size
     if args.quality != "auto":
         kwargs["quality"] = args.quality
-    if args.model.startswith("gpt-image"):
+    if is_gpt_image_model(args.model):
         kwargs["output_format"] = args.format
         if args.compression is not None:
             kwargs["output_compression"] = args.compression
         if args.background != "auto":
             kwargs["background"] = args.background
+    return kwargs
+
+
+def command_generate(args):
+    handle_dry_run(args)
+    client = get_client()
+    prompt = apply_prefix(args.prompt, getattr(args, "prefix", None))
+
+    if is_xai():
+        kwargs = _build_xai_kwargs(args, prompt)
+    else:
+        kwargs = _build_openai_kwargs(args, prompt)
 
     retries = getattr(args, "retries", 0)
     result = api_call_with_retry(lambda: client.images.generate(**kwargs), retries)
@@ -410,6 +516,7 @@ def command_generate(args):
 
     success({
         "message": f"Generated {len(saved)} image(s)",
+        "provider": _active_provider,
         "model": args.model,
         "images": saved,
     })
@@ -419,7 +526,6 @@ def command_generate(args):
 
 def command_edit(args):
     handle_dry_run(args)
-    client = get_client()
     prompt = apply_prefix(args.prompt, getattr(args, "prefix", None))
 
     image_paths = [Path(p).resolve() for p in args.image]
@@ -427,50 +533,98 @@ def command_edit(args):
         if not p.exists():
             error(f"Input image not found: {p}", "FileNotFound")
 
-    if len(image_paths) == 1:
-        image_arg = open(str(image_paths[0]), "rb")
+    if is_xai():
+        # xAI edit requires JSON with image as data URI, not multipart uploads
+        import httpx
+
+        prov = get_provider()
+        api_key = os.environ.get(prov["env_key"])
+        b64_data, mime = encode_image(image_paths[0])
+        body = {
+            "model": args.model,
+            "image": {
+                "url": f"data:{mime};base64,{b64_data}",
+                "type": "image_url",
+            },
+            "prompt": prompt,
+            "n": args.n,
+            "response_format": "b64_json",
+        }
+        # xAI supports quality and resolution for edits
+        if getattr(args, "quality", "auto") not in ("auto",):
+            body["quality"] = args.quality
+        resolution = getattr(args, "resolution", "auto")
+        if resolution != "auto":
+            body["resolution"] = resolution
+
+        retries = getattr(args, "retries", 0)
+        def xai_edit():
+            resp = httpx.post(
+                f"{prov['base_url']}/images/edits",
+                headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+                json=body,
+                timeout=120,
+            )
+            resp.raise_for_status()
+            return resp.json()
+
+        raw = api_call_with_retry(xai_edit, retries)
+        # Normalize to match OpenAI SDK response shape
+        class _Img:
+            def __init__(self, d):
+                self.b64_json = d.get("b64_json")
+                self.url = d.get("url")
+        class _Result:
+            def __init__(self, data):
+                self.data = [_Img(d) for d in data]
+        result = _Result(raw.get("data", []))
     else:
-        image_arg = [open(str(p), "rb") for p in image_paths]
+        client = get_client()
 
-    kwargs = {
-        "model": args.model,
-        "image": image_arg,
-        "prompt": prompt,
-        "n": args.n,
-    }
-
-    if args.size != "auto":
-        kwargs["size"] = args.size
-    if args.quality != "auto":
-        kwargs["quality"] = args.quality
-    if args.mask:
-        mask_path = Path(args.mask).resolve()
-        if not mask_path.exists():
-            error(f"Mask file not found: {mask_path}", "FileNotFound")
-        kwargs["mask"] = open(str(mask_path), "rb")
-    if args.model.startswith("gpt-image"):
-        kwargs["output_format"] = args.format
-        if args.compression is not None:
-            kwargs["output_compression"] = args.compression
-        if args.background != "auto":
-            kwargs["background"] = args.background
-        if args.input_fidelity:
-            kwargs["input_fidelity"] = args.input_fidelity
-
-    retries = getattr(args, "retries", 0)
-    file_handles = (image_arg if isinstance(image_arg, list) else [image_arg])
-    if "mask" in kwargs:
-        file_handles = file_handles + [kwargs["mask"]]
-    try:
-        result = api_call_with_retry(lambda: client.images.edit(**kwargs), retries, seekables=file_handles)
-    finally:
-        if isinstance(image_arg, list):
-            for f in image_arg:
-                f.close()
+        if len(image_paths) == 1:
+            image_arg = open(str(image_paths[0]), "rb")
         else:
-            image_arg.close()
-        if "mask" in kwargs and hasattr(kwargs["mask"], "close"):
-            kwargs["mask"].close()
+            image_arg = [open(str(p), "rb") for p in image_paths]
+
+        kwargs = {
+            "model": args.model,
+            "image": image_arg,
+            "prompt": prompt,
+            "n": args.n,
+        }
+
+        if args.size != "auto":
+            kwargs["size"] = args.size
+        if args.quality != "auto":
+            kwargs["quality"] = args.quality
+        if args.mask:
+            mask_path = Path(args.mask).resolve()
+            if not mask_path.exists():
+                error(f"Mask file not found: {mask_path}", "FileNotFound")
+            kwargs["mask"] = open(str(mask_path), "rb")
+        if is_gpt_image_model(args.model):
+            kwargs["output_format"] = args.format
+            if args.compression is not None:
+                kwargs["output_compression"] = args.compression
+            if args.background != "auto":
+                kwargs["background"] = args.background
+            if args.input_fidelity:
+                kwargs["input_fidelity"] = args.input_fidelity
+
+        retries = getattr(args, "retries", 0)
+        file_handles = (image_arg if isinstance(image_arg, list) else [image_arg])
+        if "mask" in kwargs:
+            file_handles = file_handles + [kwargs["mask"]]
+        try:
+            result = api_call_with_retry(lambda: client.images.edit(**kwargs), retries, seekables=file_handles)
+        finally:
+            if isinstance(image_arg, list):
+                for f in image_arg:
+                    f.close()
+            else:
+                image_arg.close()
+            if "mask" in kwargs and hasattr(kwargs["mask"], "close"):
+                kwargs["mask"].close()
 
     output_dir = Path(args.output_dir).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -492,6 +646,7 @@ def command_edit(args):
 
     success({
         "message": f"Edited {len(saved)} image(s)",
+        "provider": _active_provider,
         "model": args.model,
         "images": saved,
     })
@@ -500,7 +655,7 @@ def command_edit(args):
 # ── Describe command (GPT-4o vision) ─────────────────────────────────
 
 def command_describe(args):
-    client = get_client()
+    client = get_describe_client()
 
     image_paths = [Path(p).resolve() for p in args.image]
     for p in image_paths:
@@ -658,7 +813,7 @@ def command_style_transfer(args):
         kwargs["size"] = args.size
     if args.quality != "auto":
         kwargs["quality"] = args.quality
-    if args.model.startswith("gpt-image"):
+    if is_gpt_image_model(args.model):
         kwargs["output_format"] = args.format
 
     retries = getattr(args, "retries", 0)
@@ -724,7 +879,7 @@ def command_restore(args):
         kwargs["size"] = args.size
     if args.quality != "auto":
         kwargs["quality"] = args.quality
-    if args.model.startswith("gpt-image"):
+    if is_gpt_image_model(args.model):
         kwargs["output_format"] = args.format
         kwargs["input_fidelity"] = "high"
 
@@ -792,7 +947,7 @@ def command_thumbnail(args):
         }
         if args.quality != "auto":
             kwargs["quality"] = args.quality
-        if args.model.startswith("gpt-image"):
+        if is_gpt_image_model(args.model):
             kwargs["output_format"] = fmt
             if compression is not None:
                 kwargs["output_compression"] = compression
@@ -818,7 +973,7 @@ def command_thumbnail(args):
         }
         if args.quality != "auto":
             kwargs["quality"] = args.quality
-        if args.model.startswith("gpt-image"):
+        if is_gpt_image_model(args.model):
             kwargs["output_format"] = fmt
             if compression is not None:
                 kwargs["output_compression"] = compression
@@ -938,7 +1093,7 @@ def command_batch(args):
         dry_items = []
         for idx, job in enumerate(jobs):
             job_name = job.get("name", f"job_{idx}")
-            m = job.get("model", defaults.get("model", "gpt-image-1.5"))
+            m = job.get("model", defaults.get("model", get_provider()["default_model"]))
             q = job.get("quality", defaults.get("quality", "auto"))
             s = job.get("size", defaults.get("size", "auto"))
             dry_items.append({"name": job_name, "model": m, "quality": q, "size": s, "n": 1})
@@ -965,7 +1120,7 @@ def command_batch(args):
         output_name = job.get("output")
 
         # Merge defaults with per-job overrides
-        model = job.get("model", defaults.get("model", "gpt-image-1.5"))
+        model = job.get("model", defaults.get("model", get_provider()["default_model"]))
         quality = job.get("quality", defaults.get("quality", "auto"))
         size = job.get("size", defaults.get("size", "auto"))
         fmt = job.get("format", defaults.get("format", "png"))
@@ -995,7 +1150,7 @@ def command_batch(args):
                     kwargs["size"] = size
                 if quality != "auto":
                     kwargs["quality"] = quality
-                if model.startswith("gpt-image"):
+                if is_gpt_image_model(model):
                     kwargs["output_format"] = fmt
                     if compression is not None:
                         kwargs["output_compression"] = compression
@@ -1010,19 +1165,52 @@ def command_batch(args):
                     image_file.close()
             else:
                 # Generate mode
-                kwargs = {"model": model, "prompt": prompt, "n": 1}
-                if size != "auto":
-                    kwargs["size"] = size
-                if quality != "auto":
-                    kwargs["quality"] = quality
-                if model.startswith("gpt-image"):
-                    kwargs["output_format"] = fmt
-                    if compression is not None:
-                        kwargs["output_compression"] = compression
-                    if background != "auto":
-                        kwargs["background"] = background
-
-                result = api_call_with_retry(lambda: client.images.generate(**kwargs), retries)
+                if is_xai():
+                    import httpx
+                    prov = get_provider()
+                    api_key = os.environ.get(prov["env_key"])
+                    size_to_aspect = {
+                        "1024x1024": "1:1", "1536x1024": "3:2", "1024x1536": "2:3",
+                        "1792x1024": "16:9", "1024x1792": "9:16",
+                    }
+                    body = {"model": model, "prompt": prompt, "n": 1, "response_format": "b64_json"}
+                    if size != "auto" and size in size_to_aspect:
+                        body["aspect_ratio"] = size_to_aspect[size]
+                    if quality not in ("auto",):
+                        body["quality"] = quality
+                    resolution = defaults.get("resolution", "auto")
+                    if resolution != "auto":
+                        body["resolution"] = resolution
+                    def _xai_batch_gen(b=body):
+                        resp = httpx.post(
+                            f"{prov['base_url']}/images/generations",
+                            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+                            json=b, timeout=120,
+                        )
+                        resp.raise_for_status()
+                        return resp.json()
+                    raw = api_call_with_retry(_xai_batch_gen, retries)
+                    class _GImg:
+                        def __init__(self, d):
+                            self.b64_json = d.get("b64_json")
+                            self.url = d.get("url")
+                    class _GResult:
+                        def __init__(self, data):
+                            self.data = [_GImg(d) for d in data]
+                    result = _GResult(raw.get("data", []))
+                else:
+                    kwargs = {"model": model, "prompt": prompt, "n": 1}
+                    if size != "auto":
+                        kwargs["size"] = size
+                    if quality != "auto":
+                        kwargs["quality"] = quality
+                    if is_gpt_image_model(model):
+                        kwargs["output_format"] = fmt
+                        if compression is not None:
+                            kwargs["output_compression"] = compression
+                        if background != "auto":
+                            kwargs["background"] = background
+                    result = api_call_with_retry(lambda: client.images.generate(**kwargs), retries)
 
             b64 = result.data[0].b64_json
             if b64:
@@ -1058,8 +1246,14 @@ def command_batch(args):
 # ── CLI ──────────────────────────────────────────────────────────────
 
 def main():
+    global _active_provider
+
     parser = argparse.ArgumentParser(
-        description="OpenAI Images API wrapper for generation, editing, and analysis."
+        description="Image generation CLI supporting xAI (Grok) and OpenAI providers."
+    )
+    parser.add_argument(
+        "--provider", choices=["xai", "openai"], default="xai",
+        help="API provider. Default: xai",
     )
     parser.add_argument(
         "--retries", type=int, default=0,
@@ -1082,8 +1276,8 @@ def main():
     # -- Shared arguments --------------------------------------------------
     def add_common_args(p):
         p.add_argument(
-            "--model", default="gpt-image-1.5",
-            help="Model to use (gpt-image-1.5, gpt-image-1, gpt-image-1-mini, dall-e-3). Default: gpt-image-1.5",
+            "--model", default=None,
+            help="Model to use. Default: provider-specific (xai: grok-imagine-image, openai: gpt-image-1.5)",
         )
         p.add_argument(
             "--size", default="auto",
@@ -1091,9 +1285,14 @@ def main():
             help="Output image size. Default: auto",
         )
         p.add_argument(
-            "--quality", default="auto",
+            "--quality", default="high",
             choices=["auto", "low", "medium", "high", "standard", "hd"],
-            help="Image quality. Default: auto",
+            help="Image quality. Default: high",
+        )
+        p.add_argument(
+            "--resolution", default="auto",
+            choices=["auto", "1k", "2k"],
+            help="Output resolution (xAI only). 2k for higher fidelity. Default: auto",
         )
         p.add_argument(
             "--format", default="png",
@@ -1171,7 +1370,7 @@ def main():
     bg_parser.add_argument("image", help="Path to the input image")
     bg_parser.add_argument("--output", "-o", help="Explicit output file path")
     bg_parser.add_argument("--output-dir", default=".", help="Directory for output files")
-    bg_parser.add_argument("--model", default="gpt-image-1.5", help="Model. Default: gpt-image-1.5")
+    bg_parser.add_argument("--model", default=None, help="Model. Default: provider-specific")
     bg_parser.add_argument(
         "--quality", default="auto",
         choices=["auto", "low", "medium", "high", "standard", "hd"],
@@ -1190,7 +1389,7 @@ def main():
     style_parser.add_argument("--custom-style", help="Freeform style description (required when --style custom)")
     style_parser.add_argument("--output", "-o", help="Explicit output file path")
     style_parser.add_argument("--output-dir", default=".", help="Directory for output files")
-    style_parser.add_argument("--model", default="gpt-image-1.5", help="Model. Default: gpt-image-1.5")
+    style_parser.add_argument("--model", default=None, help="Model. Default: provider-specific")
     style_parser.add_argument(
         "--size", default="auto",
         choices=["auto", "1024x1024", "1536x1024", "1024x1536", "1792x1024", "1024x1792"],
@@ -1213,7 +1412,7 @@ def main():
     restore_parser.add_argument("image", help="Path to the input image")
     restore_parser.add_argument("--output", "-o", help="Explicit output file path")
     restore_parser.add_argument("--output-dir", default=".", help="Directory for output files")
-    restore_parser.add_argument("--model", default="gpt-image-1.5", help="Model. Default: gpt-image-1.5")
+    restore_parser.add_argument("--model", default=None, help="Model. Default: provider-specific")
     restore_parser.add_argument(
         "--size", default="auto",
         choices=["auto", "1024x1024", "1536x1024", "1024x1536", "1792x1024", "1024x1792"],
@@ -1237,7 +1436,7 @@ def main():
     thumb_parser.add_argument("--from-image", help="Path to existing image to adapt as thumbnail")
     thumb_parser.add_argument("--output", "-o", help="Explicit output file path")
     thumb_parser.add_argument("--output-dir", default=".", help="Directory for output files")
-    thumb_parser.add_argument("--model", default="gpt-image-1.5", help="Model. Default: gpt-image-1.5")
+    thumb_parser.add_argument("--model", default=None, help="Model. Default: provider-specific")
     thumb_parser.add_argument(
         "--format", default="jpeg", choices=["png", "jpeg", "webp"],
         help="Output format. Default: jpeg",
@@ -1257,6 +1456,13 @@ def main():
     batch_parser.add_argument("--output-dir", default=".", help="Base directory for output files")
 
     args = parser.parse_args()
+
+    # Resolve provider and default model
+    _active_provider = args.provider
+    default_model = get_provider()["default_model"]
+    if hasattr(args, "model") and args.model is None:
+        args.model = default_model
+
     apply_preset(args)
 
     try:

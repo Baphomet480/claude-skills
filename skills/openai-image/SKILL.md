@@ -1,18 +1,47 @@
 ---
 name: openai-image
-version: 1.6.0
-description: Generate, edit, describe, restyle, restore, thumbnail, and batch-process images using the OpenAI Images API and GPT-4o vision. Use this skill whenever the user asks to generate, create, make, draw, or design an image or picture using AI, or wants to edit, modify, transform, restyle, composite, or inpaint an existing image. Also handles image description and alt-text generation, background removal, style transfer, photo restoration, thumbnail creation, and batch generation from JSON manifests. Trigger when the user mentions DALL-E, gpt-image, OpenAI image generation, or wants AI-generated visuals for any purpose (logos, mockups, illustrations, thumbnails, icons, concept art, memes). Also trigger for batch image generation, generating a set or series of images, processing multiple images from a manifest, or creating consistent image collections. If the user says "make me an image of...", "generate a picture", "edit this photo to...", "describe this image", "remove the background", "make this look like watercolor", "restore this old photo", "create a thumbnail", "generate a batch of images", or "process this image manifest", this is the skill to use.
+version: 1.8.0
+description: Generate, edit, describe, restyle, restore, thumbnail, and batch-process images using xAI (Grok) or OpenAI image APIs and GPT-4o vision. Default provider is xAI ($0.02/image flat rate). Use this skill whenever the user asks to generate, create, make, draw, or design an image or picture using AI, or wants to edit, modify, transform, restyle, composite, or inpaint an existing image. Also handles image description and alt-text generation, background removal, style transfer, photo restoration, thumbnail creation, and batch generation from JSON manifests. Trigger when the user mentions DALL-E, gpt-image, Grok image, xAI image, OpenAI image generation, or wants AI-generated visuals for any purpose (logos, mockups, illustrations, thumbnails, icons, concept art, memes). Also trigger for batch image generation, generating a set or series of images, processing multiple images from a manifest, or creating consistent image collections. If the user says "make me an image of...", "generate a picture", "edit this photo to...", "describe this image", "remove the background", "make this look like watercolor", "restore this old photo", "create a thumbnail", "generate a batch of images", or "process this image manifest", this is the skill to use.
 ---
 
-# OpenAI Image Generation & Editing
+# Image Generation & Editing
 
-Generate images from text prompts, edit existing images, analyze with vision, and apply editorial transforms. Default model is gpt-image-1.5 (fastest, cheapest, best text rendering).
+Multi-provider image CLI. Default provider is **xAI (Grok)** at $0.02/image flat rate. OpenAI available via `--provider openai`.
+
+## Providers
+
+| Provider | Default Model | Pricing | Key Env Var |
+|----------|--------------|---------|-------------|
+| **xAI Pro** (default) | `grok-imagine-image-pro` | $0.07/image flat | `XAI_API_KEY` |
+| xAI Standard | `grok-imagine-image` | $0.02/image flat | `XAI_API_KEY` |
+| OpenAI | `gpt-image-1.5` | $0.009-$0.200/image (quality-dependent) | `OPENAI_API_KEY` |
+
+Both providers use the OpenAI SDK under the hood. The `--provider` flag switches the API endpoint and default model. Quality defaults to `high`.
+
+**Both providers support:** generate, edit, style-transfer, restore, thumbnail, batch. All commands work with xAI by default.
+
+**xAI advantages:** flat pricing, more permissive content policy, fewer refusals on real people/public figures, stronger photorealism for human faces.
+**xAI watch-outs:** defaults to cinematic/dramatic/oversaturated aesthetic. Requires `--prefix` steering for editorial or restrained styles. See [Taming xAI's Aesthetic Bias](#taming-xais-aesthetic-bias).
+**OpenAI advantages:** neutral aesthetic defaults, transparent backgrounds, masks, multi-image edit (multiple input files), fine-grained quality/compression control, `describe` command (vision), better prompt adherence for non-cinematic styles, better text rendering.
+
+`describe` always uses OpenAI (xAI has no vision endpoint). Requires `OPENAI_API_KEY` even when xAI is the default provider.
+
+## API Keys
+
+Both keys live in `~/.secrets` (sourced by shell profile). Run `source ~/.secrets` if they're not in your environment.
+
+| Key | Where to get it | Env var |
+|-----|----------------|---------|
+| **xAI** (default provider) | [console.x.ai](https://console.x.ai) > API Keys | `XAI_API_KEY` |
+| **OpenAI** (describe, fallback) | [platform.openai.com/api-keys](https://platform.openai.com/api-keys) | `OPENAI_API_KEY` |
 
 ## Quick Start
 
-1. Confirm `OPENAI_API_KEY` is set:
+1. Confirm your API key is set:
    ```bash
-   echo $OPENAI_API_KEY | head -c 10
+   source ~/.secrets
+   echo $XAI_API_KEY | head -c 10    # xAI (default)
+   echo $OPENAI_API_KEY | head -c 10  # needed for describe, or --provider openai
    ```
 2. Install the SDK if needed:
    ```bash
@@ -20,7 +49,7 @@ Generate images from text prompts, edit existing images, analyze with vision, an
    ```
 3. Generate an image:
    ```bash
-   python3 scripts/openai_image.py generate "A watercolor painting of a sunset over Mos Eisley" --output sunset.png
+   openai-image generate "A watercolor painting of a sunset over Mos Eisley" --output sunset.png
    ```
 
 ## Commands
@@ -30,23 +59,26 @@ Generate images from text prompts, edit existing images, analyze with vision, an
 Create images from a text prompt.
 
 ```bash
-# Basic generation
-python3 scripts/openai_image.py generate "your prompt" --output result.png
+# Basic generation (uses xAI by default, quality high)
+openai-image generate "your prompt" --output result.png
 
-# High quality, specific size
-python3 scripts/openai_image.py generate "your prompt" --quality high --size 1536x1024 -o landscape.png
+# Specific size
+openai-image generate "your prompt" --size 1536x1024 -o landscape.png
 
-# Transparent background (PNG only)
-python3 scripts/openai_image.py generate "a logo on transparent background" --background transparent -o logo.png
+# Use OpenAI instead
+openai-image --provider openai generate "your prompt" -o result.png
+
+# xAI Pro model
+openai-image generate "your prompt" --model grok-imagine-image-pro -o result.png
+
+# Transparent background (OpenAI only, PNG)
+openai-image --provider openai generate "a logo on transparent background" --background transparent -o logo.png
 
 # Multiple images at once
-python3 scripts/openai_image.py generate "your prompt" -n 4 --output-dir ./variants/
+openai-image generate "your prompt" -n 4 --output-dir ./variants/
 
 # Compressed JPEG output
-python3 scripts/openai_image.py generate "your prompt" --format jpeg --compression 80 -o photo.jpg
-
-# Use the older model if needed
-python3 scripts/openai_image.py generate "your prompt" --model gpt-image-1 -o result.png
+openai-image generate "your prompt" --format jpeg --compression 80 -o photo.jpg
 ```
 
 ### Edit
@@ -55,16 +87,16 @@ Modify existing images with a text prompt. Optionally supply a mask to constrain
 
 ```bash
 # Edit a single image
-python3 scripts/openai_image.py edit "make the sky dramatic and stormy" -i photo.jpg -o dramatic.png
+openai-image edit "make the sky dramatic and stormy" -i photo.jpg -o dramatic.png
 
 # Edit with a mask (transparent areas in the mask = regions to change)
-python3 scripts/openai_image.py edit "replace with a garden" -i room.jpg --mask mask.png -o garden_room.png
+openai-image edit "replace with a garden" -i room.jpg --mask mask.png -o garden_room.png
 
 # Combine multiple images
-python3 scripts/openai_image.py edit "merge these into a collage with consistent lighting" -i img1.jpg img2.jpg img3.jpg -o collage.png
+openai-image edit "merge these into a collage with consistent lighting" -i img1.jpg img2.jpg img3.jpg -o collage.png
 
 # High input fidelity (preserves more of the original style)
-python3 scripts/openai_image.py edit "add a hat" -i portrait.jpg --input-fidelity high -o hat.png
+openai-image edit "add a hat" -i portrait.jpg --input-fidelity high -o hat.png
 ```
 
 #### When to Use Input Fidelity
@@ -84,17 +116,17 @@ The most powerful edit pattern is using a photo as a **structural anchor** while
 
 ```bash
 # Use an empty coupe glass photo as a structural reference, reimagine the contents
-python3 scripts/openai_image.py edit \
+openai-image edit \
   "Fill this coupe glass with a bright blue butterfly pea tea cocktail, violet-shifting ice cubes, condensation on the glass" \
   -i ref_empty_coupe.jpg --quality high -o cocktail_blue.png
 
 # Use a rocks glass photo as a shape anchor for a completely different drink
-python3 scripts/openai_image.py edit \
+openai-image edit \
   "Golden amber old fashioned with a large ice sphere, orange peel garnish, smoke wisps" \
   -i ref_rocks_glass.jpg --quality high -o cocktail_amber.png
 
 # Use a venue photo as a layout reference for a different setting
-python3 scripts/openai_image.py edit \
+openai-image edit \
   "Transform this space into a 1920s speakeasy with warm Edison bulbs, dark wood, and brass fixtures" \
   -i venue_photo.jpg --input-fidelity high -o speakeasy.png
 ```
@@ -107,28 +139,28 @@ Analyze images using GPT-4o vision. Returns alt text, captions, tags, or structu
 
 ```bash
 # Generate alt text for web accessibility (default)
-python3 scripts/openai_image.py describe photo.jpg
+openai-image describe photo.jpg
 
 # Get a natural language caption
-python3 scripts/openai_image.py describe photo.jpg --mode caption
+openai-image describe photo.jpg --mode caption
 
 # Detailed multi-paragraph description
-python3 scripts/openai_image.py describe photo.jpg --mode detailed
+openai-image describe photo.jpg --mode detailed
 
 # Keyword tags
-python3 scripts/openai_image.py describe photo.jpg --mode tags
+openai-image describe photo.jpg --mode tags
 
 # Structured JSON (alt_text, caption, tags, colors, objects, scene)
-python3 scripts/openai_image.py describe photo.jpg --mode json
+openai-image describe photo.jpg --mode json
 
 # Custom analysis
-python3 scripts/openai_image.py describe photo.jpg --custom "what fonts and colors are used in this design?"
+openai-image describe photo.jpg --custom "what fonts and colors are used in this design?"
 
 # Multiple images
-python3 scripts/openai_image.py describe img1.jpg img2.png img3.webp
+openai-image describe img1.jpg img2.png img3.webp
 
 # Use the full gpt-4o model for better accuracy
-python3 scripts/openai_image.py describe photo.jpg --model gpt-4o
+openai-image describe photo.jpg --model gpt-4o
 ```
 
 ### Background Remove
@@ -136,7 +168,7 @@ python3 scripts/openai_image.py describe photo.jpg --model gpt-4o
 Remove background to transparent PNG.
 
 ```bash
-python3 scripts/openai_image.py bg-remove product.jpg -o product-nobg.png
+openai-image bg-remove product.jpg -o product-nobg.png
 ```
 
 ### Style Transfer
@@ -148,11 +180,11 @@ Apply an art style to an image. 10 built-in presets plus custom.
 ```bash
 # Built-in styles: watercolor, oil-painting, pixel-art, pencil-sketch,
 #   anime, pop-art, art-deco, minimalist, cyberpunk, stained-glass
-python3 scripts/openai_image.py style-transfer photo.jpg --style watercolor -o watercolor.png
-python3 scripts/openai_image.py style-transfer photo.jpg --style pixel-art -o pixel.png
+openai-image style-transfer photo.jpg --style watercolor -o watercolor.png
+openai-image style-transfer photo.jpg --style pixel-art -o pixel.png
 
 # Custom style
-python3 scripts/openai_image.py style-transfer photo.jpg --style custom --custom-style "1920s art nouveau poster" -o nouveau.png
+openai-image style-transfer photo.jpg --style custom --custom-style "1920s art nouveau poster" -o nouveau.png
 ```
 
 #### Color Palette Control
@@ -164,19 +196,19 @@ Two fixes:
 **1. Steer color with `--prefix`** (works with any preset):
 ```bash
 # Warm watercolor instead of the default cool tones
-python3 scripts/openai_image.py --prefix "Warm golden amber and coral tones. Rich saturated palette." \
+openai-image --prefix "Warm golden amber and coral tones. Rich saturated palette." \
   style-transfer venue.jpg --style watercolor -o venue_warm.png
 
 # Apply the same color direction across a batch for consistency
 PREFIX="Warm watercolor in golden amber, coral, and cream tones. Saturated, not washed out."
-python3 scripts/openai_image.py --prefix "$PREFIX" style-transfer photo1.jpg --style watercolor -o art1.png
-python3 scripts/openai_image.py --prefix "$PREFIX" style-transfer photo2.jpg --style watercolor -o art2.png
-python3 scripts/openai_image.py --prefix "$PREFIX" style-transfer photo3.jpg --style watercolor -o art3.png
+openai-image --prefix "$PREFIX" style-transfer photo1.jpg --style watercolor -o art1.png
+openai-image --prefix "$PREFIX" style-transfer photo2.jpg --style watercolor -o art2.png
+openai-image --prefix "$PREFIX" style-transfer photo3.jpg --style watercolor -o art3.png
 ```
 
 **2. Use `--style custom`** for full control when presets aren't enough:
 ```bash
-python3 scripts/openai_image.py style-transfer venue.jpg \
+openai-image style-transfer venue.jpg \
   --style custom \
   --custom-style "Warm watercolor illustration. Golden amber, coral, and cream palette. Visible brush strokes, soft washes of color, paper texture. Rich saturated tones, not cool or washed out." \
   -o venue_watercolor.png
@@ -189,7 +221,7 @@ python3 scripts/openai_image.py style-transfer venue.jpg \
 Restore damaged, faded, or degraded photographs. Uses high input fidelity by default.
 
 ```bash
-python3 scripts/openai_image.py restore old_photo.jpg -o restored.png
+openai-image restore old_photo.jpg -o restored.png
 ```
 
 ### Thumbnail
@@ -198,10 +230,10 @@ Generate web-optimized thumbnails (JPEG at 80% compression by default).
 
 ```bash
 # From a text prompt
-python3 scripts/openai_image.py thumbnail "a cozy coffee shop interior" -o thumb.jpg
+openai-image thumbnail "a cozy coffee shop interior" -o thumb.jpg
 
 # From an existing image
-python3 scripts/openai_image.py thumbnail "clean product shot" --from-image product.jpg -o thumb.jpg
+openai-image thumbnail "clean product shot" --from-image product.jpg -o thumb.jpg
 ```
 
 ### Batch
@@ -209,7 +241,7 @@ python3 scripts/openai_image.py thumbnail "clean product shot" --from-image prod
 Process multiple image jobs from a JSON manifest. Each job can generate or edit independently, sharing a common style prefix and defaults.
 
 ```bash
-python3 scripts/openai_image.py --retries 3 batch drinks.json --output-dir ./public/images/
+openai-image --retries 3 batch drinks.json --output-dir ./public/images/
 ```
 
 Manifest format (`drinks.json`):
@@ -270,23 +302,24 @@ These flags go *before* the subcommand name:
 
 | Flag | Values | Default | Notes |
 |------|--------|---------|-------|
+| `--provider` | `xai`, `openai` | `xai` | API provider. Switches endpoint, default model, and API key env var. |
 | `--retries` | `0`-`10` | `0` | Retry transient API errors with exponential backoff (1s, 2s, 4s... capped at 30s) |
 | `--prefix` | string | none | Style preamble prepended to prompts in generate, edit, and style-transfer |
-| `--preset` | `draft`, `balanced`, `final` | none | Quality preset. `draft` = mini/low ($0.005), `balanced` = 1.5/medium ($0.034), `final` = 1.5/high ($0.133). Explicit `--model`/`--quality` override. |
+| `--preset` | `draft`, `balanced`, `final` | none | Quality preset. xAI: draft/balanced = grok-imagine-image, final = grok-imagine-image-pro. OpenAI: draft = mini/low, balanced = 1.5/medium, final = 1.5/high. |
 | `--dry-run` | flag | off | Estimate cost in USD without making API calls. Works with all commands and batch. |
 
 ```bash
 # Example: retry up to 3 times with a style prefix
-python3 scripts/openai_image.py --retries 3 --prefix "Photorealistic, 8K, shallow depth of field." generate "a cup of coffee" -o coffee.png
+openai-image --retries 3 --prefix "Photorealistic, 8K, shallow depth of field." generate "a cup of coffee" -o coffee.png
 
 # Use a preset for quick iteration
-python3 scripts/openai_image.py --preset draft generate "concept sketch of a robot" -o robot_draft.png
+openai-image --preset draft generate "concept sketch of a robot" -o robot_draft.png
 
 # Estimate cost before running
-python3 scripts/openai_image.py --preset final --dry-run generate "hero image" -n 4
+openai-image --preset final --dry-run generate "hero image" -n 4
 
 # Dry-run a whole batch manifest
-python3 scripts/openai_image.py --dry-run batch drinks.json
+openai-image --dry-run batch drinks.json
 ```
 
 #### Presets
@@ -321,16 +354,17 @@ For batch manifests, the breakdown includes each job by name. When `--quality` i
 
 | Flag | Values | Default | Notes |
 |------|--------|---------|-------|
-| `--model` | `gpt-image-1.5`, `gpt-image-1`, `gpt-image-1-mini`, `dall-e-3` | `gpt-image-1.5` | 1.5 is newest and recommended; mini is cheapest. DALL-E 3 is deprecated (shutdown 2026-05-12). |
-| `--size` | `auto`, `1024x1024`, `1536x1024`, `1024x1536` | `auto` | DALL-E 3 also supports `1792x1024`, `1024x1792` |
-| `--quality` | `auto`, `low`, `medium`, `high` | `auto` | GPT Image models. DALL-E 3 uses `standard` / `hd` instead. |
-| `--format` | `png`, `jpeg`, `webp` | `png` | GPT Image models only; DALL-E returns URL |
-| `--compression` | `0`-`100` | none | JPEG/WebP only |
-| `--background` | `auto`, `transparent`, `opaque` | `auto` | Transparent requires PNG or WebP format. Best at `medium` or `high` quality. |
+| `--model` | xAI: `grok-imagine-image-pro`, `grok-imagine-image`. OpenAI: `gpt-image-1.5`, `gpt-image-1`, `gpt-image-1-mini` | provider-specific | Set by `--provider`. xAI default: `grok-imagine-image-pro`. OpenAI default: `gpt-image-1.5`. |
+| `--size` | `auto`, `1024x1024`, `1536x1024`, `1024x1536` | `auto` | xAI maps these to aspect ratios (1:1, 3:2, 2:3). DALL-E 3 also supports `1792x1024`, `1024x1792`. |
+| `--quality` | `auto`, `low`, `medium`, `high` | `high` | Controls rendering fidelity on both providers. xAI pricing stays flat regardless of quality level. |
+| `--resolution` | `auto`, `1k`, `2k` | `auto` | xAI only. Output pixel dimensions. `2k` gives sharper detail at no extra cost. OpenAI ignores this. |
+| `--format` | `png`, `jpeg`, `webp` | `png` | Controls output file format. Both providers save as this format. |
+| `--compression` | `0`-`100` | none | JPEG/WebP quality (OpenAI only; xAI ignores) |
+| `--background` | `auto`, `transparent`, `opaque` | `auto` | OpenAI only; xAI ignores. Transparent requires PNG or WebP. |
 | `-n` | `1`-`10` | `1` | Number of images |
 | `-o` / `--output` | file path | auto-named | Single image explicit path |
 | `--output-dir` | directory | `.` | Where auto-named files go |
-| `--input-fidelity` | `low`, `high` | `low` | Edit only. `high` preserves source layout; `low` (default) uses source as loose reference. |
+| `--input-fidelity` | `low`, `high` | `low` | Edit only, OpenAI only. xAI edit works without this flag. `high` preserves source layout; `low` uses source as loose reference. |
 
 ### Describe flags
 
@@ -368,22 +402,27 @@ Manifest fields: `style_prefix` (string), `defaults` (object with model/quality/
 
 Output dimensions vary by model, quality, and `--size`. This table shows what to expect:
 
-| Model | Quality Levels | Available Sizes | Notes |
-|-------|---------------|----------------|-------|
-| `gpt-image-1.5` | `low`, `medium`, `high`, `auto` | 1024x1024, 1536x1024, 1024x1536, `auto` | State of the art, recommended |
-| `gpt-image-1` | `low`, `medium`, `high`, `auto` | 1024x1024, 1536x1024, 1024x1536, `auto` | Previous generation |
-| `gpt-image-1-mini` | `low`, `medium`, `high`, `auto` | 1024x1024, 1536x1024, 1024x1536, `auto` | Budget option, all sizes supported |
-| `dall-e-3` | `standard`, `hd` | 1024x1024, 1792x1024, 1024x1792 | **Deprecated.** Shutdown 2026-05-12 |
-| `dall-e-2` | `standard` | 256x256, 512x512, 1024x1024 | **Deprecated.** Shutdown 2026-05-12 |
-| `chatgpt-image-latest` | same as 1.5 | same as 1.5 | Model alias for Responses API only. Not usable with this script. |
+| Provider | Model | Quality Levels | Available Sizes / Aspect Ratios | Notes |
+|----------|-------|---------------|--------------------------------|-------|
+| xAI | `grok-imagine-image` | `low`, `medium`, `high` | 1:1, 16:9, 9:16, 4:3, 3:4, 3:2, 2:3, 2:1, 1:2 | **Default.** $0.02/image flat. Use `--resolution 2k` for sharper output. |
+| xAI | `grok-imagine-image-pro` | `low`, `medium`, `high` | same as above | $0.07/image flat. Best with `--resolution 2k`. Wins ~79% vs standard in head-to-head. |
+| OpenAI | `gpt-image-1.5` | `low`, `medium`, `high`, `auto` | 1024x1024, 1536x1024, 1024x1536, `auto` | Best OpenAI model |
+| OpenAI | `gpt-image-1-mini` | `low`, `medium`, `high`, `auto` | 1024x1024, 1536x1024, 1024x1536, `auto` | Budget option |
 
-When `--size auto` (the default), the API picks the best size for the prompt. For predictable output, set size explicitly. Use `1536x1024` for landscape backgrounds and hero images, `1024x1024` for product shots and thumbnails, `1024x1536` for portrait/mobile.
-
-**Note:** DALL-E 2 and DALL-E 3 are deprecated and will stop working on May 12, 2026. Migrate to `gpt-image-1.5` for new work.
+When `--size auto` (the default), the API picks the best size for the prompt. For xAI, `--size` values are mapped to aspect ratios (e.g., `1536x1024` becomes `3:2`). For predictable output, set size explicitly. Use `1536x1024` for landscape backgrounds and hero images, `1024x1024` for product shots and thumbnails, `1024x1536` for portrait/mobile.
 
 ### Cost Guidance
 
-Per-image costs in USD (verified March 2026). Check [OpenAI pricing](https://openai.com/api/pricing/) for current rates.
+Per-image costs in USD (verified April 2026).
+
+**xAI (default provider) -- flat rate regardless of quality/resolution/size:**
+
+| Model | Cost/image | Notes |
+|-------|-----------|-------|
+| `grok-imagine-image` | **$0.02** | Default. 300 RPM. Supports quality and resolution params at no extra cost. |
+| `grok-imagine-image-pro` | **$0.07** | Higher fidelity, better prompt adherence, sharper at 2K resolution. 30 RPM. |
+
+**OpenAI (`--provider openai`) -- quality-dependent:**
 
 | Model | Quality | Square (1024x1024) | Landscape/Portrait (1536x) |
 |-------|---------|-------------------|--------------------------|
@@ -393,16 +432,13 @@ Per-image costs in USD (verified March 2026). Check [OpenAI pricing](https://ope
 | `gpt-image-1-mini` | `low` | $0.005 | $0.006 |
 | `gpt-image-1-mini` | `medium` | $0.011 | $0.015 |
 | `gpt-image-1-mini` | `high` | $0.036 | $0.052 |
-| `dall-e-3` (deprecated) | `standard` | $0.040 | $0.080 |
-| `dall-e-3` (deprecated) | `hd` | $0.080 | $0.120 |
 
 **Cost-aware usage for agents:**
-- **Draft with `low`, ship with `high`.** Use `--quality low` while iterating on prompts ($0.009/image). Switch to `high` only for the final version ($0.133). That is a 15x cost difference.
-- **Use `gpt-image-1-mini` for throwaway work.** At $0.005/image (low quality), it is essentially free for drafting, testing prompts, or generating placeholder images.
-- **Batch math matters.** A 10-image batch at `gpt-image-1.5` high quality landscape runs $2.00. The same batch at low quality is $0.13. Ask yourself whether every image in the batch needs high quality, or whether some (backgrounds, textures) can use medium or low.
-- **Describe is nearly free.** `gpt-4o-mini` vision calls cost fractions of a cent per image. Use `describe --mode json` freely for analysis, alt text, and tagging.
-- **Edit costs the same as generate.** Using a reference photo does not add cost but dramatically improves quality. Always prefer edit with a reference photo over blind generation.
-- **Avoid DALL-E 3.** It is deprecated (shutdown May 2026), costs 4x more than `gpt-image-1.5` at standard quality, and produces lower-quality results. Use `gpt-image-1.5` for everything.
+- **xAI is the default for a reason.** At $0.07/image (Pro), it undercuts OpenAI high ($0.133) by half. Generate, edit, style-transfer, restore, thumbnail, and batch all work on xAI.
+- **Switch to OpenAI only when needed.** Transparent backgrounds, mask-based inpainting, multi-image edit (multiple input files), `describe` (vision), and `--input-fidelity` control are OpenAI-only features. Use `--provider openai` for those.
+- **Batch math:** A 10-image batch on xAI costs $0.20. The same batch on OpenAI at high quality landscape costs $2.00. That is a 10x difference.
+- **Describe is nearly free.** `gpt-4o-mini` vision calls cost fractions of a cent per image. Use `describe --mode json` freely for analysis, alt text, and tagging. Always uses OpenAI regardless of `--provider`.
+- **Edit costs the same as generate** on both providers. Using a reference photo does not add cost but dramatically improves quality. Always prefer edit with a reference photo over blind generation.
 
 ## Photo-First: Edit Over Generate
 
@@ -439,13 +475,13 @@ Does a real-world photo of the subject exist (or could the user take one)?
 **Illustrations of a real venue or place:**
 ```bash
 # WRONG: generates a generic bar that looks nothing like the real one
-python3 scripts/openai_image.py generate "watercolor illustration of The Lavender Farms cocktail bar" -o bar.png
+openai-image generate "watercolor illustration of The Lavender Farms cocktail bar" -o bar.png
 
 # RIGHT: transforms the actual venue into a watercolor
-python3 scripts/openai_image.py style-transfer venue_photo.jpg --style watercolor -o bar_watercolor.png
+openai-image style-transfer venue_photo.jpg --style watercolor -o bar_watercolor.png
 
 # RIGHT: more control over the transformation
-python3 scripts/openai_image.py edit \
+openai-image edit \
   "Transform into a warm watercolor illustration. Preserve the room layout, bar position, and window placement. Soft washes of color, visible brush strokes, paper texture." \
   -i venue_photo.jpg --input-fidelity high --quality high -o bar_watercolor.png
 ```
@@ -453,10 +489,10 @@ python3 scripts/openai_image.py edit \
 **Product photography in a new context:**
 ```bash
 # WRONG: generates a generic bottle shape
-python3 scripts/openai_image.py generate "artisanal hot sauce bottle on marble counter" -o product.png
+openai-image generate "artisanal hot sauce bottle on marble counter" -o product.png
 
 # RIGHT: uses the actual bottle with its real label, shape, and proportions
-python3 scripts/openai_image.py edit \
+openai-image edit \
   "Place on a white marble counter. Soft diffused studio lighting from above. Subtle shadow beneath. Clean white background." \
   -i real_bottle_photo.jpg --quality high -o product_styled.png
 ```
@@ -464,11 +500,11 @@ python3 scripts/openai_image.py edit \
 **Menu art from real dishes:**
 ```bash
 # Style-transfer for uniform illustration style across a menu
-python3 scripts/openai_image.py style-transfer risotto_photo.jpg --style watercolor -o menu_risotto.png
-python3 scripts/openai_image.py style-transfer steak_photo.jpg --style watercolor -o menu_steak.png
+openai-image style-transfer risotto_photo.jpg --style watercolor -o menu_risotto.png
+openai-image style-transfer steak_photo.jpg --style watercolor -o menu_steak.png
 
 # Or edit for more photographic polish
-python3 scripts/openai_image.py edit \
+openai-image edit \
   "Fine dining food photography. Enhance plating, adjust lighting to warm directional from 10 o'clock. Deepen background blur." \
   -i dish_photo.jpg --input-fidelity high --quality high -o menu_hero.png
 ```
@@ -476,7 +512,7 @@ python3 scripts/openai_image.py edit \
 **Real building in a different context:**
 ```bash
 # Preserve architecture, change the surroundings
-python3 scripts/openai_image.py edit \
+openai-image edit \
   "Cover in fresh snow. Overcast winter sky. Warm light glowing from the windows. Footprints in the snow leading to the front door." \
   -i storefront_summer.jpg --input-fidelity high --quality high -o storefront_winter.png
 ```
@@ -503,7 +539,7 @@ firecrawl search "The Alamo San Antonio exterior photo" --sources images -o .fir
 curl -sL "$IMAGE_URL" -o ref_alamo.jpg
 
 # Now use it as a reference for the illustration
-python3 scripts/openai_image.py style-transfer ref_alamo.jpg --style watercolor -o alamo_watercolor.png
+openai-image style-transfer ref_alamo.jpg --style watercolor -o alamo_watercolor.png
 ```
 
 This works for:
@@ -557,6 +593,106 @@ The agent should auto-enhance user prompts by filling in missing segments. If th
 
 See `references/sample-prompts.md` for curated examples by category.
 
+## Taming xAI's Aesthetic Bias
+
+xAI's image models (built on the Aurora architecture, evolved from FLUX.1) have a strong default toward **cinematic drama**: high saturation, volumetric lighting, atmospheric depth, and glossy surfaces. This is by design -- xAI markets the models as "especially strong at cinematic instructions." But for editorial, travel, product, or documentary photography, this default produces oversaturated, ornamental results that read as obviously AI-generated.
+
+**The xAI API provides no `style` parameter.** All aesthetic steering must happen through the prompt itself (and `--prefix`). Negative prompts do not work. You cannot say "no oversaturation" -- you must describe what you *do* want.
+
+### The 5-Part Prompt Formula (xAI)
+
+xAI responds better to natural-language scene descriptions than to comma-separated keyword lists. Structure prompts with these five components:
+
+```
+[SCENE]    What is happening. Write it like a short film direction.
+[STYLE]    Visual aesthetic anchor. Be specific: "editorial travel magazine" not "beautiful".
+[MOOD]     Emotional direction: "understated", "contemplative", "clean", "warm".
+[LIGHTING] Use precise references: "3 PM October sunlight", "overcast diffused", "window light from camera left".
+[CAMERA]   Camera body + lens implies color science, grain, and DOF without listing each:
+           "shot on Fujifilm X-T4, 35mm f/1.4" or "Hasselblad medium format, natural film grain".
+```
+
+Camera references are the single most powerful shorthand. "Shot on Fujifilm XT4" bundles film-like color science, natural grain, and warm tones into three words. Other effective references:
+- **Fujifilm X-T4** -- warm, filmic, slightly desaturated. Great for travel and lifestyle.
+- **Leica M10** -- contrasty, sharp, classic documentary feel.
+- **Hasselblad 500C** -- medium format film look, creamy bokeh, natural skin tones.
+- **Canon EOS R5, 85mm f/1.2** -- clean, sharp, shallow DOF. Good for portraits and products.
+- **35mm Kodak Portra 400** -- warm, slightly overexposed, golden-hour travel aesthetic.
+
+### Steering Prefixes by Content Type
+
+Use `--prefix` to apply consistent aesthetic direction across multiple images. These are tested prefixes that counteract xAI's dramatic defaults:
+
+**Editorial travel photography:**
+```bash
+--prefix "Clean editorial travel photography. Shot on Fujifilm X-T4, 35mm lens. Natural lighting, muted warm tones. Documentary feel, not dramatic. Soft grain, gentle vignette."
+```
+
+**Product photography:**
+```bash
+--prefix "Clean commercial product photography. Soft diffused studio lighting. Neutral white background. Sharp focus, natural colors. No dramatic shadows or atmospheric effects."
+```
+
+**Real estate and interiors:**
+```bash
+--prefix "Architectural photography. Shot on Canon EOS R5 with tilt-shift lens. Even natural lighting, true-to-life colors. Clean, unprocessed look. No HDR, no dramatic contrast."
+```
+
+**Food and restaurant:**
+```bash
+--prefix "Editorial food photography. Shot on Hasselblad, 80mm lens. Warm directional light from 10 o'clock. Shallow depth of field. Natural colors, no oversaturation."
+```
+
+**Portraits and headshots:**
+```bash
+--prefix "Natural portrait photography. Shot on Canon 85mm f/1.2. Window light, soft and diffused. True skin tones, no airbrushing. Documentary, not glamour."
+```
+
+**Landscape and nature:**
+```bash
+--prefix "Shot on Kodak Portra 400 film. Muted earth tones, soft grain. Natural, understated. No HDR, no oversaturation, no volumetric god rays."
+```
+
+### What NOT to Do with xAI Prompts
+
+- **Do not use negative phrasing.** "No oversaturation" or "not dramatic" gets ignored or misinterpreted. Instead, describe the positive: "muted earth tones", "natural lighting", "documentary feel".
+- **Do not stack more than 2 style cues.** Saying "impressionistic, cyberpunk, art deco, photorealistic" causes the model to default to a generic "safe" style. Pick one or two complementary directions.
+- **Do not rely on single adjectives.** "Beautiful" and "high quality" are noise. Use specific descriptors: lens, film stock, lighting angle, color temperature.
+- **Front-load the important words.** xAI weights the first 20-30 words most heavily. Put the subject and critical style direction first, details second.
+
+### Provider Decision Matrix
+
+Choose xAI or OpenAI based on what you're making:
+
+| Content Type | Recommended Provider | Why |
+|---|---|---|
+| **Travel editorial** | OpenAI | Better prompt adherence for restrained, non-cinematic styles |
+| **Product photography** | OpenAI | More neutral defaults, transparent background support |
+| **Portraits (likeness preservation)** | xAI Pro | Stronger photorealism for human faces |
+| **Concept art / fantasy** | xAI | The dramatic default is an asset here |
+| **Social media graphics** | xAI | Fast, cheap ($0.02-0.07), more permissive content policy |
+| **Brand-consistent campaigns** | OpenAI | Better color consistency across generations |
+| **Illustrations from photos** | Either | xAI with strong `--prefix` steering, or OpenAI for more control |
+| **Text in images** | OpenAI | Better text rendering accuracy |
+| **Batch generation (10+ images)** | xAI | 10x cheaper at scale ($0.70 vs $1.33-$2.00 for 10 images) |
+| **Transparent backgrounds** | OpenAI | xAI does not support transparent backgrounds |
+
+When cost is the primary concern and the aesthetic can be steered with `--prefix`, use xAI. When precise style adherence matters more than cost, use OpenAI.
+
+### Resolution Control (xAI)
+
+The `--resolution` flag controls output pixel dimensions on xAI:
+
+```bash
+# Standard resolution (default, ~1024px)
+openai-image generate "your prompt" -o result.png
+
+# High resolution (2K, sharper details, same price)
+openai-image generate "your prompt" --resolution 2k -o result.png
+```
+
+The `grok-imagine-image-pro` model benefits most from `--resolution 2k` -- it produces noticeably sharper details and better text rendering at 2K. The standard model's improvement is more modest. There is no price difference between 1K and 2K on xAI.
+
 ## Preserving Likeness (People in Photos)
 
 When the user provides a photo of themselves or another person and wants to generate new images that preserve their identity, use the **Identity Preservation Framework**. This is a prompt structure, not an API feature -- the model's ability to retain facial likeness depends entirely on how the prompt is constructed.
@@ -576,7 +712,7 @@ Every prompt that references a person's photo must include these three layers be
 ### Full Identity-Preserving Prompt Template
 
 ```bash
-python3 scripts/openai_image.py edit \
+openai-image edit \
   "Use the uploaded image of me as the subject reference. \
 Preserve my facial features, proportions, age, skin texture, hairstyle, and expression exactly. \
 Do not stylise the face. Do not cartoonise. Do not anime. \
@@ -620,7 +756,7 @@ The model takes creative shortcuts when given room. Prevent specific failure mod
 ### Example: Action Figure / Stylized Portrait
 
 ```bash
-python3 scripts/openai_image.py edit \
+openai-image edit \
   "Use the uploaded image of me as the subject reference. \
 Preserve my facial features, proportions, age, skin texture, hairstyle, and expression exactly. \
 Do not stylise the face. Do not cartoonise. Do not anime. \
@@ -635,7 +771,7 @@ Studio lighting, product photography, white background." \
 ### Example: Professional Headshot from Casual Photo
 
 ```bash
-python3 scripts/openai_image.py edit \
+openai-image edit \
   "Use the uploaded image of me as the subject reference. \
 Preserve my facial features, proportions, age, skin texture, hairstyle, and expression exactly. \
 Do not stylise the face. No smoothing. No beautification. \
@@ -653,7 +789,7 @@ When crafting an edit prompt for a person's photo, first analyze the image to un
 
 ```bash
 # Analyze the source photo before editing
-python3 scripts/openai_image.py describe person_photo.jpg --mode detailed
+openai-image describe person_photo.jpg --mode detailed
 ```
 
 Use the description to write a more precise identity lock. Instead of generic "preserve my facial features," you can reference specifics from the analysis: "Preserve the subject's angular jaw, close-cropped dark hair, light stubble, and deep-set brown eyes exactly."
@@ -683,14 +819,14 @@ When generating a cohesive set of images (product shots, menu items, page backgr
 ```bash
 PREFIX="Vivid, hyper-real 1920s cinematic movie still. Rich jewel tones, warm golden lighting, film grain."
 
-python3 scripts/openai_image.py --prefix "$PREFIX" generate "blue cocktail in a coupe glass" --quality high -o drink1.png
-python3 scripts/openai_image.py --prefix "$PREFIX" generate "amber old fashioned with smoke" --quality high -o drink2.png
-python3 scripts/openai_image.py --prefix "$PREFIX" generate "emerald absinthe drip" --quality high -o drink3.png
+openai-image --prefix "$PREFIX" generate "blue cocktail in a coupe glass" --quality high -o drink1.png
+openai-image --prefix "$PREFIX" generate "amber old fashioned with smoke" --quality high -o drink2.png
+openai-image --prefix "$PREFIX" generate "emerald absinthe drip" --quality high -o drink3.png
 ```
 
 **2. Use `batch` for manifests.** Define the prefix once, list all jobs:
 ```bash
-python3 scripts/openai_image.py --retries 3 batch drinks.json --output-dir ./public/images/
+openai-image --retries 3 batch drinks.json --output-dir ./public/images/
 ```
 
 **3. Keep quality and size consistent.** Mixing `--quality medium` and `--quality high` across a series produces visible inconsistency. Pick one and stick with it.
@@ -744,9 +880,10 @@ PNG output files include embedded metadata (tEXt chunks) with the prompt, model,
 
 ## Troubleshooting
 
-- **"OPENAI_API_KEY not set"**: Run `export OPENAI_API_KEY='sk-...'` or add it to `~/.bashrc`.
-- **"openai package is not installed"**: Run `pip install openai`.
-- **Billing/quota errors**: Check your OpenAI account at platform.openai.com for usage limits.
+- **"XAI_API_KEY not set"**: Run `source ~/.secrets` or `export XAI_API_KEY='xai-...'`. This is the default provider.
+- **"OPENAI_API_KEY not set"**: Needed for `describe` command and `--provider openai`. Run `source ~/.secrets` or `export OPENAI_API_KEY='sk-...'`.
+- **"openai package is not installed"**: Run `pip install openai`. Both providers use this SDK.
+- **Billing/quota errors**: Check console.x.ai (xAI) or platform.openai.com (OpenAI) for usage limits.
 - **Mask dimension mismatch**: Resize the mask to match the source image exactly.
 - **DALL-E 3 format errors**: DALL-E 3 does not support `--format` or `--background`. Omit those flags or use a GPT image model.
 - **Transient API errors (connection, timeout, 502/503)**: The OpenAI Images API has a roughly 10-20% transient failure rate under load. Use `--retries 3` to automatically retry with exponential backoff (1s, 2s, 4s delays). Retry status is logged to stderr so you can monitor progress. For batch jobs, always use `--retries 3`.

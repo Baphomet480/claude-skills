@@ -29,25 +29,36 @@ Skills are consumed by both Claude (`~/.claude/skills/`) and Gemini (`~/.gemini/
 | Skill                        | Purpose                                                                      |
 | ---------------------------- | ---------------------------------------------------------------------------- |
 | `buffer-api`                 | Schedule, create, and manage social media posts via the Buffer GraphQL API   |
+| `client-feedback`            | Process client feedback emails into tracked issues and draft responses       |
 | `cloudflare-pages`           | Cloudflare Pages deployment, custom domains, and CI/CD                       |
 | `deep-research`              | Multi-round deep research producing visual reports with citations            |
 | `design-lookup`              | CSS components, SVG icons, and design pattern discovery from the web         |
 | `google-workspace`           | Google Workspace (Drive, Docs, Sheets, Gmail, Calendar) via the `gws` CLI   |
+| `gs-brand-doc`               | Generate branded PDF documents using GS brand assets                         |
 | `kitchen-sink-design-system` | Framework-agnostic Kitchen Sink design system workflow and component inventory|
+| `linkedin-chrome`            | LinkedIn content management via Chrome browser automation                    |
+| `llms-txt`                   | Generate /llms.txt and /llms-full.txt for web projects (llmstxt.org spec)   |
 | `nextjs-tinacms`             | Next.js 16 + TinaCMS + Tina Cloud + Vercel -- visual editing, blocks, SEO   |
-| `openai-image`               | OpenAI image generation, editing, vision, batch processing, and transforms   |
+| `openai-image`               | xAI/OpenAI image generation, editing, vision, batch processing (xAI default)|
 | `print-css`                  | Print stylesheets: @page, page breaks, colors, images, Next.js/Tailwind     |
 | `stitch-mcp`                 | Google Stitch MCP for UI design: screens, design systems, variants, prompts  |
+| `tina-schema-sync`           | Sync TinaCMS schema definitions with content models                          |
+| `voice-reviewer`             | Review and critique voice/tone in written content                            |
 
 ## Workflow
 
 1. Edit skill source in `skills/<name>/`
-2. Commit -- the pre-commit hook auto-packages changed skills into `dist/<name>.skill`
-3. Install -- copy or symlink skill directory to target location:
-   - Canonical: `~/.agents/skills/<name>/` (agent-agnostic, shared by all AIs)
-   - Claude reads from `~/.claude/skills/` (symlinks to `~/.agents/skills/`)
-   - Gemini reads from `~/.gemini/antigravity/skills/`
+2. `dist/` is rebuilt automatically:
+   - **On edit**: PostToolUse hook (`.claude/hooks/package-skill.sh`) rebuilds `dist/<name>.skill` on every Edit/Write
+   - **On commit**: Pre-commit hook (`hooks/pre-commit`) packages any remaining staged changes
+3. Install -- symlink skill directory to all install locations:
+   - `~/.agents/skills/<name>/` -> `skills/<name>/` (canonical, agent-agnostic)
+   - `~/.claude/skills/<name>/` -> `~/.agents/skills/<name>/`
+   - `~/.gemini/skills/<name>/` -> `~/.agents/skills/<name>/`
+   - `~/.gemini/antigravity/skills/<name>/` -> `~/.agents/skills/<name>/`
    - Or publish via `npx skills` ecosystem (see https://skills.sh/)
+
+All install paths are symlinks. Editing any copy edits the upstream source.
 
 ## Conventions
 

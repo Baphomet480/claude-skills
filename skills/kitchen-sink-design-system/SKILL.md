@@ -1,7 +1,7 @@
 ---
 name: kitchen-sink-design-system
-version: 1.0.0
-description: Kitchen Sink design system workflow for any frontend stack — Next.js, Hugo, Astro, SvelteKit, Nuxt, or plain HTML. Use when asked for a Kitchen Sink page, Design System, UI Audit, Style Guide, or Component Inventory, or when a project needs a component inventory plus component creation and a sink page implementation.
+version: 1.1.0
+description: "Kitchen Sink design system workflow for Next.js and React projects, with secondary support for Astro, SvelteKit, Nuxt, and static HTML. Use when asked for a Kitchen Sink page, Design System, UI Audit, Style Guide, or Component Inventory, or when a project needs a component inventory plus component creation and a sink page implementation. Covers CVA variant architecture, Tailwind v3/v4 token systems, shadcn/ui integration, and TinaCMS content modeling."
 ---
 
 # Kitchen Sink Design System
@@ -10,24 +10,22 @@ Build every component for real, wire it into a single sink page, and let the pag
 
 ## Core Philosophy
 
-- **Source of truth** — The sink page is the canonical reference for design direction. If it's not in the sink, it doesn't exist.
-- **No placeholders** — Every component rendered on the sink page must be a real, importable module. Never use draft placeholders or TODO stubs.
-- **Layered semantics** — Every component follows a base + variant architecture. Shared structure in the base, visual differences in the variant layer.
-- **Progressive disclosure** — Start with core primitives, layer in app-level components, finish with data display. Each tier builds on the last.
-- **Design-forward** — Define design direction in the sink first; production pages consume what the sink establishes.
-- **Agent-readable** — The design system should be equally consumable by human developers and AI coding agents. Semantic tokens, typed props, and explicit contracts over implicit conventions.
-- **Framework-native** — Respect each framework's idioms. Don't impose React conventions on a Hugo project or vice versa.
+- **Source of truth** -- The sink page is the canonical reference for design direction. If it's not in the sink, it doesn't exist.
+- **No placeholders** -- Every component rendered on the sink page must be a real, importable module. Never use draft placeholders or TODO stubs.
+- **Layered semantics** -- Every component follows a base + variant architecture. Shared structure in the base, visual differences in the variant layer.
+- **Progressive disclosure** -- Start with core primitives, layer in app-level components, finish with data display. Each tier builds on the last.
+- **Design-forward** -- Define design direction in the sink first; production pages consume what the sink establishes.
+- **Agent-readable** -- The design system should be equally consumable by human developers and AI coding agents. Semantic tokens, typed props, and explicit contracts over implicit conventions.
 
-## Phase 0: Detect Stack
+## Phase 0: Detect Stack & Discover Design System
 
-Before anything else, identify the project's framework and lock in the implementation strategy. If you cannot see the file tree, stop and request it.
+Before anything else, identify the project's framework and determine whether a design system already exists.
 
 ### Detection Signals
 
 | Signal file / directory | Framework |
 |---|---|
 | `next.config.*`, `app/` or `pages/` | Next.js (React) |
-| `hugo.toml`, `hugo.yaml`, `layouts/partials/` | Hugo |
 | `astro.config.*`, `src/components/` | Astro |
 | `nuxt.config.*` | Nuxt (Vue) |
 | `svelte.config.*` | SvelteKit |
@@ -37,44 +35,64 @@ Before anything else, identify the project's framework and lock in the implement
 
 Once detected, lock in these mappings for the rest of the workflow:
 
-| Concept | React / Next.js | Hugo | Astro | Static HTML |
-|---|---|---|---|---|
-| **Component** | `.tsx` in `components/` | `.html` partial in `themes/<theme>/layouts/partials/components/` | `.astro` in `src/components/` | Reusable HTML snippet |
-| **Component call** | `<Button variant="primary" />` | `{{ partial "components/button" (dict ...) }}` | `<Button variant="primary" />` | Copy/paste or `include` |
-| **Props / params** | React props (TypeScript) | `dict` context | Astro props (TypeScript) | CSS classes / data-attrs |
-| **Interactivity** | `useState`, event handlers | Alpine.js `x-data` or `<details>` | `client:load` + framework islands | Vanilla JS or Alpine.js |
-| **Sink route** | `app/sink/page.tsx` | `content/sink/_index.md` + `themes/<theme>/layouts/sink/list.html` | `src/pages/sink.astro` | `sink.html` |
-| **Prod guard** | `process.env` check → return `null` | Config overlay or `hugo.Environment` check | `import.meta.env` check | Don't deploy the file |
-| **Shortcodes** | N/A (components serve both roles) | `themes/<theme>/layouts/shortcodes/` wrapping partials | Components usable in MDX | N/A |
-| **Content authors** | Components in MDX | Shortcodes in markdown | Components in MDX / `.astro` | N/A |
-| **Utility helper** | `cn()` via `clsx` + `tailwind-merge` | `classnames` partial or inline concat | `cn()` or `class:list` | Inline concat |
+| Concept | React / Next.js | Astro | Static HTML |
+|---|---|---|---|
+| **Component** | `.tsx` in `components/` | `.astro` in `src/components/` | Reusable HTML snippet |
+| **Component call** | `<Button variant="primary" />` | `<Button variant="primary" />` | Copy/paste or `include` |
+| **Props / params** | React props (TypeScript) | Astro props (TypeScript) | CSS classes / data-attrs |
+| **Interactivity** | `useState`, event handlers | `client:load` + framework islands | Vanilla JS or Alpine.js |
+| **Sink route** | `app/sink/page.tsx` | `src/pages/sink.astro` | `sink.html` |
+| **Prod guard** | `process.env` check -> return `null` | `import.meta.env` check | Don't deploy the file |
+| **Content authors** | Components in MDX | Components in MDX / `.astro` | N/A |
+| **Utility helper** | `cn()` via `clsx` + `tailwind-merge` | `cn()` or `class:list` | Inline concat |
 
 ### Additional Detection Checks
 
 After identifying the framework, also detect:
 
-1. **CSS approach** — Tailwind (which version?), vanilla CSS, CSS modules, Sass, etc.
-2. **Icon library** — Lucide, Heroicons, inline SVG, icon fonts, Hugo module, etc.
-3. **Interactivity layer** — Alpine.js, HTMX, vanilla JS, React, Vue, Svelte, none.
-4. **CMS** — TinaCMS (`tina/`), Decap/Netlify CMS (`static/admin/`), Sanity, Contentful, plain markdown, none.
-5. **Existing component patterns** — Where do components live? What naming conventions are in use? Is there an existing helper like `cn()`?
-
-Adapt all subsequent phases to what you detected. Do not impose one framework's conventions on another.
+1. **CSS approach** -- Tailwind (which version?), vanilla CSS, CSS modules, Sass, etc.
+2. **Icon library** -- Lucide, Heroicons, inline SVG, icon fonts, etc.
+3. **Interactivity layer** -- React, Vue, Svelte, vanilla JS, none.
+4. **CMS** -- TinaCMS (`tina/`), Sanity, Contentful, plain markdown, none.
+5. **Existing component patterns** -- Where do components live? What naming conventions are in use? Is there an existing helper like `cn()`?
 
 ### Tailwind Detection
 
 Detect which Tailwind version is in use, then read the appropriate source:
 
-- **Tailwind v3** — Read `tailwind.config.js` / `tailwind.config.ts` for `theme.extend` (custom colors, spacing, fonts, breakpoints).
-- **Tailwind v4** — No config file required. Read `globals.css`, `app.css`, or the project's main CSS entry for `@theme` blocks and CSS custom properties (`--color-*`, `--spacing-*`, `--font-*`). Also check for `@import "tailwindcss"` as a v4 indicator.
-- **Detection heuristic:** If `tailwind.config.*` exists → v3. If the CSS entry contains `@theme` or `@import "tailwindcss"` → v4.
-- **No Tailwind** — Read the project's main CSS for custom properties, Sass variables, or hardcoded values.
+- **Tailwind v3** -- Read `tailwind.config.js` / `tailwind.config.ts` for `theme.extend` (custom colors, spacing, fonts, breakpoints).
+- **Tailwind v4** -- No config file required. Read `globals.css`, `app.css`, or the project's main CSS entry for `@theme` blocks and CSS custom properties (`--color-*`, `--spacing-*`, `--font-*`). Also check for `@import "tailwindcss"` as a v4 indicator.
+- **Detection heuristic:** If `tailwind.config.*` exists -> v3. If the CSS entry contains `@theme` or `@import "tailwindcss"` -> v4.
+- **No Tailwind** -- Read the project's main CSS for custom properties, Sass variables, or hardcoded values.
 
-## Phase 0b: Design System Discovery
+#### Tailwind v4 Token Example
 
-Before building anything, determine whether the project already has a documented design system or needs one created from scratch. This phase branches into two modes.
+```css
+/* app/globals.css -- Tailwind v4 */
+@import "tailwindcss";
 
-### Discovery Manifest
+@theme {
+  --color-primary: oklch(0.45 0.15 260);
+  --color-primary-foreground: oklch(0.98 0.01 260);
+  --color-secondary: oklch(0.92 0.02 260);
+  --color-secondary-foreground: oklch(0.2 0.05 260);
+  --color-destructive: oklch(0.55 0.2 25);
+  --color-muted: oklch(0.95 0.01 260);
+  --color-muted-foreground: oklch(0.55 0.02 260);
+  --color-accent: oklch(0.93 0.02 260);
+
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+}
+```
+
+In v4, components reference these tokens as utility classes directly: `bg-primary`, `text-muted-foreground`, `rounded-lg`. No `theme.extend` config needed.
+
+### Design System Discovery
 
 Scan the project root (and common subdirectories like `docs/`, `.github/`, `.cursor/`, `.agent/`) for any of these files:
 
@@ -91,50 +109,46 @@ Scan the project root (and common subdirectories like `docs/`, `.github/`, `.cur
 - `.agent/skills/*/SKILL.md`
 - `README.md` (check for design system or brand sections)
 
-**Hugo-specific:**
-- `data/design-tokens.json`, `data/tokens.json`
-- `assets/css/` for custom properties
-
 If **any** of these contain design direction (colors, typography, voice, component patterns), enter **Adopt mode**. Otherwise, enter **Establish mode**.
 
-### Adopt Mode — Existing Brand Guide
+### Adopt Mode -- Existing Brand Guide
 
 When the project already has documented design direction:
 
-1. **Ingest** — Read all discovered guide files. Extract:
+1. **Ingest** -- Read all discovered guide files. Extract:
    - Color palette (named tokens with hex/HSL values)
    - Typography scale (font families, sizes, weights)
    - Spacing system (if documented)
    - Voice & tone adjectives
    - Component patterns already specified
-2. **Map** — For every extracted token, identify:
-   - The corresponding Tailwind config value, CSS custom property, or Hugo `data/` entry
+2. **Map** -- For every extracted token, identify:
+   - The corresponding Tailwind config value or CSS custom property
    - Whether it's a **primitive** token (raw color: `--blue-500`) or **semantic** token (purpose: `--color-interactive`)
-3. **Audit** — Scan existing components for drift:
+3. **Audit** -- Scan existing components for drift:
    - Hardcoded hex values instead of tokens
    - Arbitrary Tailwind values (`w-[37px]`) instead of design scale
    - Inconsistent naming conventions
    - Missing dark mode support
-4. **Surface gaps** — Report what the guide documents vs. what actually exists in code
+4. **Surface gaps** -- Report what the guide documents vs. what actually exists in code
 
-### Establish Mode — No Guide Exists
+### Establish Mode -- No Guide Exists
 
 When the project has no documented design system:
 
-1. **Extract** — Scan existing CSS/Tailwind for de-facto tokens:
-   - Run through `globals.css`, `tailwind.config.*`, component files (or Hugo's `assets/css/`, Astro's `src/styles/`)
+1. **Extract** -- Scan existing CSS/Tailwind for de-facto tokens:
+   - Run through `globals.css`, `tailwind.config.*`, component files
    - Catalog every color, font, and spacing value actually in use
    - Identify the implicit palette and type scale
-2. **Propose** — Generate a `design-tokens.md` with:
-   - Discovered palette organized as primitive → semantic layers
+2. **Propose** -- Generate a `design-tokens.md` with:
+   - Discovered palette organized as primitive -> semantic layers
    - Recommended additions to fill gaps (e.g., missing destructive color, no muted variant)
-   - Type scale (H1–H6, body, caption) with sizes and weights
+   - Type scale (H1-H6, body, caption) with sizes and weights
    - Spacing ramp mapped to Tailwind's scale (or CSS custom properties for non-Tailwind projects)
-3. **Voice** — Define initial voice & tone:
-   - Propose 3–5 voice adjectives based on the project's domain
+3. **Voice** -- Define initial voice & tone:
+   - Propose 3-5 voice adjectives based on the project's domain
    - Draft tone map for common UI states
    - Apply the project's franchise placeholder convention (per user rules)
-4. **Approve** — Present the proposal to the user. Do NOT proceed to Phase 1 until tokens and voice are approved.
+4. **Approve** -- Present the proposal to the user. Do NOT proceed to Phase 1 until tokens and voice are approved.
 
 **Automated option:** Run `bash scripts/scan-components.sh [component_dir]` from the skill directory to get a Phase 0 discovery report + EXISTING / MISSING inventory against the tiered checklist.
 
@@ -143,13 +157,13 @@ When the project has no documented design system:
 ## Phase 1: Inventory & Plan
 
 Compare existing components against the tiered checklist. Mark each:
-- **EXISTING** — import from codebase as-is
-- **MISSING** — create the component, then wire it into the sink
-- **SHORTCODE/MDX CANDIDATE** — if a component is meant for content authors (not just the sink), also create the content-author-facing wrapper (shortcode for Hugo, MDX export for React/Astro, etc.)
+- **EXISTING** -- import from codebase as-is
+- **MISSING** -- create the component, then wire it into the sink
+- **MDX CANDIDATE** -- if a component is meant for content authors (not just the sink), also export it from the project's MDX component registry
 
 ### Tier 1: Core Primitives (mandatory)
 
-- Typography: H1–H6, paragraph, list (ol/ul), inline code, blockquote
+- Typography: H1-H6, paragraph, list (ol/ul), inline code, blockquote
 - Buttons: primary, secondary, outline, ghost, destructive; sizes sm/md/lg; disabled state
 - Badges / Tags: color variants, dismissible
 - Avatars: image, initials fallback, sizes, status indicator
@@ -172,7 +186,7 @@ Compare existing components against the tiered checklist. Mark each:
 
 ### Tier 3: Content-Author Components (CMS-dependent)
 
-Include when the site has a CMS or content authors who write markdown/MDX:
+Include when the site has a CMS or content authors who write MDX:
 
 - Callout / admonition (info, warning, tip, caution)
 - Figure / image with caption
@@ -180,7 +194,7 @@ Include when the site has a CMS or content authors who write markdown/MDX:
 - Embed (YouTube, etc.)
 - Card grid (n-up layout of cards from content)
 
-For Hugo, each of these should have both a partial (for templates) and a shortcode (for content authors). For React/Astro, the component serves both roles via MDX.
+For React/Astro, the component serves both sink and content-author roles via MDX.
 
 ### Tier 4: Data Display (include when data-heavy views exist)
 
@@ -191,9 +205,9 @@ For Hugo, each of these should have both a partial (for templates) and a shortco
 
 ## Phase 2: Layered Component Architecture
 
-Every component — whether EXISTING or newly created — must follow the **base + variant** pattern. This makes components predictable for both humans and AI agents. The exact mechanism depends on the framework detected in Phase 0.
+Every component -- whether EXISTING or newly created -- must follow the **base + variant** pattern. This makes components predictable for both humans and AI agents.
 
-### React / Next.js — CVA Pattern
+### React / Next.js -- CVA Pattern
 
 Use `class-variance-authority` (CVA) or an equivalent pattern to separate structural base classes from variant-specific classes:
 
@@ -201,7 +215,7 @@ Use `class-variance-authority` (CVA) or an equivalent pattern to separate struct
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils"; // clsx + tailwind-merge wrapper
 
-// ── Base + Variants ──────────────────────────────────────────────
+// -- Base + Variants --------------------------------------------------------
 const buttonVariants = cva(
   // Base: shared structure (always applied)
   "inline-flex items-center justify-center rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50",
@@ -230,7 +244,7 @@ const buttonVariants = cva(
   }
 );
 
-// ── Component ────────────────────────────────────────────────────
+// -- Component --------------------------------------------------------------
 interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {}
@@ -242,77 +256,77 @@ export function Button({ className, variant, size, ...props }: ButtonProps) {
 }
 ```
 
-### Hugo — Dict Context Pattern
-
-Hugo components use Go template partials with a `dict` context contract. Document params in a comment block, use `| default` for optional params, build BEM classes from variant/size, and `delimit` to join. Call via `{{ partial "components/button" (dict "label" "Submit" "variant" "primary") }}`.
-
-### Astro — Props Interface Pattern
+### Astro -- Props Interface Pattern
 
 Astro components define a TypeScript `Props` interface in frontmatter with defaults via destructuring. Build classes from variant/size, use `class:list` for merging. Pattern mirrors React CVA but uses Astro's native `Props` + `<slot />`.
 
-### Static HTML — BEM + Data-Attribute Pattern
+### Static HTML -- BEM + Data-Attribute Pattern
 
 Use BEM class conventions (`.btn`, `.btn--primary`, `.btn--sm`) and document the contract in an HTML comment at the top of the file listing available classes and data attributes.
 
 ### Rules (All Frameworks)
 
-1. **Base layer** — Shared structural classes: layout, border-radius, font-size, focus ring, transitions, disabled state. These NEVER change between variants.
-2. **Variant layer** — Only what differs: colors, borders, shadows, backgrounds. Defined as named variants.
-3. **Type / param export** — Always export the variant types (React: `VariantProps<>`, Hugo: param comment block, Astro: `Props` interface) so consumers (including AI agents) can discover available variants.
-4. **Escape hatch** — Accept an additional class prop and merge it last so consumers can override when necessary.
-5. **No raw conditionals** — Never use `isDestructive ? "bg-red-500" : "bg-blue-500"` inline. All visual branching goes through the variant API.
+1. **Base layer** -- Shared structural classes: layout, border-radius, font-size, focus ring, transitions, disabled state. These NEVER change between variants.
+2. **Variant layer** -- Only what differs: colors, borders, shadows, backgrounds. Defined as named variants.
+3. **Type / param export** -- Always export the variant types (React: `VariantProps<>`, Astro: `Props` interface) so consumers (including AI agents) can discover available variants.
+4. **Escape hatch** -- Accept an additional class prop and merge it last so consumers can override when necessary.
+5. **No raw conditionals** -- Never use `isDestructive ? "bg-red-500" : "bg-blue-500"` inline. All visual branching goes through the variant API.
 
 ### Semantic Design Tokens
 
 Components should reference **semantic** token names, not primitive color names:
 
-| ❌ Primitive | ✅ Semantic |
+| Primitive (avoid) | Semantic (use) |
 |---|---|
 | `bg-blue-500` | `bg-primary` |
 | `text-gray-500` | `text-muted-foreground` |
 | `border-red-500` | `border-destructive` |
 | `bg-gray-100` | `bg-muted` |
 
-The semantic layer means dark mode, theme changes, and brand pivots only require updating the token definitions — component code stays unchanged.
+The semantic layer means dark mode, theme changes, and brand pivots only require updating the token definitions -- component code stays unchanged.
 
 ### Utility Fallback
 
-If the project lacks a class-merging utility: **React** — add `cn()` via `clsx` + `tailwind-merge`. **Hugo** — create a `classnames.html` partial that filters and `delimit`s a slice. **Astro** — use built-in `class:list`. **Static** — inline concat or a tiny JS helper.
+If the project lacks a class-merging utility: **React** -- add `cn()` via `clsx` + `tailwind-merge`. **Astro** -- use built-in `class:list`. **Static** -- inline concat or a tiny JS helper.
 
-## Phase 3: Voice & Tone
+## Phase 3: Voice, Tone & Illustration
 
-Every design system needs content guidance. The sink page includes a **Voice & Tone** section covering:
+Every design system needs content guidance and a visual identity.
 
-- **Voice definition** — 3–5 adjectives defining the brand's consistent personality. Extract from existing guides or propose based on domain.
-- **Tone map** — How tone adapts to user emotional states (pleased, neutral, confused, frustrated, first-time).
-- **Content patterns** — Standard copy for empty states, error messages, success confirmations, loading states, destructive actions.
-- **Franchise placeholders** — A pop-culture franchise for all placeholder content (form labels, sample data, empty states). Document in the sink header.
+### Voice & Tone
 
-**Reference:** [voice-and-tone.md](references/voice-and-tone.md) — full templates, examples, and writing checklist.
+The sink page includes a **Voice & Tone** section covering:
 
-## Phase 3b: Image & Illustration
+- **Voice definition** -- 3-5 adjectives defining the brand's consistent personality. Extract from existing guides or propose based on domain.
+- **Tone map** -- How tone adapts to user emotional states (pleased, neutral, confused, frustrated, first-time).
+- **Content patterns** -- Standard copy for empty states, error messages, success confirmations, loading states, destructive actions.
+- **Franchise placeholders** -- A pop-culture franchise for all placeholder content (form labels, sample data, empty states). Document in the sink header.
+
+**Reference:** [voice-and-tone.md](references/voice-and-tone.md) -- full templates, examples, and writing checklist.
+
+### Image & Illustration
 
 Photography sourced from the web cannot be used directly (copyright, brand inconsistency). Define an **illustration style** and a **reinterpretation pipeline** to transform reference photos into brand-safe assets.
 
-- **Define style** — Set rendering, palette, detail level, stroke, texture, and mood keywords during discovery. Document in the brand guide.
-- **Reinterpretation pipeline** — Describe subject → strip photographer style → compose prompt with brand tokens → generate → validate against sink samples → optimize & store prompt.
-- **Sink page section** — Include an Illustration Gallery with 3–5 canonical illustrations, a style definition card, and the generation prompt template.
-- **Rules** — Never use unmodified photos. Always store the generation prompt alongside the asset. Every illustration gets descriptive alt text.
+- **Define style** -- Set rendering, palette, detail level, stroke, texture, and mood keywords during discovery. Document in the brand guide.
+- **Reinterpretation pipeline** -- Describe subject -> strip photographer style -> compose prompt with brand tokens -> generate via the **openai-image** skill -> validate against sink samples -> optimize & store prompt.
+- **Sink page section** -- Include an Illustration Gallery with 3-5 canonical illustrations, a style definition card, and the generation prompt template.
+- **Rules** -- Never use unmodified photos. Always store the generation prompt alongside the asset. Every illustration gets descriptive alt text.
 
-**Reference:** [image-reinterpretation.md](references/image-reinterpretation.md) — full pipeline, prompt templates, validation checklist, and sink page integration code.
+**Reference:** [image-reinterpretation.md](references/image-reinterpretation.md) -- full pipeline, prompt templates, validation checklist, and sink page integration code.
 
 ## Phase 4: Motion & Interaction
 
 Animation is the body language of the product. Define motion patterns in the sink for consistent, purposeful animation.
 
-- **Principles** — Purposeful (no decorative animation), informative, consistent, respectful of `prefers-reduced-motion`.
-- **Duration scale** — Define named tokens: `--duration-instant` (100ms), `--duration-fast` (200ms), `--duration-normal` (300ms), `--duration-slow` (500ms).
-- **Easing curves** — `--ease-out` for entrances, `--ease-in` for exits, `--ease-in-out` for state changes.
-- **Common patterns** — Hover lift, fade in, slide in, expand/collapse, skeleton shimmer, modal entrance/exit.
-- **Reduced motion** — Always include `prefers-reduced-motion` media query or use Tailwind `motion-safe:`/`motion-reduce:` modifiers.
-- **Sink section** — Include an interactive **Motion Sampler** demonstrating all patterns with their duration/easing tokens displayed.
+- **Principles** -- Purposeful (no decorative animation), informative, consistent, respectful of `prefers-reduced-motion`.
+- **Duration scale** -- Define named tokens: `--duration-instant` (100ms), `--duration-fast` (200ms), `--duration-normal` (300ms), `--duration-slow` (500ms).
+- **Easing curves** -- `--ease-out` for entrances, `--ease-in` for exits, `--ease-in-out` for state changes.
+- **Common patterns** -- Hover lift, fade in, slide in, expand/collapse, skeleton shimmer, modal entrance/exit.
+- **Reduced motion** -- Always include `prefers-reduced-motion` media query or use Tailwind `motion-safe:`/`motion-reduce:` modifiers.
+- **Sink section** -- Include an interactive **Motion Sampler** demonstrating all patterns with their duration/easing tokens displayed.
 
-**Reference:** [motion-guidelines.md](references/motion-guidelines.md) — full CSS/Tailwind code, keyframe definitions, Framer Motion patterns, and reduced-motion implementation.
+**Reference:** [motion-guidelines.md](references/motion-guidelines.md) -- full CSS/Tailwind code, keyframe definitions, Framer Motion patterns, and reduced-motion implementation.
 
 ## Phase 5: Build Components
 
@@ -322,38 +336,34 @@ For every **MISSING** item from Phase 1, create the component using the framewor
 
 | Framework | Location | Convention |
 |---|---|---|
-| React / Next.js | `components/` or `components/ui/` | `Button.tsx`, `card.tsx` — match existing project convention |
-| Hugo | `themes/<theme>/layouts/partials/components/` | `button.html`, `card.html` |
+| React / Next.js | `components/` or `components/ui/` | `Button.tsx`, `card.tsx` -- match existing project convention |
 | Astro | `src/components/` | `Button.astro`, `Card.astro` |
 | Static HTML | `components/` or `includes/` | `button.html`, `card.html` |
 
-### Component Creation Standard (All Frameworks)
+### Component Creation Standard
 
 1. **Create the component** in the project's established component location with a stable export/interface.
 2. **Document the interface** at the top of the file:
    - React: TypeScript interface or JSDoc props comment.
-   - Hugo: Go template comment block listing expected `dict` keys, their types, and defaults.
    - Astro: TypeScript `Props` interface in frontmatter.
    - Static: Comment block describing expected classes/data attributes.
-3. **Use design tokens** from the project's Tailwind config, CSS custom properties, or Hugo `data/` entries; avoid arbitrary/magic values.
-4. **Keep components self-contained** — rely only on dependencies already in the project.
+3. **Use design tokens** from the project's Tailwind config or CSS custom properties; avoid arbitrary/magic values.
+4. **Keep components self-contained** -- rely only on dependencies already in the project.
 5. **Make interactive components actually interactive** using whatever the project's interactivity layer is:
    - React: `useState`, event handlers
-   - Hugo: Alpine.js `x-data` or `<details>/<summary>` for zero-JS
    - Astro: `client:load` + framework islands
    - Static: vanilla JS, Alpine.js, or `<details>/<summary>`
-6. **Apply the variant pattern** from Phase 2 (CVA for React, dict params for Hugo, Props for Astro).
+6. **Apply the variant pattern** from Phase 2 (CVA for React, Props for Astro).
 7. **Apply voice & tone** patterns from Phase 3. Error messages answer what/why/fix. Empty states guide the user.
 8. **Apply motion** patterns from Phase 4. Use the defined duration and easing tokens.
 9. Wire the component into the sink page immediately. No placeholders.
 
 ### Content-Author Wrappers
 
-When a component is marked as a **SHORTCODE/MDX CANDIDATE** in Phase 1:
+When a component is marked as an **MDX CANDIDATE** in Phase 1:
 
-- **Hugo** — Create a shortcode in `themes/<theme>/layouts/shortcodes/` that wraps the partial. Pass through all relevant parameters.
-- **React / Astro** — The component itself is usable in MDX. Ensure it's exported from the project's MDX component registry.
-- **Static** — Document usage instructions for copy/paste inclusion.
+- **React / Astro** -- The component itself is usable in MDX. Ensure it's exported from the project's MDX component registry.
+- **Static** -- Document usage instructions for copy/paste inclusion.
 
 ## Phase 6: Assemble Sink Page
 
@@ -361,33 +371,27 @@ Create the sink route file based on the framework detected in Phase 0.
 
 ### Sink Route Creation
 
-**React / Next.js** — `app/sink/page.tsx`
+**React / Next.js** -- `app/sink/page.tsx`
 - Add `"use client"` directive.
 - Return `null` when `process.env.NEXT_PUBLIC_VERCEL_ENV === "production"`.
 - Use `examples/minimal-sink.tsx` as a starter template.
 
-**Hugo** — `content/sink/_index.md` + `layouts/sink/list.html`
-- Frontmatter: `type: sink`, exclude from sitemap (`sitemap: exclude`), hide from nav.
-- Layout: check `hugo.Environment` or `site.Params.showSink`; redirect in production.
-- Preferred production guard: config overlay at `config/production/hugo.toml` with `showSink = false`.
-- Use `examples/minimal-sink.html` as a starter template.
-
-**Astro** — `src/pages/sink.astro`
+**Astro** -- `src/pages/sink.astro`
 - Check `import.meta.env.PROD` and return redirect or empty page.
 
-**SvelteKit** — `src/routes/sink/+page.svelte`
+**SvelteKit** -- `src/routes/sink/+page.svelte`
 - Use `$app/environment` to check for production.
 
-**Nuxt** — `pages/sink.vue`
+**Nuxt** -- `pages/sink.vue`
 - Use `useRuntimeConfig()` to check environment.
 
-**Static HTML** — `sink.html`
+**Static HTML** -- `sink.html`
 - Simply don't include in production deployment.
 
 ### Architecture Rules
 
-- Never import other page/route files — only import components or define helpers locally.
-- The sink page is a dev tool — exclude it from production, sitemap, RSS, search indexes, and navigation.
+- Never import other page/route files -- only import components or define helpers locally.
+- The sink page is a dev tool -- exclude it from production, sitemap, RSS, search indexes, and navigation.
 
 ### Sink Page Layout
 
@@ -395,76 +399,87 @@ The sink page follows the same section structure regardless of framework. Adapt 
 
 **Sections (in order):**
 
-1. **Header** — Title, description, last-updated timestamp, franchise declaration
-2. **Design Tokens** — Color palette (primitive → semantic), typography scale, spacing ramp
-3. **Voice & Tone** — Voice definition, tone map, content pattern examples
-4. **Illustration Gallery** — Canonical illustrations, reinterpretation examples, prompt template
-5. **Site Header** — Rendered inline to test responsive breakpoints and nav states
-6. **Site Footer** — Rendered inline to test link columns and brand consistency
-7. **Typography** — H1–H6, body, caption, lists, blockquote, inline code
-8. **Buttons** — All variants × sizes × states (variant grid)
-9. **Badges** — Color variants, dismissible
-10. **Cards** — Basic, with header/footer, interactive
-11. **Form Controls** — All input types with label + error states
-12. **Modals & Dialogs** — Working open/close demo
-13. **Alerts** — All severity variants
-14. **Motion Sampler** — Interactive demos of hover lift, fade, slide, expand/collapse
-15. **Content-Author Specimens** — How shortcodes/MDX components render (if applicable)
-16. **Tier 2 components** — Tabs, breadcrumbs, accordion, tooltip, dropdown (if applicable)
-17. **Tier 4 components** — Table, stats cards, progress, skeleton (if applicable)
-18. **Chaos Laboratory** — Token visualization, state matrix, dark/light side-by-side
+1. **Header** -- Title, description, last-updated timestamp, franchise declaration
+2. **Design Tokens** -- Color palette (primitive -> semantic), typography scale, spacing ramp
+3. **Voice & Tone** -- Voice definition, tone map, content pattern examples
+4. **Illustration Gallery** -- Canonical illustrations, reinterpretation examples, prompt template
+5. **Site Header** -- Rendered inline to test responsive breakpoints and nav states
+6. **Site Footer** -- Rendered inline to test link columns and brand consistency
+7. **Typography** -- H1-H6, body, caption, lists, blockquote, inline code
+8. **Buttons** -- All variants x sizes x states (variant grid)
+9. **Badges** -- Color variants, dismissible
+10. **Cards** -- Basic, with header/footer, interactive
+11. **Form Controls** -- All input types with label + error states
+12. **Modals & Dialogs** -- Working open/close demo
+13. **Alerts** -- All severity variants
+14. **Motion Sampler** -- Interactive demos of hover lift, fade, slide, expand/collapse
+15. **Content-Author Specimens** -- How MDX components render (if applicable)
+16. **Tier 2 components** -- Tabs, breadcrumbs, accordion, tooltip, dropdown (if applicable)
+17. **Tier 4 components** -- Table, stats cards, progress, skeleton (if applicable)
+18. **Chaos Laboratory** -- Token visualization, state matrix, dark/light side-by-side, responsive stubs
 
 ### Chaos Laboratory
 
-1. **Token visualization** — Programmatically render design tokens (colors, spacing).
-   - React: Import resolved config via `resolveConfig`.
-   - Hugo: Export tokens to `data/design-tokens.json` at build time, read with `site.Data`.
+1. **Token visualization** -- Programmatically render design tokens (colors, spacing).
+   - React: Import resolved config via `resolveConfig` (v3) or read CSS custom properties (v4).
    - Astro: Import config in frontmatter.
    - Static: Maintain a JSON file manually or generate with a script.
-2. **State matrix** — Render variants side by side (default, hover, focus, disabled, active).
-3. **Theme test** — Light and dark columns, forced via wrapper class.
-4. **Responsive stubs** — `iframe` containers with fixed widths (320px, 768px) to verify mobile layouts.
+2. **State matrix** -- Render variants side by side (default, hover, focus, disabled, active).
+3. **Theme test** -- Light and dark columns, forced via wrapper class.
+4. **Responsive stubs** -- `iframe` containers with fixed widths (320px, 768px) to verify mobile layouts.
 
 ## Phase 7: Verify
 
-Run these checks before considering the sink complete. Commands vary by framework.
+Run these checks before considering the sink complete.
 
 ### Automated Checks
 
-| Framework | Build | Lint |
-|---|---|---|
-| Next.js | `pnpm build` | `pnpm lint` |
-| Hugo | `hugo --minify` | `hugo --templateMetrics` (check for template errors) |
-| Astro | `pnpm build` | `pnpm lint` |
-| SvelteKit | `pnpm build` | `pnpm lint` |
-| Nuxt | `pnpm build` | `pnpm lint` |
-| Static | N/A | HTML validator |
+```bash
+# Build
+pnpm build
 
-Optional accessibility audit: `pnpm dlx @axe-core/cli http://localhost:<port>/sink`
+# Lint
+pnpm lint
+
+# Accessibility audit
+pnpm dlx @axe-core/cli http://localhost:3000/sink
+```
+
+### CI Integration
+
+For continuous verification, add to your CI pipeline:
+
+- **Visual regression** -- Playwright screenshot comparison against baseline images of the sink page. Catches unintended visual drift.
+- **Accessibility** -- Run `@axe-core/cli` or `playwright-axe` against `/sink` and fail on violations.
+- **Build health** -- The sink page compiles with no TypeScript errors and no build warnings.
+
+```bash
+# Example Playwright visual regression test
+pnpm dlx playwright test sink.spec.ts --project=chromium
+```
 
 ### Manual Checklist
 
-- [ ] **A. Completeness** — Every Tier 1 item is present. Tier 2/3/4 items included where relevant.
-- [ ] **B. Real components** — Every rendered element is imported from the project's component location (no inline-only markup pretending to be a component).
-- [ ] **C. Layered architecture** — Every component uses the framework-appropriate variant pattern (CVA for React, dict params for Hugo, Props for Astro, BEM for static).
-- [ ] **D. Semantic tokens** — No hardcoded hex values or primitive color names in component code.
-- [ ] **E. Interactivity** — Modals open, toggles toggle, tabs switch, dropdowns expand. Every stateful component works.
-- [ ] **F. Voice & tone** — Content patterns documented. Error messages answer what/why/fix. Empty states guide the user.
-- [ ] **G. Motion** — Animations use defined duration/easing tokens. `prefers-reduced-motion` respected.
-- [ ] **H. Theming** — Dark/light columns render correctly. No hard-coded colors bypassing tokens.
-- [ ] **I. Production guard** — Sink page is excluded from production via the framework's native mechanism.
-- [ ] **J. No import cycles** — Sink page does not import any page/route file.
-- [ ] **K. Content-author wrappers** — Shortcodes/MDX exports pass through all relevant parameters (if applicable).
+- [ ] **A. Completeness** -- Every Tier 1 item is present. Tier 2/3/4 items included where relevant.
+- [ ] **B. Real components** -- Every rendered element is imported from the project's component location (no inline-only markup pretending to be a component).
+- [ ] **C. Layered architecture** -- Every component uses CVA (React) or the framework-appropriate variant pattern.
+- [ ] **D. Semantic tokens** -- No hardcoded hex values or primitive color names in component code.
+- [ ] **E. Interactivity** -- Modals open, toggles toggle, tabs switch, dropdowns expand. Every stateful component works.
+- [ ] **F. Voice & tone** -- Content patterns documented. Error messages answer what/why/fix. Empty states guide the user.
+- [ ] **G. Motion** -- Animations use defined duration/easing tokens. `prefers-reduced-motion` respected.
+- [ ] **H. Theming** -- Dark/light columns render correctly. No hard-coded colors bypassing tokens.
+- [ ] **I. Production guard** -- Sink page is excluded from production via the framework's native mechanism.
+- [ ] **J. No import cycles** -- Sink page does not import any page/route file.
+- [ ] **K. Content-author wrappers** -- MDX exports pass through all relevant parameters (if applicable).
 
 ## CMS Notes
 
-The sink page is **never** CMS-managed — it's a developer tool.
+The sink page is **never** CMS-managed -- it's a developer tool.
 
 However, when a CMS is present, content-author-facing components (Tier 3) should respect the CMS content model:
 
-- **TinaCMS** — Component params should align with the fields defined in `tina/config.ts` collections. Note: TinaCMS visual editing requires React — in Hugo projects, Tina functions only as a markdown/frontmatter editor GUI.
-- **Decap CMS** — Component params should map to widget types in `static/admin/config.yml`.
-- **MDX-based CMS** (Contentful, Sanity, etc.) — Exported components should match the expected props shape from the CMS schema.
+- **TinaCMS** -- Component params should align with the fields defined in `tina/config.ts` collections.
+- **MDX-based CMS** (Contentful, Sanity, etc.) -- Exported components should match the expected props shape from the CMS schema.
 
 ## AI Agent Readiness
 
@@ -472,21 +487,20 @@ Ensure the design system is consumable by AI agents: use semantic tokens over pr
 
 ## Companion Skills
 
-When available, leverage: **design-lookup** for CSS components, SVG icons, and design inspiration during Establish mode. **Frontend/brand identity skills** for project-specific visual identity constraints during discovery. **deep-research** for evaluating design system approaches from scratch. This skill acts as the **integrator** — consuming companion skill outputs and codifying them into the component library and sink page.
+When available, leverage: **design-lookup** for CSS components, SVG icons, and design inspiration during Establish mode. **openai-image** for illustration reinterpretation and brand-safe asset generation. **deep-research** for evaluating design system approaches from scratch. This skill acts as the **integrator** -- consuming companion skill outputs and codifying them into the component library and sink page.
 
 ## Anti-patterns
 
-- **Draft placeholders** — `{/* TODO: add button */}` is never acceptable. Build the real component.
-- **Arbitrary Tailwind values** — `w-[35px]` or `text-[#ff0000]` instead of using config tokens.
-- **Raw conditional classes** — `isDestructive ? "bg-red-500" : "bg-blue-500"` instead of using variants.
-- **Importing page files** — `import X from "../other-page/page"` creates coupling and build issues.
-- **Skipping tiers** — Don't jump to Tier 4 charts before Tier 1 buttons exist.
-- **Static mockups** — A modal that doesn't open, a toggle that doesn't toggle, a tab bar that doesn't switch.
-- **One-off inline components** — If it's rendered in the sink, it belongs in the component directory as an importable module.
-- **Appearance-based token names** — `blue-primary` instead of `color-interactive`. Semantic names survive brand pivots.
-- **Missing voice guidance** — A sink without content patterns is only half a design system.
-- **Decorative animation** — Motion without purpose. Every animation should inform or guide.
-- **Framework mismatch** — Imposing React idioms (JSX, hooks) on a Hugo or static HTML project.
+- **Draft placeholders** -- `{/* TODO: add button */}` is never acceptable. Build the real component.
+- **Arbitrary Tailwind values** -- `w-[35px]` or `text-[#ff0000]` instead of using config tokens.
+- **Raw conditional classes** -- `isDestructive ? "bg-red-500" : "bg-blue-500"` instead of using variants.
+- **Importing page files** -- `import X from "../other-page/page"` creates coupling and build issues.
+- **Skipping tiers** -- Don't jump to Tier 4 charts before Tier 1 buttons exist.
+- **Static mockups** -- A modal that doesn't open, a toggle that doesn't toggle, a tab bar that doesn't switch.
+- **One-off inline components** -- If it's rendered in the sink, it belongs in the component directory as an importable module.
+- **Appearance-based token names** -- `blue-primary` instead of `color-interactive`. Semantic names survive brand pivots.
+- **Missing voice guidance** -- A sink without content patterns is only half a design system.
+- **Decorative animation** -- Motion without purpose. Every animation should inform or guide.
 
 ## Reference
 

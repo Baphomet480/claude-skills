@@ -1,33 +1,112 @@
 "use client";
 
-// ── Kitchen Sink — Starter Template (React / Next.js) ────────────────────────
+// -- Kitchen Sink -- Starter Template (React / Next.js) ----------------------
 //
-// This is a structural skeleton for the sink page. Replace placeholder sections
-// with real component imports. Every rendered element must be an importable
-// module — no inline-only markup.
+// A fully working sink page skeleton. Every rendered element is a real component
+// defined in this file. Replace these with imports from your component library
+// as you build out each component.
 //
 // Production guard: returns null in production.
-// Franchise placeholder: [FRANCHISE_NAME]
+// Franchise placeholder: Star Wars (replace with your project's franchise)
 
 import { useState } from "react";
+import { cva, type VariantProps } from "class-variance-authority";
 
-// ── Replace these with real imports from your component library ───────────────
-// import { Button }    from "@/components/ui/button";
-// import { Badge }     from "@/components/ui/badge";
-// import { Card }      from "@/components/ui/card";
-// import { Alert }     from "@/components/ui/alert";
-// import { Dialog }    from "@/components/ui/dialog";
-// import { Tabs }      from "@/components/ui/tabs";
-// import { Input }     from "@/components/ui/input";
-// import { Skeleton }  from "@/components/ui/skeleton";
+// -- Utility ----------------------------------------------------------------
 
-// ── Section Config ───────────────────────────────────────────────────────────
+function cn(...classes: (string | false | undefined | null)[]) {
+  return classes.filter(Boolean).join(" ");
+}
+
+// -- Button (inline -- replace with your real component) --------------------
+
+const buttonVariants = cva(
+  "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50",
+  {
+    variants: {
+      variant: {
+        primary: "bg-primary text-primary-foreground hover:bg-primary/90",
+        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        outline: "border border-input bg-transparent hover:bg-accent hover:text-accent-foreground",
+        ghost: "hover:bg-accent hover:text-accent-foreground",
+        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+      },
+      size: {
+        sm: "h-8 px-3 text-xs",
+        md: "h-10 px-4 text-sm",
+        lg: "h-12 px-6 text-base",
+      },
+    },
+    defaultVariants: { variant: "primary", size: "md" },
+  }
+);
+
+interface ButtonProps
+  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
+    VariantProps<typeof buttonVariants> {}
+
+function Button({ className, variant, size, ...props }: ButtonProps) {
+  return (
+    <button className={cn(buttonVariants({ variant, size }), className ?? "")} {...props} />
+  );
+}
+
+// -- Badge (inline -- replace with your real component) ---------------------
+
+function Badge({
+  children,
+  variant = "default",
+}: {
+  children: React.ReactNode;
+  variant?: "default" | "secondary" | "destructive" | "outline";
+}) {
+  const base = "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors";
+  const variants: Record<string, string> = {
+    default: "bg-primary text-primary-foreground",
+    secondary: "bg-secondary text-secondary-foreground",
+    destructive: "bg-destructive text-destructive-foreground",
+    outline: "border border-input text-foreground",
+  };
+  return <span className={cn(base, variants[variant])}>{children}</span>;
+}
+
+// -- Card (inline -- replace with your real component) ----------------------
+
+function Card({ children, className }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div className={cn("rounded-lg border bg-card text-card-foreground shadow-sm", className ?? "")}>
+      {children}
+    </div>
+  );
+}
+
+// -- Alert (inline -- replace with your real component) ---------------------
+
+function Alert({
+  children,
+  variant = "info",
+}: {
+  children: React.ReactNode;
+  variant?: "info" | "success" | "warning" | "error";
+}) {
+  const styles: Record<string, string> = {
+    info: "border-blue-200 bg-blue-50 text-blue-900 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-100",
+    success: "border-green-200 bg-green-50 text-green-900 dark:border-green-800 dark:bg-green-950 dark:text-green-100",
+    warning: "border-yellow-200 bg-yellow-50 text-yellow-900 dark:border-yellow-800 dark:bg-yellow-950 dark:text-yellow-100",
+    error: "border-red-200 bg-red-50 text-red-900 dark:border-red-800 dark:bg-red-950 dark:text-red-100",
+  };
+  return (
+    <div role="alert" className={cn("rounded-lg border p-4 text-sm", styles[variant])}>
+      {children}
+    </div>
+  );
+}
+
+// -- Section Config ---------------------------------------------------------
+
 const SECTIONS = [
   { id: "tokens", label: "Design Tokens" },
   { id: "voice", label: "Voice & Tone" },
-  { id: "illustrations", label: "Illustrations" },
-  { id: "header", label: "Site Header" },
-  { id: "footer", label: "Site Footer" },
   { id: "typo", label: "Typography" },
   { id: "buttons", label: "Buttons" },
   { id: "badges", label: "Badges" },
@@ -36,19 +115,17 @@ const SECTIONS = [
   { id: "modals", label: "Modals & Dialogs" },
   { id: "alerts", label: "Alerts" },
   { id: "motion", label: "Motion Sampler" },
-  { id: "tier2", label: "Tier 2 Components" },
-  { id: "tier3", label: "Tier 3 Components" },
   { id: "chaos", label: "Chaos Laboratory" },
 ] as const;
 
-// ── Main Page ────────────────────────────────────────────────────────────────
+// -- Main Page --------------------------------------------------------------
+
 export default function KitchenSinkPage() {
-  // Production guard — never render in production
   if (process.env.NEXT_PUBLIC_VERCEL_ENV === "production") return null;
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">
-      {/* ── Sidebar Navigation ── */}
+      {/* Sidebar Navigation */}
       <nav className="sticky top-0 hidden h-screen w-56 shrink-0 overflow-y-auto border-r bg-muted/30 p-4 lg:block">
         <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
           Kitchen Sink
@@ -67,7 +144,7 @@ export default function KitchenSinkPage() {
         </ul>
       </nav>
 
-      {/* ── Main Content ── */}
+      {/* Main Content */}
       <main className="flex-1 space-y-16 p-6 lg:p-10">
         <header>
           <h1 className="text-4xl font-bold tracking-tight">Kitchen Sink</h1>
@@ -75,14 +152,13 @@ export default function KitchenSinkPage() {
             Living source of truth for the design system.
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Franchise: <strong>[FRANCHISE_NAME]</strong>
+            Franchise: <strong>Star Wars</strong>
           </p>
         </header>
 
-        {/* ── Design Tokens ── */}
+        {/* Design Tokens */}
         <section id="tokens" className="space-y-6">
           <h2 className="border-b pb-2 text-2xl font-semibold">Design Tokens</h2>
-          {/* Color palette — render from CSS custom properties or Tailwind config */}
           <div className="grid grid-cols-3 gap-4 sm:grid-cols-4 md:grid-cols-6">
             {[
               { name: "background", css: "var(--background)" },
@@ -103,10 +179,33 @@ export default function KitchenSinkPage() {
               </div>
             ))}
           </div>
-          {/* Typography scale, spacing ramp */}
         </section>
 
-        {/* ── Buttons (representative section showing variant × size grid) ── */}
+        {/* Typography */}
+        <section id="typo" className="space-y-6">
+          <h2 className="border-b pb-2 text-2xl font-semibold">Typography</h2>
+          <div className="space-y-4">
+            <h1 className="text-4xl font-bold">H1 -- A New Hope</h1>
+            <h2 className="text-3xl font-semibold">H2 -- The Empire Strikes Back</h2>
+            <h3 className="text-2xl font-semibold">H3 -- Return of the Jedi</h3>
+            <h4 className="text-xl font-medium">H4 -- The Phantom Menace</h4>
+            <h5 className="text-lg font-medium">H5 -- Attack of the Clones</h5>
+            <h6 className="text-base font-medium">H6 -- Revenge of the Sith</h6>
+            <p className="text-base">Body text -- A long time ago in a galaxy far, far away...</p>
+            <p className="text-sm text-muted-foreground">Caption text -- Directed by George Lucas</p>
+            <ul className="list-disc pl-6 space-y-1">
+              <li>Luke Skywalker</li>
+              <li>Princess Leia</li>
+              <li>Han Solo</li>
+            </ul>
+            <blockquote className="border-l-4 border-muted pl-4 italic text-muted-foreground">
+              &ldquo;Do. Or do not. There is no try.&rdquo; -- Yoda
+            </blockquote>
+            <p>Inline <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-sm">code</code> example</p>
+          </div>
+        </section>
+
+        {/* Buttons */}
         <section id="buttons" className="space-y-6">
           <h2 className="border-b pb-2 text-2xl font-semibold">Buttons</h2>
           <div className="overflow-x-auto">
@@ -120,79 +219,268 @@ export default function KitchenSinkPage() {
                 </tr>
               </thead>
               <tbody>
-                {/* Map over variants × sizes using your real <Button> component:
-                {(["primary","secondary","outline","ghost","destructive"] as const).map(
+                {(["primary", "secondary", "outline", "ghost", "destructive"] as const).map(
                   (variant) => (
                     <tr key={variant} className="border-b">
                       <td className="px-4 py-3 font-mono text-xs">{variant}</td>
-                      {(["sm","md","lg"] as const).map((size) => (
+                      {(["sm", "md", "lg"] as const).map((size) => (
                         <td key={size} className="px-4 py-3">
-                          <Button variant={variant} size={size}>{variant}</Button>
+                          <Button variant={variant} size={size}>
+                            {variant}
+                          </Button>
                         </td>
                       ))}
                     </tr>
                   )
-                )} */}
+                )}
               </tbody>
             </table>
           </div>
-          {/* States: default, disabled, focus-visible */}
+          <div className="flex gap-4">
+            <Button disabled>Disabled</Button>
+          </div>
         </section>
 
-        {/* ── Modals (representative interactive section) ── */}
+        {/* Badges */}
+        <section id="badges" className="space-y-6">
+          <h2 className="border-b pb-2 text-2xl font-semibold">Badges</h2>
+          <div className="flex flex-wrap gap-3">
+            <Badge>Jedi</Badge>
+            <Badge variant="secondary">Padawan</Badge>
+            <Badge variant="destructive">Sith</Badge>
+            <Badge variant="outline">Smuggler</Badge>
+          </div>
+        </section>
+
+        {/* Cards */}
+        <section id="cards" className="space-y-6">
+          <h2 className="border-b pb-2 text-2xl font-semibold">Cards</h2>
+          <div className="grid gap-6 md:grid-cols-3">
+            <Card>
+              <div className="p-6">
+                <h3 className="text-lg font-semibold">Tatooine</h3>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  A harsh desert world orbiting twin suns in the galaxy&apos;s Outer Rim.
+                </p>
+              </div>
+            </Card>
+            <Card className="transition-transform motion-safe:hover:-translate-y-1 motion-safe:hover:shadow-lg">
+              <div className="p-6">
+                <h3 className="text-lg font-semibold">Hoth</h3>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  An ice planet serving as the secret base for the Rebel Alliance.
+                </p>
+                <Button variant="outline" size="sm" className="mt-4">
+                  Explore
+                </Button>
+              </div>
+            </Card>
+            <Card>
+              <div className="border-b p-4">
+                <h3 className="font-semibold">Endor</h3>
+              </div>
+              <div className="p-4 text-sm text-muted-foreground">
+                Forest moon, home to the Ewoks.
+              </div>
+              <div className="border-t p-4">
+                <Button variant="ghost" size="sm">Details</Button>
+              </div>
+            </Card>
+          </div>
+        </section>
+
+        {/* Form Controls */}
+        <section id="forms" className="space-y-6">
+          <h2 className="border-b pb-2 text-2xl font-semibold">Form Controls</h2>
+          <div className="max-w-md space-y-4">
+            <div>
+              <label className="mb-1.5 block text-sm font-medium">Callsign</label>
+              <input
+                type="text"
+                placeholder="Red Five"
+                className="w-full rounded-md border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-medium">Mission Briefing</label>
+              <textarea
+                rows={3}
+                placeholder="Describe the mission objectives..."
+                className="w-full rounded-md border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-medium">Allegiance</label>
+              <select className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
+                <option>Rebel Alliance</option>
+                <option>Galactic Empire</option>
+                <option>Bounty Hunters Guild</option>
+              </select>
+            </div>
+            <div className="flex items-center gap-2">
+              <input type="checkbox" id="force" className="h-4 w-4 rounded border" />
+              <label htmlFor="force" className="text-sm">Force-sensitive</label>
+            </div>
+            <div className="space-y-2">
+              <label className="block text-sm font-medium">Rank</label>
+              <div className="flex items-center gap-2">
+                <input type="radio" name="rank" id="commander" className="h-4 w-4" />
+                <label htmlFor="commander" className="text-sm">Commander</label>
+              </div>
+              <div className="flex items-center gap-2">
+                <input type="radio" name="rank" id="captain" className="h-4 w-4" />
+                <label htmlFor="captain" className="text-sm">Captain</label>
+              </div>
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-medium">Error state</label>
+              <input
+                type="text"
+                defaultValue="INVALID_COORDINATES"
+                className="w-full rounded-md border border-destructive bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-destructive"
+              />
+              <p className="mt-1 text-xs text-destructive">
+                Coordinates must be in standard galactic format. Check your nav computer.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Modals */}
         <ModalSection />
 
-        {/* ── Remaining sections follow the same pattern ──
-          See SKILL.md Phase 6 "Sink Page Layout" for the full section order:
-          - Voice & Tone, Illustrations, Site Header, Site Footer, Typography
-          - Badges, Cards, Form Controls, Alerts, Motion Sampler
-          - Tier 2 (Tabs, Breadcrumbs, Accordion, Tooltip, Dropdown)
-          - Tier 3 (Content-Author Components)
-          - Chaos Laboratory (token vis, state matrix, dark/light, responsive stubs)
-        */}
+        {/* Alerts */}
+        <section id="alerts" className="space-y-6">
+          <h2 className="border-b pb-2 text-2xl font-semibold">Alerts</h2>
+          <div className="space-y-3">
+            <Alert variant="info">Scanning for nearby Imperial vessels...</Alert>
+            <Alert variant="success">Hyperspace jump completed. Welcome to the Dagobah system.</Alert>
+            <Alert variant="warning">Shield generator is at 30%. Seek repairs before your next engagement.</Alert>
+            <Alert variant="error">Hyperdrive malfunction. Unable to make the jump to lightspeed.</Alert>
+          </div>
+        </section>
+
+        {/* Motion Sampler */}
+        <section id="motion" className="space-y-6">
+          <h2 className="border-b pb-2 text-2xl font-semibold">Motion Sampler</h2>
+          <div className="grid gap-6 md:grid-cols-3">
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Hover Lift</p>
+              <div className="flex h-24 items-center justify-center rounded-lg border bg-muted/30 transition-transform duration-100 ease-out motion-safe:hover:-translate-y-1 motion-safe:hover:shadow-lg">
+                Hover me
+              </div>
+              <p className="font-mono text-xs text-muted-foreground">duration-100 ease-out</p>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Fade In</p>
+              <div className="flex h-24 items-center justify-center rounded-lg border bg-muted/30 motion-safe:animate-[fade-in_300ms_ease-out]">
+                I faded in
+              </div>
+              <p className="font-mono text-xs text-muted-foreground">300ms ease-out</p>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Scale</p>
+              <div className="flex h-24 items-center justify-center rounded-lg border bg-muted/30 transition-transform duration-200 motion-safe:hover:scale-105">
+                Hover to scale
+              </div>
+              <p className="font-mono text-xs text-muted-foreground">duration-200 scale-105</p>
+            </div>
+          </div>
+        </section>
+
+        {/* Chaos Laboratory */}
+        <section id="chaos" className="space-y-6">
+          <h2 className="border-b pb-2 text-2xl font-semibold">Chaos Laboratory</h2>
+
+          {/* Theme Test */}
+          <div>
+            <h3 className="mb-3 text-lg font-medium">Theme Test</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="rounded-lg border bg-white p-4 text-black dark:bg-white dark:text-black">
+                <p className="text-sm font-medium">Light</p>
+                <Button variant="primary" size="sm" className="mt-2">Primary</Button>
+              </div>
+              <div className="rounded-lg border bg-zinc-950 p-4 text-white dark:bg-zinc-950 dark:text-white">
+                <p className="text-sm font-medium">Dark</p>
+                <Button variant="primary" size="sm" className="mt-2">Primary</Button>
+              </div>
+            </div>
+          </div>
+
+          {/* State Matrix */}
+          <div>
+            <h3 className="mb-3 text-lg font-medium">State Matrix</h3>
+            <div className="flex flex-wrap gap-3">
+              <Button variant="primary">Default</Button>
+              <Button variant="primary" disabled>Disabled</Button>
+              <Button variant="primary" className="ring-2 ring-ring ring-offset-2">Focus</Button>
+            </div>
+          </div>
+
+          {/* Responsive Stubs */}
+          <div>
+            <h3 className="mb-3 text-lg font-medium">Responsive Stubs</h3>
+            <div className="space-y-4">
+              <div>
+                <p className="mb-1 text-xs font-medium text-muted-foreground">320px -- Mobile</p>
+                <iframe
+                  src="/sink"
+                  title="Mobile viewport"
+                  className="h-64 w-[320px] rounded border"
+                  loading="lazy"
+                />
+              </div>
+              <div>
+                <p className="mb-1 text-xs font-medium text-muted-foreground">768px -- Tablet</p>
+                <iframe
+                  src="/sink"
+                  title="Tablet viewport"
+                  className="h-64 w-[768px] max-w-full rounded border"
+                  loading="lazy"
+                />
+              </div>
+            </div>
+          </div>
+        </section>
       </main>
     </div>
   );
 }
 
-// ── Modal Section (example of interactive sub-component) ─────────────────────
+// -- Modal Section ----------------------------------------------------------
+
 function ModalSection() {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
     <section id="modals" className="space-y-6">
       <h2 className="border-b pb-2 text-2xl font-semibold">Modals & Dialogs</h2>
-      {/* Replace with real <Button> and <Dialog> components */}
-      <button
-        onClick={() => setIsOpen(true)}
-        className="rounded-md border px-4 py-2 text-sm hover:bg-accent"
-      >
+      <Button variant="outline" onClick={() => setIsOpen(true)}>
         Open Modal
-      </button>
+      </Button>
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div
             className="absolute inset-0 bg-black/50 motion-safe:animate-[fade-in_200ms_ease-out]"
             onClick={() => setIsOpen(false)}
+            aria-hidden="true"
           />
-          <div className="relative z-10 w-full max-w-md rounded-lg border bg-background p-6 shadow-xl motion-safe:animate-[modal-in_300ms_ease-out]">
-            <h3 className="text-lg font-semibold">Confirm Action</h3>
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="relative z-10 w-full max-w-md rounded-lg border bg-background p-6 shadow-xl motion-safe:animate-[fade-in_200ms_ease-out]"
+          >
+            <h3 className="text-lg font-semibold">Delete Rebel Base Location?</h3>
             <p className="mt-2 text-sm text-muted-foreground">
-              Destructive confirmation with specific details per voice guidelines.
+              This will permanently erase the coordinates for Echo Base. This action cannot be undone.
             </p>
             <div className="mt-6 flex justify-end gap-3">
-              <button
-                onClick={() => setIsOpen(false)}
-                className="rounded-md border px-3 py-1.5 text-sm hover:bg-accent"
-              >
+              <Button variant="outline" size="sm" onClick={() => setIsOpen(false)}>
                 Cancel
-              </button>
-              <button
-                onClick={() => setIsOpen(false)}
-                className="rounded-md bg-destructive px-3 py-1.5 text-sm text-destructive-foreground hover:bg-destructive/90"
-              >
-                Confirm
-              </button>
+              </Button>
+              <Button variant="destructive" size="sm" onClick={() => setIsOpen(false)}>
+                Delete Base
+              </Button>
             </div>
           </div>
         </div>

@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# scan-components.sh — Kitchen Sink Inventory Scanner (Multi-Framework)
+# scan-components.sh -- Kitchen Sink Inventory Scanner (Multi-Framework)
 #
 # Walks a project's component directory and compares found exports
 # against the tiered Kitchen Sink checklist. Also performs Phase 0
-# design system discovery — detecting brand guides, design tokens,
+# design system discovery -- detecting brand guides, design tokens,
 # component library (shadcn, etc.), and CVA usage.
 #
-# Supports: React/Next.js, Hugo, Astro, SvelteKit, Nuxt, Static HTML
+# Supports: React/Next.js (primary), Astro, SvelteKit, Nuxt, Static HTML
 #
 # Usage:
 #   bash scripts/scan-components.sh [component_dir]
@@ -155,8 +155,6 @@ detected_framework=""
 detect_framework() {
   if [[ -f "next.config.js" || -f "next.config.ts" || -f "next.config.mjs" ]]; then
     detected_framework="nextjs"
-  elif [[ -f "hugo.toml" || -f "hugo.yaml" || -f "hugo.json" || -f "config.toml" || -f "config.yaml" ]]; then
-    detected_framework="hugo"
   elif [[ -f "astro.config.mjs" || -f "astro.config.ts" || -f "astro.config.js" ]]; then
     detected_framework="astro"
   elif [[ -f "nuxt.config.ts" || -f "nuxt.config.js" ]]; then
@@ -171,7 +169,6 @@ detect_framework() {
 framework_label() {
   case "$detected_framework" in
     nextjs)    echo "Next.js (React)" ;;
-    hugo)      echo "Hugo" ;;
     astro)     echo "Astro" ;;
     nuxt)      echo "Nuxt (Vue)" ;;
     sveltekit) echo "SvelteKit" ;;
@@ -183,16 +180,6 @@ framework_label() {
 # Detect the component directory based on framework
 detect_component_dir() {
   case "$detected_framework" in
-    hugo)
-      # Hugo uses partials as components
-      local candidates=("layouts/partials/components" "layouts/partials")
-      for dir in "${candidates[@]}"; do
-        if [[ -d "$dir" ]]; then
-          echo "$dir"
-          return 0
-        fi
-      done
-      ;;
     astro)
       local candidates=("src/components" "components")
       for dir in "${candidates[@]}"; do
@@ -203,7 +190,7 @@ detect_component_dir() {
       done
       ;;
     *)
-      # React, Next.js, Vite, SvelteKit, Nuxt, Static
+      # React, Next.js, SvelteKit, Nuxt, Static
       local candidates=("src/components" "components" "app/components")
       for dir in "${candidates[@]}"; do
         if [[ -d "$dir" ]]; then
@@ -218,60 +205,37 @@ detect_component_dir() {
 
 # --- Component Search ---------------------------------------------------------
 
-# Search for a component by pattern in the component directory.
-# Supports multiple file extensions based on detected framework.
 search_component() {
   local pattern="$1"
   local dir="$2"
 
   case "$detected_framework" in
-    hugo)
-      # Hugo: search for .html partials
-      find "$dir" -type f -name "*.html" \
-        | grep -iE "(^|/)($pattern)\.html$" \
-        | head -5 \
-        || true
-      ;;
     astro)
-      # Astro: search for .astro AND .tsx/.ts (for framework islands)
-      find "$dir" -type f \( -name "*.astro" -o -name "*.tsx" -o -name "*.ts" -o -name "*.jsx" -o -name "*.js" \) \
+      find "$dir" -maxdepth 3 -type f \( -name "*.astro" -o -name "*.tsx" -o -name "*.ts" -o -name "*.jsx" -o -name "*.js" \) \
         | grep -iE "(^|/)($pattern)\.(astro|tsx|ts|jsx|js)$" \
         | head -5 \
         || true
       ;;
     sveltekit)
-      # SvelteKit: search for .svelte and .ts/.js
-      find "$dir" -type f \( -name "*.svelte" -o -name "*.ts" -o -name "*.js" \) \
+      find "$dir" -maxdepth 3 -type f \( -name "*.svelte" -o -name "*.ts" -o -name "*.js" \) \
         | grep -iE "(^|/)($pattern)\.(svelte|ts|js)$" \
         | head -5 \
         || true
       ;;
     nuxt)
-      # Nuxt: search for .vue and .ts/.js
-      find "$dir" -type f \( -name "*.vue" -o -name "*.ts" -o -name "*.js" \) \
+      find "$dir" -maxdepth 3 -type f \( -name "*.vue" -o -name "*.ts" -o -name "*.js" \) \
         | grep -iE "(^|/)($pattern)\.(vue|ts|js)$" \
         | head -5 \
         || true
       ;;
     *)
-      # React / Next.js / Static: search for tsx, ts, jsx, js, html
-      find "$dir" -type f \( -name "*.tsx" -o -name "*.ts" -o -name "*.jsx" -o -name "*.js" -o -name "*.html" \) \
+      # React / Next.js / Static
+      find "$dir" -maxdepth 3 -type f \( -name "*.tsx" -o -name "*.ts" -o -name "*.jsx" -o -name "*.js" -o -name "*.html" \) \
         | grep -iE "(^|/)($pattern)\.(tsx|ts|jsx|js|html)$" \
         | head -5 \
         || true
       ;;
   esac
-}
-
-# Also search Hugo shortcodes if applicable
-search_shortcode() {
-  local pattern="$1"
-  if [[ "$detected_framework" == "hugo" && -d "layouts/shortcodes" ]]; then
-    find "layouts/shortcodes" -type f -name "*.html" \
-      | grep -iE "(^|/)($pattern)\.html$" \
-      | head -5 \
-      || true
-  fi
 }
 
 scan_tier() {
@@ -283,7 +247,7 @@ scan_tier() {
   shift
   local dir="$1"
 
-  echo -e "\n${BOLD}${CYAN}── $tier_name ──${NC}"
+  echo -e "\n${BOLD}${CYAN}-- $tier_name --${NC}"
   echo ""
 
   for i in "${!patterns_ref[@]}"; do
@@ -295,17 +259,8 @@ scan_tier() {
     if [[ -n "$matches" ]]; then
       local first_match
       first_match=$(echo "$matches" | head -1)
-      echo -e "  ${GREEN}EXISTING${NC}  $label  →  $first_match"
+      echo -e "  ${GREEN}EXISTING${NC}  $label  ->  $first_match"
       ((found_count++)) || true
-
-      # Check for shortcode wrapper (Hugo only)
-      if [[ "$detected_framework" == "hugo" ]]; then
-        local shortcode_match
-        shortcode_match=$(search_shortcode "$pattern")
-        if [[ -n "$shortcode_match" ]]; then
-          echo -e "           ${DIM}+ shortcode: $(echo "$shortcode_match" | head -1)${NC}"
-        fi
-      fi
     else
       echo -e "  ${RED}MISSING ${NC}  $label"
       ((missing_count++)) || true
@@ -316,15 +271,15 @@ scan_tier() {
 # --- Phase 0: Discovery ------------------------------------------------------
 
 scan_discovery() {
-  echo -e "\n${BOLD}${MAGENTA}═══ Phase 0: Design System Discovery ═══${NC}\n"
+  echo -e "\n${BOLD}${MAGENTA}=== Phase 0: Design System Discovery ===${NC}\n"
 
   # Framework detection
-  echo -e "${BOLD}${CYAN}── Framework Detection ──${NC}\n"
+  echo -e "${BOLD}${CYAN}-- Framework Detection --${NC}\n"
   echo -e "  ${GREEN}DETECTED${NC}  $(framework_label)  ${DIM}($detected_framework)${NC}"
   echo ""
 
   # Check for brand/style guide files
-  echo -e "${BOLD}${CYAN}── Brand & Style Guides ──${NC}\n"
+  echo -e "${BOLD}${CYAN}-- Brand & Style Guides --${NC}\n"
 
   for file in "${GUIDE_FILES[@]}"; do
     if [[ -f "$file" ]]; then
@@ -352,22 +307,10 @@ scan_discovery() {
     fi
   fi
 
-  # Check agent skill files
-  if [[ -d ".agent/skills" ]]; then
-    local skill_files
-    skill_files=$(find .agent/skills/ -maxdepth 2 -name "SKILL.md" 2>/dev/null || true)
-    if [[ -n "$skill_files" ]]; then
-      while IFS= read -r skill; do
-        echo -e "  ${GREEN}FOUND${NC}   $skill"
-        ((guide_count++)) || true
-      done <<< "$skill_files"
-    fi
-  fi
-
   echo ""
 
   # Check for design token files
-  echo -e "${BOLD}${CYAN}── Design Tokens ──${NC}\n"
+  echo -e "${BOLD}${CYAN}-- Design Tokens --${NC}\n"
 
   for file in "${TOKEN_FILES[@]}"; do
     if [[ -f "$file" ]]; then
@@ -376,29 +319,8 @@ scan_discovery() {
     fi
   done
 
-  # Hugo-specific: check data/ directory for tokens
-  if [[ "$detected_framework" == "hugo" ]]; then
-    for data_file in "data/design-tokens.json" "data/tokens.json"; do
-      if [[ -f "$data_file" ]]; then
-        echo -e "  ${GREEN}FOUND${NC}   $data_file  ${DIM}(Hugo data file)${NC}"
-        ((guide_count++)) || true
-      fi
-    done
-  fi
-
   # Check for CSS custom properties in common CSS files
-  local css_candidates=()
-  case "$detected_framework" in
-    hugo)
-      css_candidates=("assets/css/main.css" "assets/css/style.css" "assets/scss/main.scss" "static/css/style.css")
-      ;;
-    astro)
-      css_candidates=("src/styles/global.css" "src/styles/globals.css" "src/index.css")
-      ;;
-    *)
-      css_candidates=("globals.css" "src/globals.css" "app/globals.css" "src/app/globals.css" "src/index.css")
-      ;;
-  esac
+  local css_candidates=("globals.css" "src/globals.css" "app/globals.css" "src/app/globals.css" "src/index.css" "src/styles/global.css" "src/styles/globals.css")
 
   for css_file in "${css_candidates[@]}"; do
     if [[ -f "$css_file" ]]; then
@@ -407,27 +329,25 @@ scan_discovery() {
       if [[ "$token_count" -gt 0 ]]; then
         echo -e "  ${GREEN}FOUND${NC}   $css_file  ${DIM}($token_count CSS custom properties)${NC}"
       fi
+
+      # Tailwind v4 detection
+      if grep -q '@theme\|@import "tailwindcss"' "$css_file" 2>/dev/null; then
+        echo -e "  ${GREEN}FOUND${NC}   $css_file  ${DIM}(Tailwind v4 @theme detected)${NC}"
+      fi
     fi
   done
 
-  # Check Tailwind config
+  # Check Tailwind v3 config
   for tw_config in "tailwind.config.ts" "tailwind.config.js" "tailwind.config.mjs"; do
     if [[ -f "$tw_config" ]]; then
       echo -e "  ${GREEN}FOUND${NC}   $tw_config  ${DIM}(Tailwind v3)${NC}"
     fi
   done
 
-  # Check for Tailwind v4 indicator
-  for css_file in "${css_candidates[@]}"; do
-    if [[ -f "$css_file" ]] && grep -q '@theme\|@import "tailwindcss"' "$css_file" 2>/dev/null; then
-      echo -e "  ${GREEN}FOUND${NC}   $css_file  ${DIM}(Tailwind v4 @theme detected)${NC}"
-    fi
-  done
-
   echo ""
 
   # Check for component library
-  echo -e "${BOLD}${CYAN}── Component Library ──${NC}\n"
+  echo -e "${BOLD}${CYAN}-- Component Library --${NC}\n"
 
   if [[ -f "components.json" ]]; then
     echo -e "  ${GREEN}FOUND${NC}   components.json  ${DIM}(shadcn/ui detected)${NC}"
@@ -439,7 +359,7 @@ scan_discovery() {
     ((guide_count++)) || true
   fi
 
-  # Check for package.json dependencies (JS frameworks)
+  # Check for package.json dependencies
   if [[ -f "package.json" ]]; then
     if grep -q '"class-variance-authority"' package.json 2>/dev/null; then
       echo -e "  ${GREEN}FOUND${NC}   class-variance-authority  ${DIM}(CVA installed)${NC}"
@@ -459,50 +379,23 @@ scan_discovery() {
       echo -e "  ${GREEN}FOUND${NC}   Framer Motion  ${DIM}(animation library available)${NC}"
     fi
 
-    # Framework-specific icon/interactivity detection
     if grep -q '"lucide-react"\|"lucide"' package.json 2>/dev/null; then
       echo -e "  ${GREEN}FOUND${NC}   Lucide  ${DIM}(icon library)${NC}"
-    fi
-
-    if grep -q '"alpinejs"\|"@alpinejs/csp"' package.json 2>/dev/null; then
-      echo -e "  ${GREEN}FOUND${NC}   Alpine.js  ${DIM}(interactivity layer)${NC}"
-    fi
-  fi
-
-  # Hugo-specific: check for Hugo modules and Alpine.js in layouts
-  if [[ "$detected_framework" == "hugo" ]]; then
-    if [[ -f "go.mod" ]] && grep -q "hugo" go.mod 2>/dev/null; then
-      echo -e "  ${GREEN}FOUND${NC}   go.mod  ${DIM}(Hugo modules enabled)${NC}"
-    fi
-    # Check for Alpine.js in baseof or head
-    local alpine_found=false
-    for layout_file in "layouts/_default/baseof.html" "layouts/partials/head.html"; do
-      if [[ -f "$layout_file" ]] && grep -qi "alpine" "$layout_file" 2>/dev/null; then
-        alpine_found=true
-      fi
-    done
-    if $alpine_found; then
-      echo -e "  ${GREEN}FOUND${NC}   Alpine.js  ${DIM}(detected in Hugo layouts)${NC}"
-    fi
-
-    # Check for Decap CMS
-    if [[ -f "static/admin/config.yml" || -f "static/admin/config.yaml" ]]; then
-      echo -e "  ${GREEN}FOUND${NC}   Decap CMS  ${DIM}(static/admin/ detected)${NC}"
     fi
   fi
 
   echo ""
 
-  # Check for CVA usage in component files (JS frameworks only)
-  if [[ "$detected_framework" != "hugo" && "$detected_framework" != "static" ]]; then
-    echo -e "${BOLD}${CYAN}── CVA Pattern Usage ──${NC}\n"
+  # Check for CVA usage in component files
+  if [[ "$detected_framework" != "static" ]]; then
+    echo -e "${BOLD}${CYAN}-- CVA Pattern Usage --${NC}\n"
 
     local comp_dir="${1:-}"
     if [[ -n "$comp_dir" && -d "$comp_dir" ]]; then
       local cva_files
       cva_files=$(grep -rl "from \"class-variance-authority\"\|from 'class-variance-authority'" "$comp_dir" 2>/dev/null || true)
       local total_components
-      total_components=$(find "$comp_dir" -type f \( -name "*.tsx" -o -name "*.jsx" -o -name "*.astro" -o -name "*.svelte" -o -name "*.vue" \) | wc -l)
+      total_components=$(find "$comp_dir" -maxdepth 3 -type f \( -name "*.tsx" -o -name "*.jsx" -o -name "*.astro" -o -name "*.svelte" -o -name "*.vue" \) | wc -l)
 
       if [[ -n "$cva_files" ]]; then
         local cva_count
@@ -510,7 +403,7 @@ scan_discovery() {
         echo -e "  ${GREEN}$cva_count${NC} / ${total_components} components use CVA pattern"
 
         while IFS= read -r f; do
-          echo -e "    ${DIM}✓ $f${NC}"
+          echo -e "    ${DIM}+ $f${NC}"
         done <<< "$cva_files"
       else
         echo -e "  ${YELLOW}0${NC} / ${total_components} components use CVA pattern"
@@ -523,57 +416,15 @@ scan_discovery() {
     echo ""
   fi
 
-  # Hugo-specific: check partial param documentation
-  if [[ "$detected_framework" == "hugo" ]]; then
-    echo -e "${BOLD}${CYAN}── Partial Documentation ──${NC}\n"
-
-    local comp_dir="${1:-}"
-    if [[ -n "$comp_dir" && -d "$comp_dir" ]]; then
-      local total_partials
-      total_partials=$(find "$comp_dir" -type f -name "*.html" | wc -l)
-      local documented_partials=0
-
-      while IFS= read -r partial; do
-        if grep -q "Params:" "$partial" 2>/dev/null || grep -q "@param" "$partial" 2>/dev/null; then
-          ((documented_partials++)) || true
-        fi
-      done < <(find "$comp_dir" -type f -name "*.html")
-
-      echo -e "  ${GREEN}$documented_partials${NC} / ${total_partials} partials have documented params"
-      if [[ "$documented_partials" -lt "$total_partials" ]]; then
-        echo -e "  ${DIM}Add Go template comment blocks with param types and defaults${NC}"
-      fi
-    else
-      echo -e "  ${DIM}Skipped (no component directory)${NC}"
-    fi
-
-    echo ""
-
-    # Check for shortcodes
-    echo -e "${BOLD}${CYAN}── Shortcodes ──${NC}\n"
-    if [[ -d "layouts/shortcodes" ]]; then
-      local shortcode_count
-      shortcode_count=$(find layouts/shortcodes -type f -name "*.html" | wc -l)
-      echo -e "  ${GREEN}FOUND${NC}   $shortcode_count shortcode(s) in layouts/shortcodes/"
-      find layouts/shortcodes -type f -name "*.html" -exec basename {} .html \; | sort | while read -r sc; do
-        echo -e "    ${DIM}✓ $sc${NC}"
-      done
-    else
-      echo -e "  ${YELLOW}MISSING${NC} layouts/shortcodes/ directory"
-    fi
-
-    echo ""
-  fi
-
   # Determine discovery mode
   if [[ "$guide_count" -gt 0 ]]; then
     discovery_mode="ADOPT"
-    echo -e "${BOLD}Discovery mode: ${GREEN}ADOPT${NC} — existing design direction found (${guide_count} guide files)${NC}"
-    echo -e "${DIM}→ Ingest guides, map tokens, audit for drift, surface gaps${NC}"
+    echo -e "${BOLD}Discovery mode: ${GREEN}ADOPT${NC} -- existing design direction found (${guide_count} guide files)${NC}"
+    echo -e "${DIM}-> Ingest guides, map tokens, audit for drift, surface gaps${NC}"
   else
     discovery_mode="ESTABLISH"
-    echo -e "${BOLD}Discovery mode: ${YELLOW}ESTABLISH${NC} — no design direction found${NC}"
-    echo -e "${DIM}→ Extract de-facto tokens, propose system, define voice, get approval${NC}"
+    echo -e "${BOLD}Discovery mode: ${YELLOW}ESTABLISH${NC} -- no design direction found${NC}"
+    echo -e "${DIM}-> Extract de-facto tokens, propose system, define voice, get approval${NC}"
   fi
 }
 
@@ -588,10 +439,6 @@ if [[ -z "$COMPONENT_DIR" ]]; then
   if ! COMPONENT_DIR=$(detect_component_dir); then
     echo -e "${RED}Error:${NC} No component directory found."
     case "$detected_framework" in
-      hugo)
-        echo "Checked: layouts/partials/components/, layouts/partials/"
-        echo "Create layouts/partials/components/ to get started."
-        ;;
       astro)
         echo "Checked: src/components/, components/"
         ;;
@@ -619,7 +466,7 @@ echo -e "$(date -Iseconds)"
 scan_discovery "$COMPONENT_DIR"
 
 # Phase 1: Component Inventory
-echo -e "\n${BOLD}${MAGENTA}═══ Phase 1: Component Inventory ═══${NC}"
+echo -e "\n${BOLD}${MAGENTA}=== Phase 1: Component Inventory ===${NC}"
 
 scan_tier "Tier 1: Core Primitives" TIER1_PATTERNS TIER1_LABELS "$COMPONENT_DIR"
 scan_tier "Tier 2: Navigation & Layout" TIER2_PATTERNS TIER2_LABELS "$COMPONENT_DIR"
@@ -633,7 +480,7 @@ echo -e "  ${RED}MISSING:${NC}  $missing_count"
 echo ""
 
 if [[ "$missing_count" -gt 0 ]]; then
-  echo -e "${YELLOW}→ Build MISSING components before assembling the sink page.${NC}"
+  echo -e "${YELLOW}-> Build MISSING components before assembling the sink page.${NC}"
 else
-  echo -e "${GREEN}✓ All tracked components found. Ready to assemble the sink.${NC}"
+  echo -e "${GREEN}+ All tracked components found. Ready to assemble the sink.${NC}"
 fi
