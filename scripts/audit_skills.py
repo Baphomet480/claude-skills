@@ -57,15 +57,16 @@ class SkillAuditor:
             report['errors'].append(f"Error reading SKILL.md: {str(e)}")
 
         # 3. Check for loose files
-        # Allowed items in root: SKILL.md, and directories
+        # Allowed items in root: SKILL.md, KNOWN_BUGS.md, CONTEXT.md, GWS-README.md, and directories
+        allowed_root_files = {'SKILL.md', 'KNOWN_BUGS.md', 'CONTEXT.md', 'GWS-README.md'}
         for item in os.listdir(skill_path):
             item_path = os.path.join(skill_path, item)
-            if item == 'SKILL.md':
+            if item in allowed_root_files:
                 continue
             
             if os.path.isfile(item_path):
                 report['valid'] = False
-                report['errors'].append(f"Loose file found: {item}. Only SKILL.md and directories allowed in root.")
+                report['errors'].append(f"Loose file found: {item}. Only {', '.join(allowed_root_files)} and directories allowed in root.")
             elif os.path.isdir(item_path):
                 # Optionally check subdirectories naming here, but spec said 'Standardize naming conventions (kebab-case)'
                 if not self.check_naming_convention(item):

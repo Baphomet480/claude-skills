@@ -46,6 +46,15 @@ Skills are consumed by both Claude (`~/.claude/skills/`) and Gemini (`~/.gemini/
 | `tina-schema-sync`           | Sync TinaCMS schema definitions with content models                          |
 | `voice-reviewer`             | Review and critique voice/tone in written content                            |
 
+## Agent Best Practices
+
+When operating within this repository, agents should adhere to the following directives:
+
+1. **Validation:** Always run `python3 scripts/audit_skills.py skills` before committing changes to ensure new or modified skills comply with repository standards (e.g., kebab-case naming, `SKILL.md` presence, no forbidden loose files).
+2. **Installation:** If you add a new skill or fix symlinks, run `./scripts/install-skills.sh` to ensure it is correctly mapped to `~/.agents/skills/`, `~/.claude/skills/`, and `~/.gemini/skills/`.
+3. **Versioning:** If you modify a skill's logic or documentation, increment its semver `version` in the `SKILL.md` frontmatter.
+4. **No Direct `dist/` Edits:** Never attempt to modify the `.skill` ZIP archives in `dist/`. Edit the source in `skills/` and let the git hooks handle packaging.
+
 ## Workflow
 
 1. Edit skill source in `skills/<name>/`
