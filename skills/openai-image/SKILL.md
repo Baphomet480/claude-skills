@@ -1144,6 +1144,7 @@ For sessions generating 50+ images:
 5. **Budget with `--dry-run`** before large batches
 6. **Always use `--retries 2`** on batches -- xAI has ~10% transient failure rate
 7. **Name output files descriptively** -- `winner_v2_noir.png` not `gen_20260409_123456.png`
+8. **Automate with Python Subprocess:** Instead of writing massive JSON files by hand, you can write a simple python script to loop through an array of dictionaries and call `subprocess.run(["openai-image", "generate", p["prompt"], ...])`. See `examples/python_wrapper_example.py` for a real-world script using the 5-part `SCENE / STYLE / MOOD / LIGHTING / CAMERA` formula.
 
 ### Cost Reality
 
