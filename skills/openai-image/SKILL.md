@@ -713,9 +713,16 @@ Aurora responds to named references because of its broad training data. Use thes
 - **Anime:** "Makoto Shinkai atmospheric haze", "MAPPA character design"
 - **Retro/vintage:** "WPA poster aesthetic", "Saul Bass graphic design"
 
-### Grok Iteration Strategy
+### Agentic Workflow: Prompt Iteration
 
-At $0.02-0.07/image, iterate freely but change **one variable at a time** between regenerations. Changing lighting, background, and mood simultaneously makes it impossible to identify what caused improvement or regression.
+When tasked with generating a highly specific image (like a poster with text, or a complex visual concept), **do not expect to get it right on the first try.** You must *learn how to prompt by iterating*. 
+
+At $0.02-0.07/image on Grok, you should iterate freely. The standard agent workflow for complex image requests is:
+1. **Draft:** Generate a V1 using a best-guess prompt based on the 5-Part Formula and isolation patterns for text.
+2. **Review:** Look at the result (using the `describe` command, or by asking the user for qualitative feedback like "what went wrong with V1?").
+3. **Isolate the Failure:** Identify the specific weakness. Did the text garble? Was the lighting too dramatic? Did the subject drift?
+4. **Refine ONE Variable:** Change **exactly one element** at a time between regenerations (e.g., adjust *only* the lighting description, or *only* the font layout). Changing the lighting, background, and mood simultaneously makes it impossible to identify what caused improvement or regression.
+5. **Re-generate:** Fire the new prompt and repeat until the output matches the user's intent perfectly.
 
 ### Grok Visual Content Policy (Tested April 2026)
 
