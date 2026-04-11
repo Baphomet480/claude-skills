@@ -524,40 +524,36 @@ def command_generate(args):
 
 # ── Edit command ─────────────────────────────────────────────────────
 
-def command_edit(args):
-    handle_dry_run(args)
-    prompt = apply_prefix(args.prompt, getattr(args, "prefix", None))
 
-    image_paths = [Path(p).resolve() for p in args.image]
-    for p in image_paths:
-        if not p.exists():
-            error(f"Input image not found: {p}", "FileNotFound")
+def unified_edit(client, image_paths, prompt, model, n=1, size="auto", quality="auto",
+                 mask_path=None, format="png", compression=None, background="auto",
+                 input_fidelity=None, retries=0, resolution="auto"):
+    """Helper to unify image editing across xAI and OpenAI providers."""
+    if isinstance(image_paths, (str, Path)):
+        image_paths = [Path(image_paths)]
+    else:
+        image_paths = [Path(p) for p in image_paths]
 
     if is_xai():
-        # xAI edit requires JSON with image as data URI, not multipart uploads
         import httpx
-
         prov = get_provider()
         api_key = os.environ.get(prov["env_key"])
         b64_data, mime = encode_image(image_paths[0])
         body = {
-            "model": args.model,
+            "model": model,
             "image": {
                 "url": f"data:{mime};base64,{b64_data}",
                 "type": "image_url",
             },
             "prompt": prompt,
-            "n": args.n,
+            "n": n,
             "response_format": "b64_json",
         }
-        # xAI supports quality and resolution for edits
-        if getattr(args, "quality", "auto") not in ("auto",):
-            body["quality"] = args.quality
-        resolution = getattr(args, "resolution", "auto")
+        if quality != "auto":
+            body["quality"] = quality
         if resolution != "auto":
             body["resolution"] = resolution
 
-        retries = getattr(args, "retries", 0)
         def xai_edit():
             resp = httpx.post(
                 f"{prov['base_url']}/images/edits",
@@ -569,7 +565,6 @@ def command_edit(args):
             return resp.json()
 
         raw = api_call_with_retry(xai_edit, retries)
-        # Normalize to match OpenAI SDK response shape
         class _Img:
             def __init__(self, d):
                 self.b64_json = d.get("b64_json")
@@ -577,46 +572,42 @@ def command_edit(args):
         class _Result:
             def __init__(self, data):
                 self.data = [_Img(d) for d in data]
-        result = _Result(raw.get("data", []))
+        return _Result(raw.get("data", []))
     else:
-        client = get_client()
-
         if len(image_paths) == 1:
             image_arg = open(str(image_paths[0]), "rb")
         else:
             image_arg = [open(str(p), "rb") for p in image_paths]
 
         kwargs = {
-            "model": args.model,
+            "model": model,
             "image": image_arg,
             "prompt": prompt,
-            "n": args.n,
+            "n": n,
         }
 
-        if args.size != "auto":
-            kwargs["size"] = args.size
-        if args.quality != "auto":
-            kwargs["quality"] = args.quality
-        if args.mask:
-            mask_path = Path(args.mask).resolve()
-            if not mask_path.exists():
-                error(f"Mask file not found: {mask_path}", "FileNotFound")
-            kwargs["mask"] = open(str(mask_path), "rb")
-        if is_gpt_image_model(args.model):
-            kwargs["output_format"] = args.format
-            if args.compression is not None:
-                kwargs["output_compression"] = args.compression
-            if args.background != "auto":
-                kwargs["background"] = args.background
-            if args.input_fidelity:
-                kwargs["input_fidelity"] = args.input_fidelity
+        if size != "auto":
+            kwargs["size"] = size
+        if quality != "auto":
+            kwargs["quality"] = quality
+        if mask_path:
+            mask_p = Path(mask_path).resolve()
+            kwargs["mask"] = open(str(mask_p), "rb")
+            
+        if is_gpt_image_model(model):
+            kwargs["output_format"] = format
+            if compression is not None:
+                kwargs["output_compression"] = compression
+            if background != "auto":
+                kwargs["background"] = background
+            if input_fidelity:
+                kwargs["input_fidelity"] = input_fidelity
 
-        retries = getattr(args, "retries", 0)
         file_handles = (image_arg if isinstance(image_arg, list) else [image_arg])
         if "mask" in kwargs:
             file_handles = file_handles + [kwargs["mask"]]
         try:
-            result = api_call_with_retry(lambda: client.images.edit(**kwargs), retries, seekables=file_handles)
+            return api_call_with_retry(lambda: client.images.edit(**kwargs), retries, seekables=file_handles)
         finally:
             if isinstance(image_arg, list):
                 for f in image_arg:
@@ -625,6 +616,35 @@ def command_edit(args):
                 image_arg.close()
             if "mask" in kwargs and hasattr(kwargs["mask"], "close"):
                 kwargs["mask"].close()
+
+
+def command_edit(args):
+    handle_dry_run(args)
+    prompt = apply_prefix(args.prompt, getattr(args, "prefix", None))
+
+    image_paths = [Path(p).resolve() for p in args.image]
+    for p in image_paths:
+        if not p.exists():
+            error(f"Input image not found: {p}", "FileNotFound")
+
+    client = get_client() if not is_xai() else None
+    retries = getattr(args, "retries", 0)
+    result = unified_edit(
+        client=client,
+        image_paths=image_paths,
+        prompt=prompt,
+        model=args.model,
+        n=args.n,
+        size=args.size,
+        quality=args.quality,
+        mask_path=args.mask,
+        format=args.format,
+        compression=args.compression,
+        background=args.background,
+        input_fidelity=args.input_fidelity,
+        retries=retries,
+        resolution=getattr(args, "resolution", "auto")
+    )
 
     output_dir = Path(args.output_dir).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -726,27 +746,21 @@ def command_bg_remove(args):
     if not image_path.exists():
         error(f"Input image not found: {image_path}", "FileNotFound")
 
-    image_file = open(str(image_path), "rb")
-
-    kwargs = {
-        "model": args.model,
-        "image": image_file,
-        "prompt": (
+    retries = getattr(args, "retries", 0)
+    result = unified_edit(
+        client=client,
+        image_paths=image_path,
+        prompt=(
             "Remove the background completely, keeping only the main subject. "
             "Output on a fully transparent background."
         ),
-        "n": 1,
-        "output_format": "png",
-        "background": "transparent",
-    }
-    if args.quality != "auto":
-        kwargs["quality"] = args.quality
-
-    retries = getattr(args, "retries", 0)
-    try:
-        result = api_call_with_retry(lambda: client.images.edit(**kwargs), retries, seekables=[image_file])
-    finally:
-        image_file.close()
+        model=args.model,
+        n=1,
+        quality=args.quality,
+        format="png",
+        background="transparent",
+        retries=retries
+    )
 
     output_dir = Path(args.output_dir).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -801,26 +815,18 @@ def command_style_transfer(args):
     )
     prompt = apply_prefix(prompt, getattr(args, "prefix", None))
 
-    image_file = open(str(image_path), "rb")
-
-    kwargs = {
-        "model": args.model,
-        "image": image_file,
-        "prompt": prompt,
-        "n": 1,
-    }
-    if args.size != "auto":
-        kwargs["size"] = args.size
-    if args.quality != "auto":
-        kwargs["quality"] = args.quality
-    if is_gpt_image_model(args.model):
-        kwargs["output_format"] = args.format
-
     retries = getattr(args, "retries", 0)
-    try:
-        result = api_call_with_retry(lambda: client.images.edit(**kwargs), retries, seekables=[image_file])
-    finally:
-        image_file.close()
+    result = unified_edit(
+        client=client,
+        image_paths=image_path,
+        prompt=prompt,
+        model=args.model,
+        n=1,
+        size=args.size,
+        quality=args.quality,
+        format=args.format,
+        retries=retries
+    )
 
     output_dir = Path(args.output_dir).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -862,32 +868,24 @@ def command_restore(args):
     if not image_path.exists():
         error(f"Input image not found: {image_path}", "FileNotFound")
 
-    image_file = open(str(image_path), "rb")
-
-    kwargs = {
-        "model": args.model,
-        "image": image_file,
-        "prompt": (
+    retries = getattr(args, "retries", 0)
+    result = unified_edit(
+        client=client,
+        image_paths=image_path,
+        prompt=(
             "Restore this damaged, faded, or degraded photograph. Fix any "
             "scratches, tears, discoloration, noise, or blur while preserving "
             "the original content and composition. Make it look like a clean, "
             "well-preserved version of the original."
         ),
-        "n": 1,
-    }
-    if args.size != "auto":
-        kwargs["size"] = args.size
-    if args.quality != "auto":
-        kwargs["quality"] = args.quality
-    if is_gpt_image_model(args.model):
-        kwargs["output_format"] = args.format
-        kwargs["input_fidelity"] = "high"
-
-    retries = getattr(args, "retries", 0)
-    try:
-        result = api_call_with_retry(lambda: client.images.edit(**kwargs), retries, seekables=[image_file])
-    finally:
-        image_file.close()
+        model=args.model,
+        n=1,
+        size=args.size,
+        quality=args.quality,
+        format=args.format,
+        input_fidelity="high",
+        retries=retries
+    )
 
     output_dir = Path(args.output_dir).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -937,26 +935,19 @@ def command_thumbnail(args):
             "sharpen details for crisp rendering at reduced dimensions."
         )
 
-        image_file = open(str(image_path), "rb")
-        kwargs = {
-            "model": args.model,
-            "image": image_file,
-            "prompt": prompt,
-            "n": 1,
-            "size": "1024x1024",
-        }
-        if args.quality != "auto":
-            kwargs["quality"] = args.quality
-        if is_gpt_image_model(args.model):
-            kwargs["output_format"] = fmt
-            if compression is not None:
-                kwargs["output_compression"] = compression
-
         retries = getattr(args, "retries", 0)
-        try:
-            result = api_call_with_retry(lambda: client.images.edit(**kwargs), retries, seekables=[image_file])
-        finally:
-            image_file.close()
+        result = unified_edit(
+            client=client,
+            image_paths=image_path,
+            prompt=prompt,
+            model=args.model,
+            n=1,
+            size="1024x1024",
+            quality=args.quality,
+            format=fmt,
+            compression=compression,
+            retries=retries
+        )
     else:
         if not args.prompt:
             error(
@@ -1142,27 +1133,21 @@ def command_batch(args):
                                     "message": f"Input not found: {input_path}"})
                     continue
 
-                image_file = open(str(img_path), "rb")
-                kwargs = {
-                    "model": model, "image": image_file, "prompt": prompt, "n": 1,
-                }
-                if size != "auto":
-                    kwargs["size"] = size
-                if quality != "auto":
-                    kwargs["quality"] = quality
-                if is_gpt_image_model(model):
-                    kwargs["output_format"] = fmt
-                    if compression is not None:
-                        kwargs["output_compression"] = compression
-                    if background != "auto":
-                        kwargs["background"] = background
-                    if input_fidelity:
-                        kwargs["input_fidelity"] = input_fidelity
-
-                try:
-                    result = api_call_with_retry(lambda: client.images.edit(**kwargs), retries, seekables=[image_file])
-                finally:
-                    image_file.close()
+                result = unified_edit(
+                    client=client,
+                    image_paths=img_path,
+                    prompt=prompt,
+                    model=model,
+                    n=1,
+                    size=size,
+                    quality=quality,
+                    format=fmt,
+                    compression=compression,
+                    background=background,
+                    input_fidelity=input_fidelity,
+                    retries=retries,
+                    resolution=defaults.get("resolution", "auto")
+                )
             else:
                 # Generate mode
                 if is_xai():
