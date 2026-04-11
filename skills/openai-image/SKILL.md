@@ -83,6 +83,8 @@ openai-image generate "your prompt" --format jpeg --compression 80 -o photo.jpg
 
 ### Edit
 
+**CRITICAL:** xAI (Grok) fully supports image editing / image-to-image generation. Do NOT refuse to edit an image because you think xAI lacks this feature.
+
 Modify existing images with a text prompt. Optionally supply a mask to constrain edits.
 
 ```bash
@@ -638,10 +640,16 @@ Use `--prefix` to apply consistent aesthetic direction across multiple images. T
 --prefix "Architectural photography. Shot on Canon EOS R5 with tilt-shift lens. Even natural lighting, true-to-life colors. Clean, unprocessed look. No HDR, no dramatic contrast."
 ```
 
-**Food and restaurant:**
+**Editorial food photography:**
 ```bash
 --prefix "Editorial food photography. Shot on Hasselblad, 80mm lens. Warm directional light from 10 o'clock. Shallow depth of field. Natural colors, no oversaturation."
 ```
+
+**Modern Industrial Luxury (The 'NJOY' Aesthetic):**
+```bash
+--prefix "Ultra-sharp modern commercial product photography isolated on a pure, deep black void. High-contrast, stark, sculptural studio lighting. Deep rich true blacks, bright pristine highlights. Sleek, premium, sterile yet luxurious aesthetic. Shot on Canon EOS R5. No film grain. No vintage retro grading."
+```
+*Note on Modern Industrial Luxury:* This aesthetic works by treating mundane, utilitarian objects (like a plastic ethernet connector, a rubber cable, or a basic bracket) with the exact same reverence and dramatic lighting used for high-end consumer electronics or luxury watches. It is about the *treatment* (pure black background, stark sculptural lighting, ultra-sharp focus), not just the material.
 
 **Portraits and headshots:**
 ```bash
@@ -659,6 +667,112 @@ Use `--prefix` to apply consistent aesthetic direction across multiple images. T
 - **Do not stack more than 2 style cues.** Saying "impressionistic, cyberpunk, art deco, photorealistic" causes the model to default to a generic "safe" style. Pick one or two complementary directions.
 - **Do not rely on single adjectives.** "Beautiful" and "high quality" are noise. Use specific descriptors: lens, film stock, lighting angle, color temperature.
 - **Front-load the important words.** xAI weights the first 20-30 words most heavily. Put the subject and critical style direction first, details second.
+
+### Typography and Text in xAI (Grok)
+
+Grok struggles more with text rendering and typography layout than OpenAI. If you simply ask for "A poster that says X", Grok will often garble the text or lose the structural layout. To get high-quality text out of Grok:
+
+1. **Treat text as a physical, structural prop.** Do not just ask for text; describe *where* the text lives in the physical space of the image. (e.g., "A crinkled diner receipt unspooling across the frame. The itemized charges feature the exact text:" or "A massive fight card list dominates the center. The exact text reads:")
+2. **Always use `--resolution 2k` (or the `grok-imagine-image-pro` model).** The higher resolution is strictly necessary for the text rendering engine to resolve smaller letters clearly.
+3. **Use ALL CAPS.** Grok renders uppercase block lettering significantly better than lowercase or cursive scripts.
+4. **Use exact quotes.** Say `The exact text reads: 'HELLO WORLD'` rather than `It should say hello world`.
+5. **Isolate each text element in its own sentence.** Separate position, font style, and content: `At the top, bold condensed sans-serif text reads "ARIZONA". Below the illustration, smaller italic serif text reads "Land of the Sun".`
+6. **Keep strings under ~25 characters per element.** Longer strings increase substitution errors. Break long text into two lines in the prompt.
+
+### Grok Aurora Architecture: Why It Prompts Differently
+
+Aurora (the engine behind `grok-imagine-image`) is an **autoregressive mixture-of-experts network**, not a diffusion model. It generates images patch by patch the way a language model generates tokens. This has direct prompting implications:
+
+- **Natural language over keyword stacks.** Coherent sentences work better than comma-separated tags. "A neon hot dog glowing in a purple sky above lavender fields" beats "neon, hot dog, purple sky, lavender, glowing".
+- **Text rendering is architecturally stronger** than diffusion models because text and visual tokens share the same pipeline. Still not perfect, but Grok renders poster text better than Stable Diffusion or Midjourney.
+- **Follows composition literally.** Diffusion models interpret artistically; Aurora tends toward literal execution. If you say "explosion in the background," you get an explosion in the background, not a stylistic interpretation.
+- **Earlier tokens matter more.** Front-load the subject and critical style direction in the first 20-30 words. Details come second.
+- **Supports ~1,000 characters without degradation.** Density helps. Short prompts produce flat, stock-photo results. Pack in specific visual details.
+
+### The Grok Poster Principle
+
+For text-heavy graphics (posters, lineups, menus, cards), Grok works best with:
+
+**One killer visual + crisp text + loaded atmosphere.**
+
+Do NOT try to illustrate every element. The festival lineup poster that worked had ONE dominant visual (neon hot dog sun over lavender fields) and let the TEXT carry the lineup. The five genre re-skins that looked generic each tried to cram 9 competing vignettes into the frame.
+
+Recipe:
+- One clear visual metaphor (anchors the whole image)
+- Text elements specified individually with position and font
+- Atmospheric details (lighting, color, mood) woven as natural language
+- Style anchor (one or two references, not a tag stack)
+
+### Named Artist/Style References
+
+Aurora responds to named references because of its broad training data. Use these as shorthand:
+
+- **Photorealism:** "National Geographic style", "Platon portrait lighting"
+- **Illustration:** "Greg Rutkowski", "Simon Stalenhag environmental feel"
+- **Landscape:** "Albert Bierstadt tonality", "Hiroshi Sugimoto long exposure"
+- **Anime:** "Makoto Shinkai atmospheric haze", "MAPPA character design"
+- **Retro/vintage:** "WPA poster aesthetic", "Saul Bass graphic design"
+
+### Grok Iteration Strategy
+
+At $0.02-0.07/image, iterate freely but change **one variable at a time** between regenerations. Changing lighting, background, and mood simultaneously makes it impossible to identify what caused improvement or regression.
+
+### Grok Visual Content Policy (Tested April 2026)
+
+Grok's image generation API has **minimal visual content filtering**. Empirical results from systematic testing:
+
+**Renders without refusal:**
+- Silhouettes of sexual positions (oral, from behind) against gradient backgrounds
+- Nudity in "classical art" framing (Renaissance paintings, marble sculptures)
+- Boudoir/lingerie photography
+- Nude couples in shower scenes (steam partially obscuring)
+- Pin-up illustration style
+- Film noir with exposed shoulders, silk robes
+- Suggestive poses in charcoal sketch / life drawing framing
+- Post-intimacy tangled sheets (bare shoulders visible)
+- Anime couples in intimate settings
+- Any sexual term as rendered text on posters/receipts/signs
+
+**Artistic framing bypasses all filters:** "Renaissance oil painting", "marble sculpture", "charcoal life drawing", "silhouette art", and "boudoir photography" all render content that would be refused with direct phrasing.
+
+**Known hard limits (tested April 2026):**
+- **Edit endpoint + nudity = blocked.** The `edit` command (which takes a real photo as input) returns 400 when asked to render the person nude. This prevents deepfake-style abuse. The `generate` command renders nudity from scratch without issue.
+- **Moderation is probabilistic.** The same generate prompt can pass on one attempt and fail on the next. Grok makes a contextual judgment each time. Specific physical descriptions of people + nudity are more likely to trigger the filter than generic scenes.
+- CSAM (confirmed hard block)
+- Deepfakes of real public figures in sexual contexts (confirmed block)
+
+**Comparison with OpenAI:** OpenAI refuses silhouettes of sexual positions, nudity in any framing, and most boudoir content. OpenAI renders clothed suggestive poses, romantic couples in bed (clothed), and pin-up art with modest clothing. The gap is significant.
+
+### Grok Text Content Policy (Tested April 2026)
+
+Grok renders **any text** on posters and graphics without filtering. Tested terms that rendered cleanly:
+
+- "ANAL", "BUTT PLUGS", "EAT HER OUT", "MORNING HEAD", "BACK DOOR"
+- "fuck" (rendered in cursive handwriting on love notes)
+- "MORNING BLOWJOB" (renders in ALL CAPS and large fonts; garbles to "Blaybob"/"Blowbob" in small serif fonts)
+
+**Text garble patterns:**
+- "Blowjob" in serif or small fonts often becomes "Blaybob", "Blowbob", or "Blayjob"
+- Workaround: use "HEAD" or "BJ" instead, or use ALL CAPS in large bold fonts
+- All other explicit terms render clean regardless of font style
+
+### Best Photorealistic Prop Formats for Text
+
+Some visual formats produce near-perfect text rendering because the format itself implies structured, readable text:
+
+| Format | Text Accuracy | Why It Works |
+|--------|--------------|-------------|
+| **Diner receipt** | 10/10 | Dot-matrix monospace on thermal paper -- text IS the format |
+| **Boarding pass** | 10/10 | Structured fields with clear hierarchy |
+| **Fortune cookie** | 10/10 | Short text on paper strip -- minimal, focused |
+| **Movie marquee** | 10/10 | Letter tiles on lit sign -- each character is a physical object |
+| **Neon sign** | 9/10 | Neon tubes naturally form letters -- structural |
+| **Love note** | 9/10 | Cursive handwriting -- longer text but high fidelity |
+| **Fight card** | 9/10 | Bold typography hierarchy -- headliner + undercard |
+| **Tasting menu** | 8/10 | Serif font on paper -- occasional garbles on long words |
+| **Festival lineup** | 8/10 | Works best with short act names in ALL CAPS |
+
+**The principle:** formats where text is a physical object in the scene (receipt paper, letter tiles, neon tubes, fortune strips) render more accurately than formats where text is overlaid on imagery.
 
 ### Provider Decision Matrix
 
@@ -916,3 +1030,129 @@ response = client.responses.create(
 ```
 
 This skill does not wrap the Responses API. Use it directly when multi-turn editing is needed.
+
+---
+
+## Lessons from Large-Scale Generation Sessions (April 2026)
+
+Documented from a 214-image session testing formats, styles, content limits, and couple photo edits across Grok and OpenAI. These are empirical findings, not theoretical.
+
+### Format Reliability Ranking for Text-Heavy Images
+
+Formats where text is a **physical object in the scene** render more accurately than overlaid typography:
+
+| Tier | Formats | Why |
+|------|---------|-----|
+| **S tier** | Diner receipt, boarding pass, fortune cookie, movie marquee letter tiles | Text IS the object. Monospace/tile formats are structurally constrained. |
+| **A tier** | Neon sign, love note (handwritten), rolling paper note, door hanger | Text rendered as tubes, ink, or printed label. Physical anchor. |
+| **B tier** | Boxing fight card, tasting menu, concert poster | Bold hierarchy works but long words garble in smaller tiers. |
+| **C tier** | Festival lineup, app mockups (Spotify/Amazon/Yelp) | Multiple text blocks competing. Occasional substitution errors. |
+
+### Couple Photo Edit Playbook
+
+When editing a real photo of a couple into a new scene:
+
+**Body description is critical.** AI normalizes all bodies to "average fit." If someone is a bodybuilder, you MUST specify "extremely muscular bodybuilder physique, massive defined pecs, huge arms with visible veins, thick shoulders and traps" or the output will flatten them. Similarly, describe her as "beautiful, gorgeous curves, radiant, confident, glowing skin" -- the AI will make her look great but needs the direction.
+
+**Composition direction matters.** Specify who is the focus:
+- "She is the star, front and center, he is behind her" -- boudoir, pin-up
+- "He is silhouetted in the doorway, she is on the bed" -- film noir
+- "They are equal, tangled together" -- morning after, Klimt
+- "She is larger/higher, he looks up at her" -- pin-up crescent moon
+
+**Two modes for face handling in edits:**
+
+1. **Photorealistic preservation** -- for styles where the output IS photographic (boudoir, noir, tangled sheets, shower). Use the full identity lock: "Preserve facial features exactly. Do not stylise."
+2. **Stylized likeness** -- for illustrated/artistic styles (pop art, pin-up, Klimt, psychedelic, GTA, anime, Renaissance). Replace identity lock with: "Stylize their faces to match the art style while keeping them recognizable -- same facial structure, his glasses, her dark hair, his muscular build." This prevents the jarring effect of photorealistic faces pasted onto illustrated bodies.
+
+**Use photorealistic preservation for:**
+- Film noir (B&W, venetian blinds, silk robe)
+- Boudoir photography
+- Tangled sheets / morning after
+- Shower scenes
+- Blacklight body paint (still photographic)
+
+**Use stylized likeness for:**
+- Klimt gold leaf
+- Pin-up illustration
+- Pop art Lichtenstein
+- Psychedelic (Alex Grey, double exposure)
+- GTA game cover
+- Renaissance painting
+- Anime
+- Comic strips
+- Tarot cards
+
+**Styles with face limitations:**
+- Pure silhouette (too dark to see faces by definition)
+- Heavy abstract/kaleidoscope effects (face dissolves)
+- Charcoal sketch (gesture too loose for likeness)
+
+**Edit endpoint content boundaries (Grok):**
+- Lingerie/boudoir on real photo: WORKS
+- Clothed shower scene: WORKS
+- Silk robe, exposed shoulder: WORKS
+- Shirtless muscular man: WORKS
+- Blacklight body paint (bikini + shirtless): WORKS
+- Nude/sheer in shower: BLOCKED (400 error)
+- Transparent clothing: BLOCKED (400 error)
+- Any "remove clothes" direction: BLOCKED
+
+### Spanish Text Rendering
+
+Grok renders Spanish text as reliably as English. Tested extensively:
+- Long cursive paragraphs on love notes: clean
+- Slang: "ponernos pedos", "te cojo", "comerte toda" all render
+- Accent marks are usually dropped (manana not mañana) but readable
+- ALL CAPS Spanish renders most reliably
+- Receipt/marquee/neon formats handle Spanish identically to English
+
+### Word-Specific Garble Patterns
+
+| Word | Garbles To | Fix |
+|------|-----------|-----|
+| "Blowjob" | "Blaybob", "Blowbob", "Blayjob" | Use "HEAD", "BJ", or ALL CAPS in large fonts |
+| "Blowjob" in ALL CAPS large font | Renders clean | Preferred approach |
+| All other explicit English terms | Render clean | No workaround needed |
+| All Spanish explicit terms | Render clean | No issues found |
+
+### Effective Sex Reference Variety
+
+Don't repeat the same reference every time. Tested alternatives that all render cleanly:
+
+| Reference | Spanish | Tone |
+|-----------|---------|------|
+| "Eat you out" | "Te como toda" | Direct |
+| "Fuck you until you can't walk" | "Te cojo hasta que no puedas caminar" | Dominant |
+| "Make you mine" | "Te hago mia" | Romantic-dominant |
+| "You won't be sleeping" | "No vas a dormir" | Implied |
+| "You already know" | "Lo que tu ya sabes" / "Ella ya sabe" | Winking |
+| "Don't make plans tomorrow" | "No hagas planes manana" | Implied consequence |
+| "I'm your dessert" | "Soy tu postre" | Playful |
+| "Don't wear underwear" | "No te pongas pantaletas" | Command |
+| "She always wins" | "Ella siempre gana" | Her-focused |
+| "..." or just the vibe | No text needed | Let the image speak |
+| "Walls will shake" | "Tiemblen las paredes" | Hyperbolic |
+
+### Batch Workflow Best Practices
+
+For sessions generating 50+ images:
+1. **Use JSON batch manifests** for themed rounds (8-12 per batch)
+2. **Fire couple photo edits individually in parallel** -- they're slower than generates
+3. **Send results to user as they land** -- don't wait to curate
+4. **Change ONE variable between iterations** -- body description, text, or style, not all three
+5. **Budget with `--dry-run`** before large batches
+6. **Always use `--retries 2`** on batches -- xAI has ~10% transient failure rate
+7. **Name output files descriptively** -- `winner_v2_noir.png` not `gen_20260409_123456.png`
+
+### Cost Reality
+
+At $0.07/image (Grok Pro), large sessions are cheap:
+- 50 images = $3.50
+- 100 images = $7.00
+- 200 images = $14.00
+
+A single stock photo license costs more than a 50-image generation session. Iterate freely.
+4.00
+
+A single stock photo license costs more than a 50-image generation session. Iterate freely.

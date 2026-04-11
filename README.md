@@ -37,8 +37,10 @@ cp -r skills/<name> /path/to/project/.agent/skills/<name>
 ### Gemini / Antigravity
 
 ```bash
-cp -r skills/<name> ~/.gemini/antigravity/skills/<name>
+./scripts/install-skills.sh
 ```
+
+*(Note: Do not symlink directly to `~/.gemini/antigravity/skills/` as Gemini reads `~/.gemini/skills/` globally and doing so causes duplicate install warnings.)*
 
 ## Authoring a Skill
 

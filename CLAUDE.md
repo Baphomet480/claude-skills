@@ -52,11 +52,13 @@ Skills are consumed by both Claude (`~/.claude/skills/`) and Gemini (`~/.gemini/
 2. `dist/` is rebuilt automatically:
    - **On edit**: PostToolUse hook (`.claude/hooks/package-skill.sh`) rebuilds `dist/<name>.skill` on every Edit/Write
    - **On commit**: Pre-commit hook (`hooks/pre-commit`) packages any remaining staged changes
-3. Install -- symlink skill directory to all install locations:
+3. Install -- run the install script to symlink skill directories to all install locations:
+   - `./scripts/install-skills.sh`
+   This script creates the following symlinks:
    - `~/.agents/skills/<name>/` -> `skills/<name>/` (canonical, agent-agnostic)
    - `~/.claude/skills/<name>/` -> `~/.agents/skills/<name>/`
    - `~/.gemini/skills/<name>/` -> `~/.agents/skills/<name>/`
-   - `~/.gemini/antigravity/skills/<name>/` -> `~/.agents/skills/<name>/`
+   (Note: Do not symlink directly to Gemini extensions like Antigravity as Gemini natively loads `~/.gemini/skills/` globally, which would cause duplicate install warnings.)
    - Or publish via `npx skills` ecosystem (see https://skills.sh/)
 
 All install paths are symlinks. Editing any copy edits the upstream source.
