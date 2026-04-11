@@ -435,6 +435,11 @@ curl -X POST 'https://api.buffer.com' \
   }')"
 ```
 
+## Agentic Workflow & Vibe Coding
+
+- **Iterative Scheduling:** Do not expect complex GraphQL payloads to perfectly schedule multi-asset posts on the first try. Draft the payload, test it as a draft or send it to the ideas board, isolate any specific schema or media attachment errors, refine ONE field at a time, and re-test until the post format is correct.
+- **Vibe Coding:** Commit your working GraphQL queries or scheduling scripts locally before attempting destructive operations or bulk queue modifications.
+
 ## Error Handling
 
 ### Mutation Errors (Recoverable)

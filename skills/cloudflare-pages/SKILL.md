@@ -145,6 +145,11 @@ Shows: latest deployment status (color-coded), last 5 deployments table, custom 
 | Deploy succeeds but site 404s | Wrong output directory | Verify build output dir matches deploy path |
 | CI/CD deploy fails | Missing GitHub secrets | Add `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` |
 
+## Agentic Workflow & Vibe Coding
+
+- **Iterative Deployment:** Do not expect the perfect CI/CD setup or DNS propagation on the first run. Draft the configuration or run the manual deploy, review the Cloudflare Pages logs or status checks, isolate specific build errors or proxy issues, adjust ONE setting at a time, and redeploy until the site is live.
+- **Vibe Coding:** Commit your working deployment scripts and GitHub Actions workflows locally before testing them on the live repository, making it easy to roll back if the pipeline breaks.
+
 ## Anti-Patterns
 
 - **Don't use Cloudflare's git integration** — use `wrangler pages deploy` for direct uploads. Git integration adds complexity with no benefit for this workflow.

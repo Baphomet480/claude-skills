@@ -233,6 +233,11 @@ The response structure for each item should cover:
 
 If the GitHub repo is private, handle all issue tracking internally and communicate with the client via email only. Don't ask non-technical clients to use GitHub. The email responses ARE the client-facing deliverable.
 
+## Agentic Workflow & Vibe Coding
+
+- **Iterative Resolution:** Do not expect to fix all client feedback perfectly on the first try. Draft a fix for one issue, review the local preview, isolate any specific visual or functional regressions, refine the component or content ONE variable at a time, and verify before moving to the next ticket.
+- **Vibe Coding:** Commit your working code fixes locally with `fixes #N` *before* drafting the final response emails, ensuring the codebase accurately reflects the promised resolution.
+
 ## Checklist
 
 Before marking the workflow complete, verify:

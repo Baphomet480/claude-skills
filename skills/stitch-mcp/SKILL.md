@@ -426,6 +426,11 @@ project/
 
 ---
 
+## Agentic Workflow & Vibe Coding
+
+- **Iterative Design:** Do not expect pixel-perfect UI on the first generation. Draft a V1 screen, review the HTML/image output, isolate specific layout or styling issues, refine exactly ONE variable (e.g., color, padding, or prompt phrasing) at a time, and regenerate until it matches the design intent.
+- **Vibe Coding:** Commit your working HTML/CSS states and `next-prompt.md` files locally before attempting risky redesigns or merging multiple generated screens into the main application.
+
 ## DESIGN.md (Official Spec)
 
 DESIGN.md is a **dual-representation** design system document. The markdown is human-readable; underneath, Stitch maintains structured tokens. You can be approximate ("warm colors, rounded feel") or exact (`#2665fd`, `8px radius`) -- Stitch reconciles both.

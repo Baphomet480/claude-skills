@@ -489,6 +489,11 @@ Ensure the design system is consumable by AI agents: use semantic tokens over pr
 
 When available, leverage: **design-lookup** for CSS components, SVG icons, and design inspiration during Establish mode. **openai-image** for illustration reinterpretation and brand-safe asset generation. **deep-research** for evaluating design system approaches from scratch. This skill acts as the **integrator** -- consuming companion skill outputs and codifying them into the component library and sink page.
 
+## Agentic Workflow & Vibe Coding
+
+- **Iterative Design:** Do not expect a perfect, comprehensive component on the first pass. Draft the base structure, review it in the sink page, isolate specific layout or styling issues, refine exactly ONE variant or token mapping at a time, and re-check until the component is robust.
+- **Vibe Coding:** Commit your working component files and sink page updates locally before moving on to the next tier of components or attempting complex interactive logic.
+
 ## Anti-patterns
 
 - **Draft placeholders** -- `{/* TODO: add button */}` is never acceptable. Build the real component.

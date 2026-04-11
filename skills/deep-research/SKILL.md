@@ -100,6 +100,11 @@ Produce Gemini Deep Research-quality output: rich artifacts with embedded screen
 3. **Max 3 total iterations** (Phase 1-3 = round 1, then up to 2 more targeted rounds).
 4. After final iteration, mark remaining gaps as "Unresolved" with explanation.
 
+## Agentic Workflow & Vibe Coding
+
+- **Iterative Synthesis:** Do not expect a perfect, comprehensive report on the first draft. Write the initial synthesis, review the extracted data and formatting, isolate any specific gaps or broken diagrams, refine ONE section at a time, and regenerate until the artifact meets the briefing standards.
+- **Vibe Coding:** Commit your working markdown report and any local screenshots/assets locally *before* kicking off additional deep-read loops, ensuring you don't lose the structural foundation if a search goes off track.
+
 ## Tool Strategy
 
 | Purpose | Primary | Fallback |

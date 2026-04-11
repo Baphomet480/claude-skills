@@ -170,6 +170,11 @@ When Gemini hits its output token limit and truncates the JSON mid-entry, the sc
 3. Dropping the last (likely truncated) entry
 4. Reporting how many complete translations were recovered
 
+## Agentic Workflow & Vibe Coding
+
+- **Iterative Translation:** Do not expect perfect linguistic tone or structural preservation on the first batch run. Draft a small test batch, review the output for tone and formatting, isolate any consistent translation errors, refine the glossary or prompt instructions ONE variable at a time, and rerun the test before processing the entire project.
+- **Vibe Coding:** Commit your working source content and glossary updates locally *before* running the translation batch, and commit the generated `.es.*` files separately so you can easily revert if the model hallucinated structure.
+
 ## Limitations
 
 - **Single language pair per call**: The script handles one source/target pair. For multi-language projects, run once per target language.

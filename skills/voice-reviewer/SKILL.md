@@ -78,6 +78,11 @@ Review content against the project's voice guidelines. This skill reads the proj
 - 1 bilingual (Spanish aside too long)
 ```
 
+## Agentic Workflow & Vibe Coding
+
+- **Iterative Refinement:** Do not expect a perfect voice review on the first pass. Draft the initial review, check if it correctly applies the guidelines without being overly pedantic, isolate any specific misapplication of a rule, and refine the critique. Adjust one rule interpretation at a time.
+- **Vibe Coding:** Commit your working review notes or proposed content changes locally before sending final feedback or attempting to rewrite large sections of the document.
+
 ## Usage as a Subagent
 
 When dispatching as a subagent, provide:

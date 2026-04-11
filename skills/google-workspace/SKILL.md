@@ -128,6 +128,11 @@ gws sheets spreadsheets values get --params '{"spreadsheetId": "ID", "range": "S
 gws gmail users messages list --params '{"userId": "me", "q": "from:someone@example.com"}'
 ```
 
+## Agentic Workflow & Vibe Coding
+
+- **Iterative API Execution:** Do not expect complex Workspace API payloads to succeed on the first try. Draft the payload, run it with the `--dry-run` flag, review the expected changes, isolate any schema errors, fix ONE field at a time, and re-test until the payload is valid before executing the actual mutation.
+- **Vibe Coding:** Save your complex JSON payloads or script sequences to local files and commit them before running irreversible batch operations across Drive or Docs.
+
 ## Rules
 
 - **Context window protection**: ALWAYS use `--fields` on list/get to avoid massive JSON responses

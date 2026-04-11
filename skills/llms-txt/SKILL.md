@@ -241,6 +241,11 @@ When a site's `/llms.txt` needs updating (new pages, changed brand, etc.):
 - **kitchen-sink-design-system**: Design token extraction overlaps -- reuse the component inventory if available.
 - **nextjs-tinacms**: Content schema from TinaCMS config informs the content structure section.
 
+## Agentic Workflow & Vibe Coding
+
+- **Iterative Extraction:** Do not expect perfect context files on the first generation. Draft the initial `llms.txt`, review the extracted brand identity and route map, isolate any missing or misinterpreted context, adjust the extraction logic or source files, and regenerate until the file accurately represents the site.
+- **Vibe Coding:** Commit the generated `llms.txt` and `llms-full.txt` files locally alongside the structural or brand changes that necessitated their creation, ensuring agents always have the latest context.
+
 ## Validation
 
 After generation, verify:

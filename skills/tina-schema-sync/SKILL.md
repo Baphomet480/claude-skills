@@ -87,6 +87,11 @@ git push
 
 TinaCloud picks up the lock file from the pushed commit and indexes the schema correctly.
 
+## Agentic Workflow & Vibe Coding
+
+- **Iterative Syncing:** Do not expect the schema to sync perfectly on the first try if there are complex field dependencies. If the dev server throws an error or artifacts don't generate, isolate the specific schema error, fix exactly one collection or field definition, and rerun the sync process until successful.
+- **Vibe Coding:** Create local, semantic commits for your working `tina/config.ts` changes *before* running the sync process, and then commit the generated artifacts separately once the sync succeeds. This ensures you can easily roll back if the generation fails.
+
 ## Troubleshooting
 
 ### "Unable to seed content/pages/home.mdx"

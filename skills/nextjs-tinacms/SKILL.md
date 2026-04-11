@@ -151,6 +151,11 @@ Set up in `.claude/settings.json` early in Day 0:
 - `/new-block` -- scaffold a block template + component + renderer mapping
 - `/tinacms-check` -- audit schema for missing `ui.itemProps`, broken `tinaField`, version drift
 
+## Agentic Workflow & Vibe Coding
+
+- **Iterative Building:** Do not expect a perfect CMS integration on the first try. Draft the schema and visual editing wrapper, test the connection locally (`tinacms dev`), isolate any specific data-fetching or rendering error, adjust exactly ONE field or query at a time, and refresh until the click-to-edit experience is seamless.
+- **Vibe Coding:** Commit your working Next.js pages and Tina schema configurations locally before attempting complex block template additions or deploying to Vercel. Ensure `tina-lock.json` is included in these commits.
+
 ## Reference Files
 
 | File | When To Read |

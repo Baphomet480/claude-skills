@@ -183,6 +183,11 @@ What doesn't work:
 - Best times: 8-9 AM or 12-1 PM local time
 - Reply to comments on existing posts between new posts to maintain engagement
 
+## Agentic Workflow & Vibe Coding
+
+- **Iterative Drafting:** Do not expect the perfect LinkedIn post on the first attempt. Draft a V1, review against the Content Guidelines (checking for "AI tells"), isolate specific tonal issues or formatting errors, refine exactly ONE section at a time, and regenerate until the voice matches the user.
+- **Vibe Coding:** Save your working drafts locally (e.g., in a `.md` file) before attempting to use browser automation to publish or schedule. If automation fails, you still have the approved content.
+
 ## DOM Reference
 
 LinkedIn's DOM changes frequently. These selectors are starting points. Always verify with a snapshot before interacting.

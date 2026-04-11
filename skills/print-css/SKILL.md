@@ -439,6 +439,11 @@ Before declaring print styles complete:
 
 ---
 
+## Agentic Workflow & Vibe Coding
+
+- **Iterative Styling:** Do not expect perfect print layouts on the first try, as print rendering engines are finicky. Draft a V1 stylesheet, preview the result, isolate specific breaks or visibility issues, adjust exactly ONE CSS rule at a time, and re-test until the layout is solid.
+- **Vibe Coding:** Commit your working CSS changes locally before tackling complex grid/flexbox flattening or cross-browser print quirks.
+
 ## Utility Classes
 
 Add these to your project for print control:

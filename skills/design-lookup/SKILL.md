@@ -76,6 +76,11 @@ Source: {URL}
 
 Provide 2-4 options when possible so the user or design agent can choose.
 
+## Agentic Workflow & Vibe Coding
+
+- **Iterative Sourcing:** Do not expect the perfect component or icon on the first search. Fetch a candidate, review the extracted code, isolate any framework-specific bloat or conflicting styles, strip or adapt ONE CSS class/rule at a time, and preview the result until the snippet is clean and usable.
+- **Vibe Coding:** Commit the clean, working CSS or SVG snippet locally before attempting to integrate it into complex layout structures or interactive components.
+
 ## Guidelines
 
 - **Clean up extracted code** — Remove unnecessary vendor prefixes, framework-specific wrappers, or unrelated styles. Present minimal, self-contained snippets.

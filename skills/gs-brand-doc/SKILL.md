@@ -43,6 +43,11 @@ bash ~/.gemini/skills/gs-brand-doc/scripts/generate_pdf.sh ../azdocs/proposal.md
 ## Modern Stack Support
 If the project uses Next.js/React, look for `@react-pdf/renderer` in `package.json`. If present, generate the PDF programmatically using React components rather than Markdown conversion, as this allows for much more sophisticated layouts consistent with the GS brand. 
 
+## Agentic Workflow & Vibe Coding
+
+- **Iterative Document Generation:** Do not expect a perfect PDF layout on the first run, especially with complex Markdown tables or images. Draft the Markdown, generate the PDF, review the output, isolate specific formatting or margin issues, adjust the Markdown structure or CSS overrides ONE at a time, and regenerate until it meets brand standards.
+- **Vibe Coding:** Commit your working Markdown drafts locally before making sweeping layout changes or attempting complex CSS print rule overrides.
+
 ## CSS Asset
 
 If you need to generate HTML or use a different tool, the raw CSS file is located at `assets/gs-brand.css`. It includes print media queries specifically tuned for document rendering.
