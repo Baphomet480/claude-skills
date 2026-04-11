@@ -1,5 +1,11 @@
 ---
 name: openai-image
+
+## ⚠️ VISION PROTOCOL
+**CRITICAL:** For general chat inquiries ("what is this?", "describe this image", "extract text"), **DO NOT USE the `describe` command.**
+- **PRIORITY:** Use your native multimodal (vision) capabilities. It is faster and preserves context.
+- **EXCEPTION:** ONLY use the `describe` command if you need structured JSON analysis or specific identity-lock metadata required for a subsequent tool call.
+
 version: 1.8.0
 description: Generate, edit, describe, restyle, restore, thumbnail, and batch-process images using xAI (Grok) or OpenAI image APIs and GPT-4o vision. Default provider is xAI ($0.02/image flat rate). Use this skill whenever the user asks to generate, create, make, draw, or design an image or picture using AI, or wants to edit, modify, transform, restyle, composite, or inpaint an existing image. Also handles image description and alt-text generation, background removal, style transfer, photo restoration, thumbnail creation, and batch generation from JSON manifests. Trigger when the user mentions DALL-E, gpt-image, Grok image, xAI image, OpenAI image generation, or wants AI-generated visuals for any purpose (logos, mockups, illustrations, thumbnails, icons, concept art, memes). Also trigger for batch image generation, generating a set or series of images, processing multiple images from a manifest, or creating consistent image collections. If the user says "make me an image of...", "generate a picture", "edit this photo to...", "describe this image", "remove the background", "make this look like watercolor", "restore this old photo", "create a thumbnail", "generate a batch of images", or "process this image manifest", this is the skill to use.
 ---
@@ -904,7 +910,11 @@ Composition: Centered, slight head tilt, natural relaxed expression." \
   -i casual_photo.jpg --input-fidelity high --quality high -o headshot.png
 ```
 
-### Describe-First Workflow
+### Describe-First Workflow (Native-First)
+
+**PRIORITY:** Use your **NATIVE VISION** to understand the subject first.
+
+Only run the `describe` command if you need precise GPT-4o details for an identity-lock prompt:
 
 When crafting an edit prompt for a person's photo, first analyze the image to understand what you're working with:
 
