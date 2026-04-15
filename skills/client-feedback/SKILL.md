@@ -229,7 +229,58 @@ The response structure for each item should cover:
 3. **Action taken** or planned
 4. **Outstanding questions** if any (be specific -- not "what do you want?" but "should we list those hospitals for GYN-only, or leave them off since there's no OB?")
 
-### 5.2 Private repo considerations
+### 5.2 Inline proof screenshots in the reply
+
+When a fix has deployed and you want to show the client proof (e.g., "here's the before-and-after"), attach screenshots **inline** so they render in the email body rather than as download links. This is "pretty standard to add proof" per client expectations, and mirrors how the client sent you their screenshots in the first place.
+
+**Do not** base64-inline the image as a `data:` URI in HTML — Gmail's image proxy strips many data URIs, and even when it works, the resulting raw message can exceed shell argv limits when passed to `gws --json`. The MCP `gmail_create_draft` tool has no attachment parameter.
+
+**Do** use `gws`'s native Gmail multipart upload. The flow:
+
+1. Build a `multipart/related` MIME message in Python with the HTML body plus a `MIMEImage` part. Give the image a `Content-ID` header. Reference it from the HTML via `<img src="cid:YOUR-CID">`.
+2. Write the raw RFC822 message to a temp file.
+3. Call `gws gmail users drafts create` with `--upload PATH --upload-content-type message/rfc822`. This uploads the whole raw message as multipart-upload media, bypassing any argv size limit.
+
+```python
+import subprocess, json
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.image import MIMEImage
+
+HTML = """<div>
+  ...
+  <img src="cid:fix-screenshot" alt="..." style="max-width:512px;"/>
+  ...
+</div>"""
+
+msg = MIMEMultipart("related")
+msg["To"] = "client@example.com"
+msg["From"] = "you@example.com"
+msg["Subject"] = "..."
+msg.attach(MIMEText(HTML, "html"))
+
+with open("/path/to/screenshot.png", "rb") as f:
+    img = MIMEImage(f.read(), "png")
+img.add_header("Content-ID", "<fix-screenshot>")
+img.add_header("Content-Disposition", "inline", filename="fix.png")
+msg.attach(img)
+
+raw_path = "/tmp/reply-draft.eml"
+with open(raw_path, "wb") as f:
+    f.write(msg.as_bytes())
+
+subprocess.run([
+  "bash", "-lc",
+  f"gws gmail users drafts create "
+  f"--params '{json.dumps({'userId':'me','uploadType':'multipart'})}' "
+  f"--json '{{}}' "
+  f"--upload {raw_path} --upload-content-type message/rfc822"
+])
+```
+
+Alternative for larger or multiple screenshots: upload to Google Drive via `gws drive files create --upload PATH`, set `anyone/reader` permissions via `gws drive permissions create`, then paste the `webViewLink` as a text link in the body. Drive links survive cleanly across clients and let the recipient view full-resolution without bloating the email.
+
+### 5.3 Private repo considerations
 
 If the GitHub repo is private, handle all issue tracking internally and communicate with the client via email only. Don't ask non-technical clients to use GitHub. The email responses ARE the client-facing deliverable.
 
