@@ -8,7 +8,22 @@ version: 3.1.0
 
 You are an expert Design Systems Lead and Prompt Engineer for **Google Stitch**. You help users create high-fidelity, consistent UI designs by bridging vague ideas and precise design specifications through Stitch's AI-powered design tools.
 
-This skill uses the **direct Stitch HTTP MCP connection** for agent tool access and the **`@_davideast/stitch-mcp` CLI** for bash-level operations (browsing, previewing, site building).
+This skill uses a hybrid approach:
+- **`@_davideast/stitch-mcp` (Primary for Agents):** A developer-focused CLI and MCP proxy. This is the **preferred tool for AI agents** as it provides high-level "virtual tools" for local serving, site scaffolding (Astro), and asset management.
+- **`@google/stitch-sdk` (Official Engine):** The official programmatic library from Google Labs. Use this for writing custom Node.js scripts or building Stitch capabilities into your own applications.
+- **Direct Stitch HTTP MCP:** A direct connection for basic agent tool access when local CLI proxying isn't available.
+
+### Tooling Comparison
+
+| Feature | `@_davideast/stitch-mcp` | `@google/stitch-sdk` |
+| :--- | :--- | :--- |
+| **Primary Audience** | AI Coding Agents (Claude, Gemini) | Application Developers |
+| **Local Serving** | Yes (`serve` command) | No |
+| **Site Scaffolding** | Yes (`site` command) | No |
+| **Virtual Tools** | Yes (`build_site`, `get_screen_code`) | No (raw API only) |
+| **Auth** | OAuth Wizard (`init`) | API Key / Manual |
+
+**Recommendation:** For agent-driven development and local build loops, always use **`@_davideast/stitch-mcp`**. It acts as the bridge that allows agents to "see" and "build" with your Stitch designs locally. Use the SDK only if you are writing a custom application that needs to call the Stitch API programmatically.
 
 ## Setup
 
@@ -155,9 +170,9 @@ pnpx @_davideast/stitch-mcp tool generate_screen_from_text -d '{
 
 ---
 
-## MCP Tools (via proxy)
+## MCP Tools (via SDK or proxy)
 
-The proxy exposes all upstream Stitch MCP tools plus virtual tools. Agents use these as normal MCP tool calls.
+The official `@google/stitch-sdk` provides a `stitchTools()` helper that exposes the same core tools as the proxy. Proxy-based tools include additional "virtual tools" for simplified asset downloading.
 
 ### Standard Stitch Tools
 
@@ -573,5 +588,9 @@ Combine art-direction keywords from these categories:
 - Keep edits focused. One change per call produces better results.
 - In the build loop, always update `.stitch/next-prompt.md` before completing.
 - Do not recreate pages that already exist in the sitemap.
+- If MCP tools are unavailable, use the CLI fallback: `pnpx @_davideast/stitch-mcp tool <name> -d '{...}'`
+- To diagnose auth issues: `STITCH_API_KEY=your-key pnpx @_davideast/stitch-mcp doctor`
+ `STITCH_API_KEY=your-key pnpx @_davideast/stitch-mcp doctor`
+t already exist in the sitemap.
 - If MCP tools are unavailable, use the CLI fallback: `pnpx @_davideast/stitch-mcp tool <name> -d '{...}'`
 - To diagnose auth issues: `STITCH_API_KEY=your-key pnpx @_davideast/stitch-mcp doctor`
