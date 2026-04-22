@@ -27,7 +27,7 @@ prompts = [
 for p in prompts:
     print(f"Generating {p['name']}...")
     cmd = [
-        "openai-image",
+        "omni-image",
         "generate",
         p["prompt"],
         "--model", "grok-imagine-image-pro",

@@ -75,14 +75,14 @@ No photographic elements. [Any items from 'avoid' list].
 
 ### Step 3: Generate
 
-Use the **openai-image** skill to generate the illustration:
+Use the **omni-image** skill to generate the illustration:
 
 ```bash
 # Generate from prompt only
-python3 scripts/openai_image.py generate "composedPrompt" -o illustration.png
+python3 scripts/omni_image.py generate "composedPrompt" -o illustration.png
 
 # Use reference photo for composition guidance (NOT style transfer)
-python3 scripts/openai_image.py edit reference-photo.jpg "composedPrompt" -o illustration.png
+python3 scripts/omni_image.py edit reference-photo.jpg "composedPrompt" -o illustration.png
 ```
 
 > [!IMPORTANT]

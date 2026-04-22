@@ -1,12 +1,12 @@
 ---
-name: openai-image
+name: omni-image
 
 ## ⚠️ VISION PROTOCOL
 **CRITICAL:** For general chat inquiries ("what is this?", "describe this image", "extract text"), **DO NOT USE the `describe` command.**
 - **PRIORITY:** Use your native multimodal (vision) capabilities. It is faster and preserves context.
 - **EXCEPTION:** ONLY use the `describe` command if you need structured JSON analysis or specific identity-lock metadata required for a subsequent tool call.
 
-version: 1.8.0
+version: 2.0.0
 description: Generate, edit, describe, restyle, restore, thumbnail, and batch-process images using xAI (Grok) or OpenAI image APIs and GPT-4o vision. Default provider is xAI ($0.02/image flat rate). Use this skill whenever the user asks to generate, create, make, draw, or design an image or picture using AI, or wants to edit, modify, transform, restyle, composite, or inpaint an existing image. Also handles image description and alt-text generation, background removal, style transfer, photo restoration, thumbnail creation, and batch generation from JSON manifests. Trigger when the user mentions DALL-E, gpt-image, Grok image, xAI image, OpenAI image generation, or wants AI-generated visuals for any purpose (logos, mockups, illustrations, thumbnails, icons, concept art, memes). Also trigger for batch image generation, generating a set or series of images, processing multiple images from a manifest, or creating consistent image collections. If the user says "make me an image of...", "generate a picture", "edit this photo to...", "describe this image", "remove the background", "make this look like watercolor", "restore this old photo", "create a thumbnail", "generate a batch of images", or "process this image manifest", this is the skill to use.
 ---
 
@@ -55,7 +55,7 @@ Both keys live in `~/.secrets` (sourced by shell profile). Run `source ~/.secret
    ```
 3. Generate an image:
    ```bash
-   openai-image generate "A watercolor painting of a sunset over Mos Eisley" --output sunset.png
+   omni-image generate "A watercolor painting of a sunset over Mos Eisley" --output sunset.png
    ```
 
 ## Commands
@@ -66,25 +66,25 @@ Create images from a text prompt.
 
 ```bash
 # Basic generation (uses xAI by default, quality high)
-openai-image generate "your prompt" --output result.png
+omni-image generate "your prompt" --output result.png
 
 # Specific size
-openai-image generate "your prompt" --size 1536x1024 -o landscape.png
+omni-image generate "your prompt" --size 1536x1024 -o landscape.png
 
 # Use OpenAI instead
-openai-image --provider openai generate "your prompt" -o result.png
+omni-image --provider openai generate "your prompt" -o result.png
 
 # xAI Pro model
-openai-image generate "your prompt" --model grok-imagine-image-pro -o result.png
+omni-image generate "your prompt" --model grok-imagine-image-pro -o result.png
 
 # Transparent background (OpenAI only, PNG)
-openai-image --provider openai generate "a logo on transparent background" --background transparent -o logo.png
+omni-image --provider openai generate "a logo on transparent background" --background transparent -o logo.png
 
 # Multiple images at once
-openai-image generate "your prompt" -n 4 --output-dir ./variants/
+omni-image generate "your prompt" -n 4 --output-dir ./variants/
 
 # Compressed JPEG output
-openai-image generate "your prompt" --format jpeg --compression 80 -o photo.jpg
+omni-image generate "your prompt" --format jpeg --compression 80 -o photo.jpg
 ```
 
 ### Edit
@@ -95,16 +95,16 @@ Modify existing images with a text prompt. Optionally supply a mask to constrain
 
 ```bash
 # Edit a single image
-openai-image edit "make the sky dramatic and stormy" -i photo.jpg -o dramatic.png
+omni-image edit "make the sky dramatic and stormy" -i photo.jpg -o dramatic.png
 
 # Edit with a mask (transparent areas in the mask = regions to change)
-openai-image edit "replace with a garden" -i room.jpg --mask mask.png -o garden_room.png
+omni-image edit "replace with a garden" -i room.jpg --mask mask.png -o garden_room.png
 
 # Combine multiple images
-openai-image edit "merge these into a collage with consistent lighting" -i img1.jpg img2.jpg img3.jpg -o collage.png
+omni-image edit "merge these into a collage with consistent lighting" -i img1.jpg img2.jpg img3.jpg -o collage.png
 
 # High input fidelity (preserves more of the original style)
-openai-image edit "add a hat" -i portrait.jpg --input-fidelity high -o hat.png
+omni-image edit "add a hat" -i portrait.jpg --input-fidelity high -o hat.png
 ```
 
 #### When to Use Input Fidelity
@@ -124,17 +124,17 @@ The most powerful edit pattern is using a photo as a **structural anchor** while
 
 ```bash
 # Use an empty coupe glass photo as a structural reference, reimagine the contents
-openai-image edit \
+omni-image edit \
   "Fill this coupe glass with a bright blue butterfly pea tea cocktail, violet-shifting ice cubes, condensation on the glass" \
   -i ref_empty_coupe.jpg --quality high -o cocktail_blue.png
 
 # Use a rocks glass photo as a shape anchor for a completely different drink
-openai-image edit \
+omni-image edit \
   "Golden amber old fashioned with a large ice sphere, orange peel garnish, smoke wisps" \
   -i ref_rocks_glass.jpg --quality high -o cocktail_amber.png
 
 # Use a venue photo as a layout reference for a different setting
-openai-image edit \
+omni-image edit \
   "Transform this space into a 1920s speakeasy with warm Edison bulbs, dark wood, and brass fixtures" \
   -i venue_photo.jpg --input-fidelity high -o speakeasy.png
 ```
@@ -147,28 +147,28 @@ Analyze images using GPT-4o vision. Returns alt text, captions, tags, or structu
 
 ```bash
 # Generate alt text for web accessibility (default)
-openai-image describe photo.jpg
+omni-image describe photo.jpg
 
 # Get a natural language caption
-openai-image describe photo.jpg --mode caption
+omni-image describe photo.jpg --mode caption
 
 # Detailed multi-paragraph description
-openai-image describe photo.jpg --mode detailed
+omni-image describe photo.jpg --mode detailed
 
 # Keyword tags
-openai-image describe photo.jpg --mode tags
+omni-image describe photo.jpg --mode tags
 
 # Structured JSON (alt_text, caption, tags, colors, objects, scene)
-openai-image describe photo.jpg --mode json
+omni-image describe photo.jpg --mode json
 
 # Custom analysis
-openai-image describe photo.jpg --custom "what fonts and colors are used in this design?"
+omni-image describe photo.jpg --custom "what fonts and colors are used in this design?"
 
 # Multiple images
-openai-image describe img1.jpg img2.png img3.webp
+omni-image describe img1.jpg img2.png img3.webp
 
 # Use the full gpt-4o model for better accuracy
-openai-image describe photo.jpg --model gpt-4o
+omni-image describe photo.jpg --model gpt-4o
 ```
 
 ### Background Remove
@@ -176,7 +176,7 @@ openai-image describe photo.jpg --model gpt-4o
 Remove background to transparent PNG.
 
 ```bash
-openai-image bg-remove product.jpg -o product-nobg.png
+omni-image bg-remove product.jpg -o product-nobg.png
 ```
 
 ### Style Transfer
@@ -188,11 +188,11 @@ Apply an art style to an image. 10 built-in presets plus custom.
 ```bash
 # Built-in styles: watercolor, oil-painting, pixel-art, pencil-sketch,
 #   anime, pop-art, art-deco, minimalist, cyberpunk, stained-glass
-openai-image style-transfer photo.jpg --style watercolor -o watercolor.png
-openai-image style-transfer photo.jpg --style pixel-art -o pixel.png
+omni-image style-transfer photo.jpg --style watercolor -o watercolor.png
+omni-image style-transfer photo.jpg --style pixel-art -o pixel.png
 
 # Custom style
-openai-image style-transfer photo.jpg --style custom --custom-style "1920s art nouveau poster" -o nouveau.png
+omni-image style-transfer photo.jpg --style custom --custom-style "1920s art nouveau poster" -o nouveau.png
 ```
 
 #### Color Palette Control
@@ -204,19 +204,19 @@ Two fixes:
 **1. Steer color with `--prefix`** (works with any preset):
 ```bash
 # Warm watercolor instead of the default cool tones
-openai-image --prefix "Warm golden amber and coral tones. Rich saturated palette." \
+omni-image --prefix "Warm golden amber and coral tones. Rich saturated palette." \
   style-transfer venue.jpg --style watercolor -o venue_warm.png
 
 # Apply the same color direction across a batch for consistency
 PREFIX="Warm watercolor in golden amber, coral, and cream tones. Saturated, not washed out."
-openai-image --prefix "$PREFIX" style-transfer photo1.jpg --style watercolor -o art1.png
-openai-image --prefix "$PREFIX" style-transfer photo2.jpg --style watercolor -o art2.png
-openai-image --prefix "$PREFIX" style-transfer photo3.jpg --style watercolor -o art3.png
+omni-image --prefix "$PREFIX" style-transfer photo1.jpg --style watercolor -o art1.png
+omni-image --prefix "$PREFIX" style-transfer photo2.jpg --style watercolor -o art2.png
+omni-image --prefix "$PREFIX" style-transfer photo3.jpg --style watercolor -o art3.png
 ```
 
 **2. Use `--style custom`** for full control when presets aren't enough:
 ```bash
-openai-image style-transfer venue.jpg \
+omni-image style-transfer venue.jpg \
   --style custom \
   --custom-style "Warm watercolor illustration. Golden amber, coral, and cream palette. Visible brush strokes, soft washes of color, paper texture. Rich saturated tones, not cool or washed out." \
   -o venue_watercolor.png
@@ -229,7 +229,7 @@ openai-image style-transfer venue.jpg \
 Restore damaged, faded, or degraded photographs. Uses high input fidelity by default.
 
 ```bash
-openai-image restore old_photo.jpg -o restored.png
+omni-image restore old_photo.jpg -o restored.png
 ```
 
 ### Thumbnail
@@ -238,10 +238,10 @@ Generate web-optimized thumbnails (JPEG at 80% compression by default).
 
 ```bash
 # From a text prompt
-openai-image thumbnail "a cozy coffee shop interior" -o thumb.jpg
+omni-image thumbnail "a cozy coffee shop interior" -o thumb.jpg
 
 # From an existing image
-openai-image thumbnail "clean product shot" --from-image product.jpg -o thumb.jpg
+omni-image thumbnail "clean product shot" --from-image product.jpg -o thumb.jpg
 ```
 
 ### Batch
@@ -249,7 +249,7 @@ openai-image thumbnail "clean product shot" --from-image product.jpg -o thumb.jp
 Process multiple image jobs from a JSON manifest. Each job can generate or edit independently, sharing a common style prefix and defaults.
 
 ```bash
-openai-image --retries 3 batch drinks.json --output-dir ./public/images/
+omni-image --retries 3 batch drinks.json --output-dir ./public/images/
 ```
 
 Manifest format (`drinks.json`):
@@ -318,16 +318,16 @@ These flags go *before* the subcommand name:
 
 ```bash
 # Example: retry up to 3 times with a style prefix
-openai-image --retries 3 --prefix "Photorealistic, 8K, shallow depth of field." generate "a cup of coffee" -o coffee.png
+omni-image --retries 3 --prefix "Photorealistic, 8K, shallow depth of field." generate "a cup of coffee" -o coffee.png
 
 # Use a preset for quick iteration
-openai-image --preset draft generate "concept sketch of a robot" -o robot_draft.png
+omni-image --preset draft generate "concept sketch of a robot" -o robot_draft.png
 
 # Estimate cost before running
-openai-image --preset final --dry-run generate "hero image" -n 4
+omni-image --preset final --dry-run generate "hero image" -n 4
 
 # Dry-run a whole batch manifest
-openai-image --dry-run batch drinks.json
+omni-image --dry-run batch drinks.json
 ```
 
 #### Presets
@@ -483,13 +483,13 @@ Does a real-world photo of the subject exist (or could the user take one)?
 **Illustrations of a real venue or place:**
 ```bash
 # WRONG: generates a generic bar that looks nothing like the real one
-openai-image generate "watercolor illustration of The Lavender Farms cocktail bar" -o bar.png
+omni-image generate "watercolor illustration of The Lavender Farms cocktail bar" -o bar.png
 
 # RIGHT: transforms the actual venue into a watercolor
-openai-image style-transfer venue_photo.jpg --style watercolor -o bar_watercolor.png
+omni-image style-transfer venue_photo.jpg --style watercolor -o bar_watercolor.png
 
 # RIGHT: more control over the transformation
-openai-image edit \
+omni-image edit \
   "Transform into a warm watercolor illustration. Preserve the room layout, bar position, and window placement. Soft washes of color, visible brush strokes, paper texture." \
   -i venue_photo.jpg --input-fidelity high --quality high -o bar_watercolor.png
 ```
@@ -497,10 +497,10 @@ openai-image edit \
 **Product photography in a new context:**
 ```bash
 # WRONG: generates a generic bottle shape
-openai-image generate "artisanal hot sauce bottle on marble counter" -o product.png
+omni-image generate "artisanal hot sauce bottle on marble counter" -o product.png
 
 # RIGHT: uses the actual bottle with its real label, shape, and proportions
-openai-image edit \
+omni-image edit \
   "Place on a white marble counter. Soft diffused studio lighting from above. Subtle shadow beneath. Clean white background." \
   -i real_bottle_photo.jpg --quality high -o product_styled.png
 ```
@@ -508,11 +508,11 @@ openai-image edit \
 **Menu art from real dishes:**
 ```bash
 # Style-transfer for uniform illustration style across a menu
-openai-image style-transfer risotto_photo.jpg --style watercolor -o menu_risotto.png
-openai-image style-transfer steak_photo.jpg --style watercolor -o menu_steak.png
+omni-image style-transfer risotto_photo.jpg --style watercolor -o menu_risotto.png
+omni-image style-transfer steak_photo.jpg --style watercolor -o menu_steak.png
 
 # Or edit for more photographic polish
-openai-image edit \
+omni-image edit \
   "Fine dining food photography. Enhance plating, adjust lighting to warm directional from 10 o'clock. Deepen background blur." \
   -i dish_photo.jpg --input-fidelity high --quality high -o menu_hero.png
 ```
@@ -520,7 +520,7 @@ openai-image edit \
 **Real building in a different context:**
 ```bash
 # Preserve architecture, change the surroundings
-openai-image edit \
+omni-image edit \
   "Cover in fresh snow. Overcast winter sky. Warm light glowing from the windows. Footprints in the snow leading to the front door." \
   -i storefront_summer.jpg --input-fidelity high --quality high -o storefront_winter.png
 ```
@@ -547,7 +547,7 @@ firecrawl search "The Alamo San Antonio exterior photo" --sources images -o .fir
 curl -sL "$IMAGE_URL" -o ref_alamo.jpg
 
 # Now use it as a reference for the illustration
-openai-image style-transfer ref_alamo.jpg --style watercolor -o alamo_watercolor.png
+omni-image style-transfer ref_alamo.jpg --style watercolor -o alamo_watercolor.png
 ```
 
 This works for:
@@ -812,10 +812,10 @@ The `--resolution` flag controls output pixel dimensions on xAI:
 
 ```bash
 # Standard resolution (default, ~1024px)
-openai-image generate "your prompt" -o result.png
+omni-image generate "your prompt" -o result.png
 
 # High resolution (2K, sharper details, same price)
-openai-image generate "your prompt" --resolution 2k -o result.png
+omni-image generate "your prompt" --resolution 2k -o result.png
 ```
 
 The `grok-imagine-image-pro` model benefits most from `--resolution 2k` -- it produces noticeably sharper details and better text rendering at 2K. The standard model's improvement is more modest. There is no price difference between 1K and 2K on xAI.
@@ -839,7 +839,7 @@ Every prompt that references a person's photo must include these three layers be
 ### Full Identity-Preserving Prompt Template
 
 ```bash
-openai-image edit \
+omni-image edit \
   "Use the uploaded image of me as the subject reference. \
 Preserve my facial features, proportions, age, skin texture, hairstyle, and expression exactly. \
 Do not stylise the face. Do not cartoonise. Do not anime. \
@@ -883,7 +883,7 @@ The model takes creative shortcuts when given room. Prevent specific failure mod
 ### Example: Action Figure / Stylized Portrait
 
 ```bash
-openai-image edit \
+omni-image edit \
   "Use the uploaded image of me as the subject reference. \
 Preserve my facial features, proportions, age, skin texture, hairstyle, and expression exactly. \
 Do not stylise the face. Do not cartoonise. Do not anime. \
@@ -898,7 +898,7 @@ Studio lighting, product photography, white background." \
 ### Example: Professional Headshot from Casual Photo
 
 ```bash
-openai-image edit \
+omni-image edit \
   "Use the uploaded image of me as the subject reference. \
 Preserve my facial features, proportions, age, skin texture, hairstyle, and expression exactly. \
 Do not stylise the face. No smoothing. No beautification. \
@@ -920,7 +920,7 @@ When crafting an edit prompt for a person's photo, first analyze the image to un
 
 ```bash
 # Analyze the source photo before editing
-openai-image describe person_photo.jpg --mode detailed
+omni-image describe person_photo.jpg --mode detailed
 ```
 
 Use the description to write a more precise identity lock. Instead of generic "preserve my facial features," you can reference specifics from the analysis: "Preserve the subject's angular jaw, close-cropped dark hair, light stubble, and deep-set brown eyes exactly."
@@ -950,14 +950,14 @@ When generating a cohesive set of images (product shots, menu items, page backgr
 ```bash
 PREFIX="Vivid, hyper-real 1920s cinematic movie still. Rich jewel tones, warm golden lighting, film grain."
 
-openai-image --prefix "$PREFIX" generate "blue cocktail in a coupe glass" --quality high -o drink1.png
-openai-image --prefix "$PREFIX" generate "amber old fashioned with smoke" --quality high -o drink2.png
-openai-image --prefix "$PREFIX" generate "emerald absinthe drip" --quality high -o drink3.png
+omni-image --prefix "$PREFIX" generate "blue cocktail in a coupe glass" --quality high -o drink1.png
+omni-image --prefix "$PREFIX" generate "amber old fashioned with smoke" --quality high -o drink2.png
+omni-image --prefix "$PREFIX" generate "emerald absinthe drip" --quality high -o drink3.png
 ```
 
 **2. Use `batch` for manifests.** Define the prefix once, list all jobs:
 ```bash
-openai-image --retries 3 batch drinks.json --output-dir ./public/images/
+omni-image --retries 3 batch drinks.json --output-dir ./public/images/
 ```
 
 **3. Keep quality and size consistent.** Mixing `--quality medium` and `--quality high` across a series produces visible inconsistency. Pick one and stick with it.
@@ -1161,7 +1161,7 @@ For sessions generating 50+ images:
 5. **Budget with `--dry-run`** before large batches
 6. **Always use `--retries 2`** on batches -- xAI has ~10% transient failure rate
 7. **Name output files descriptively** -- `winner_v2_noir.png` not `gen_20260409_123456.png`
-8. **Automate with Python Subprocess:** Instead of writing massive JSON files by hand, you can write a simple python script to loop through an array of dictionaries and call `subprocess.run(["openai-image", "generate", p["prompt"], ...])`. See `examples/python_wrapper_example.py` for a real-world script using the 5-part `SCENE / STYLE / MOOD / LIGHTING / CAMERA` formula.
+8. **Automate with Python Subprocess:** Instead of writing massive JSON files by hand, you can write a simple python script to loop through an array of dictionaries and call `subprocess.run(["omni-image", "generate", p["prompt"], ...])`. See `examples/python_wrapper_example.py` for a real-world script using the 5-part `SCENE / STYLE / MOOD / LIGHTING / CAMERA` formula.
 
 ### Cost Reality
 

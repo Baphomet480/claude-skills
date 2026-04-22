@@ -3,7 +3,7 @@
 OpenAI Images API CLI -- generate, edit, describe, and transform images.
 
 Usage:
-    python3 scripts/openai_image.py <command> [options]
+    python3 scripts/omni_image.py <command> [options]
 
 Commands:
     generate        Create an image from a text prompt
@@ -187,7 +187,7 @@ def tag_image(path: Path, fmt: str, prompt: str, model: str,
     if fmt != "png":
         return
     embed_png_metadata(path, {
-        "Software": "openai-image-skill",
+        "Software": "omni-image-skill",
         "Description": prompt[:500],
         "model": model,
         "quality": quality,
@@ -1475,12 +1475,12 @@ def main():
         err_msg = str(exc) or repr(exc)
         tb_str = traceback.format_exc()
 
-        log_dir = Path.home() / ".openai_image" / "logs"
+        log_dir = Path.home() / ".omni_image" / "logs"
         log_dir.mkdir(parents=True, exist_ok=True)
         log_file = log_dir / "error.log"
         with open(log_file, "a") as f:
             f.write(
-                f"--- UNHANDLED EXCEPTION [openai_image.py] ---\n"
+                f"--- UNHANDLED EXCEPTION [omni_image.py] ---\n"
                 f"{time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())}\n"
                 f"Command: {' '.join(sys.argv)}\n"
                 f"{tb_str}\n"
@@ -1491,7 +1491,7 @@ def main():
             "type": "UnhandledException",
             "message": err_msg,
             "fix": (
-                "AGENT DIRECTIVE: This is an internal bug in openai_image.py. "
+                "AGENT DIRECTIVE: This is an internal bug in omni_image.py. "
                 "Document this failure in the skill's KNOWN_BUGS.md and notify the user."
             ),
             "logFile": str(log_file),

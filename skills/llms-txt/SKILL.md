@@ -140,7 +140,7 @@ The file is **Markdown** following the llmstxt.org spec. Structure it in this or
 **Key rules for the LLM Instructions section:**
 - Be specific and actionable. "Use muted warm tones" is better than "be on-brand."
 - Include extracted color hex values -- agents generating images or CSS need exact values.
-- Reference specific tools or techniques when relevant (e.g., `--prefix` for the openai-image skill).
+- Reference specific tools or techniques when relevant (e.g., `--prefix` for the omni-image skill).
 - If the site has voice guidelines, summarize them here.
 - If the site has API endpoints, note which to prefer and which are deprecated.
 - Stripe's pattern is the gold standard: explicit, practical instructions that prevent common mistakes.
@@ -235,7 +235,7 @@ When a site's `/llms.txt` needs updating (new pages, changed brand, etc.):
 
 ## Integration with Other Skills
 
-- **openai-image**: The LLM Instructions section should include image generation guidance (style, prefix templates, provider preference). Any agent hitting `/llms.txt` before generating images for the site gets brand-appropriate defaults.
+- **omni-image**: The LLM Instructions section should include image generation guidance (style, prefix templates, provider preference). Any agent hitting `/llms.txt` before generating images for the site gets brand-appropriate defaults.
 - **voice-reviewer**: If voice guidelines exist, summarize them in the Tone and Voice subsection.
 - **gs-brand-doc**: Brand colors and typography extracted here can inform PDF generation.
 - **kitchen-sink-design-system**: Design token extraction overlaps -- reuse the component inventory if available.

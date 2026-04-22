@@ -309,7 +309,7 @@ The sink page includes a **Voice & Tone** section covering:
 Photography sourced from the web cannot be used directly (copyright, brand inconsistency). Define an **illustration style** and a **reinterpretation pipeline** to transform reference photos into brand-safe assets.
 
 - **Define style** -- Set rendering, palette, detail level, stroke, texture, and mood keywords during discovery. Document in the brand guide.
-- **Reinterpretation pipeline** -- Describe subject -> strip photographer style -> compose prompt with brand tokens -> generate via the **openai-image** skill -> validate against sink samples -> optimize & store prompt.
+- **Reinterpretation pipeline** -- Describe subject -> strip photographer style -> compose prompt with brand tokens -> generate via the **omni-image** skill -> validate against sink samples -> optimize & store prompt.
 - **Sink page section** -- Include an Illustration Gallery with 3-5 canonical illustrations, a style definition card, and the generation prompt template.
 - **Rules** -- Never use unmodified photos. Always store the generation prompt alongside the asset. Every illustration gets descriptive alt text.
 
@@ -487,7 +487,7 @@ Ensure the design system is consumable by AI agents: use semantic tokens over pr
 
 ## Companion Skills
 
-When available, leverage: **design-lookup** for CSS components, SVG icons, and design inspiration during Establish mode. **openai-image** for illustration reinterpretation and brand-safe asset generation. **deep-research** for evaluating design system approaches from scratch. This skill acts as the **integrator** -- consuming companion skill outputs and codifying them into the component library and sink page.
+When available, leverage: **design-lookup** for CSS components, SVG icons, and design inspiration during Establish mode. **omni-image** for illustration reinterpretation and brand-safe asset generation. **deep-research** for evaluating design system approaches from scratch. This skill acts as the **integrator** -- consuming companion skill outputs and codifying them into the component library and sink page.
 
 ## Agentic Workflow & Vibe Coding
 

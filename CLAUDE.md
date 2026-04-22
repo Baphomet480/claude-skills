@@ -40,7 +40,7 @@ Skills are consumed by both Claude (`~/.claude/skills/`) and Gemini (`~/.gemini/
 | `linkedin-chrome`            | LinkedIn content management via Chrome browser automation                    |
 | `llms-txt`                   | Generate /llms.txt and /llms-full.txt for web projects (llmstxt.org spec)   |
 | `nextjs-tinacms`             | Next.js 16 + TinaCMS + Tina Cloud + Vercel -- visual editing, blocks, SEO   |
-| `openai-image`               | xAI/OpenAI image generation, editing, vision, batch processing (xAI default)|
+| `omni-image`               | xAI/OpenAI image generation, editing, vision, batch processing (xAI default)|
 | `print-css`                  | Print stylesheets: @page, page breaks, colors, images, Next.js/Tailwind     |
 | `stitch-mcp`                 | Google Stitch MCP for UI design: screens, design systems, variants, prompts  |
 | `tina-schema-sync`           | Sync TinaCMS schema definitions with content models                          |
@@ -97,4 +97,4 @@ When a skill script returns a JSON response with `"type": "UnhandledException"`,
 4. **Check the `logFile` field** for the path to the full traceback on disk. Reference this path when documenting the bug.
 
 Skills with scripts may have a `KNOWN_BUGS.md` at their root (`skills/<name>/KNOWN_BUGS.md`). Error logs are persisted to disk:
-- OpenAI Image: `~/.openai_image/logs/error.log`
+- OpenAI Image: `~/.omni_image/logs/error.log`

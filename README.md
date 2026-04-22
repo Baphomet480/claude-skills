@@ -11,7 +11,7 @@ Portable AI agent skill distribution. Skills are framework-agnostic instruction 
 | **design-lookup**              | Design system discovery and reference                                                                                                                            |
 | **kitchen-sink-design-system** | Framework-agnostic Kitchen Sink design system workflow — component inventory, tiered checklists, CVA patterns, voice/tone, image reinterpretation, motion tokens |
 | **nextjs-tinacms**             | Next.js 16 + React 19 + TinaCMS — scaffolding through production, 247-task day 0–2 checklist                                                                     |
-| **openai-image**               | OpenAI image generation, editing, vision, batch processing, and transforms                                                                                       |
+| **omni-image**               | OpenAI image generation, editing, vision, batch processing, and transforms                                                                                       |
 
 ## Structure
 

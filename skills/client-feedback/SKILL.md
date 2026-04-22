@@ -127,7 +127,36 @@ gh label create design         --color 7B68EE --description "Design and UI impro
 # bug and question usually exist already
 ```
 
-### 3.2 Create one issue per feedback item
+### 3.2 Dedup before filing
+
+For every new finding, check the tracker for overlap BEFORE `gh issue create`:
+
+```bash
+gh issue list --repo <owner>/<repo> --state all --search "<keyword>"
+```
+
+If the finding corroborates or extends an existing issue, add a comment there instead of filing a duplicate. Duplicates pollute the tracker and make `fixes #N` commit messages ambiguous.
+
+### 3.3 Umbrella issues for same-class findings
+
+When a batch contains 5+ instances of the same bug class (missing-space typos across 10 pages, broken links in the same section, comma-no-space patterns from a content-conversion step), file ONE umbrella issue with a checklist body listing each affected surface. Do NOT file 10 separate issues for the same bug class.
+
+```markdown
+## Reports
+Client 2026-04-17 19:47 and 19:49 | two emails with screenshots from 12+ pages
+
+## Findings (checklist)
+- [ ] Robotic-Surgery page: "InnovationMomDoc" (missing space between words)
+- [ ] Pregnancy Week-by-Week: "occurs,your"
+- [ ] Nausea in Pregnancy: 6 instances of comma-no-space
+
+## Suggested fix
+Pattern suggests a content-conversion step dropped spaces after commas systemically. Worth a global grep for `,[a-z]` across content/ to catch all instances.
+```
+
+Umbrella issues keep the tracker legible, let you close the whole class with one commit, and surface the underlying pattern for architectural fixes.
+
+### 3.4 Create one issue per distinct feedback item (otherwise)
 
 One issue per item, not one per email. This matters because:
 - Individual items can be closed independently with `fixes #N` in commits
@@ -148,7 +177,7 @@ url=$(gh issue create \
 echo "filed: $url"
 ```
 
-### 3.3 Issue body template
+### 3.5 Issue body template
 
 ```markdown
 ## Reported by
@@ -180,7 +209,7 @@ Apply labels based on category:
 | `provider-data` | Provider locations, photos, credentials |
 | `question` | Needs client answer before we can act |
 
-### 3.4 Map issues back to email threads
+### 3.6 Map issues back to email threads
 
 Keep a written map in the in-repo `_index.md` of which issues came from which email thread. You will need this in Phase 6 when drafting responses organized by thread.
 
@@ -241,7 +270,28 @@ When the same issue surfaces in multiple forms across a feedback cycle, it's an 
 
 Name the pattern explicitly in the relevant issue body and propose the architectural fix as a follow-up. Don't keep playing whack-a-mole.
 
-### 4.4 Recovering assets from legacy sites
+### 4.4 Audit legal, regulatory, and vendor claims before citing them
+
+For any email or memo that cites statutes, CFR sections, enforcement dates, vendor pricing, or specific dollar figures, every testable claim needs to survive scrutiny. Training-data recall is not sufficient; verify against current public sources within the hour of filing.
+
+| Claim type | Verify against |
+|---|---|
+| Legal citations (CFR, USC) | `ecfr.gov` or `law.cornell.edu/cfr` (authoritative) |
+| HIPAA doctrines (Conduit Exception, etc.) | HHS guidance preambles, 2013 Omnibus Rule (78 Fed. Reg. 5565), OCR fact sheets on `hhs.gov/hipaa` |
+| Vendor BAA/pricing (Twilio, Vercel, Mongo, Sentry) | Vendor's own pricing page via `WebFetch`; flag quote-only items explicitly |
+| OCR enforcement status | `hhs.gov/hipaa/for-professionals/` + recent legal trade press (Ogletree, HIPAA Journal) |
+| Resolution agreement dollar ranges | OCR's public resolution agreements index + cited individual settlements |
+
+**Common errors:**
+- Attributing a regulatory doctrine to a specific CFR subsection when the doctrine actually comes from a preamble or agency guidance (e.g., HIPAA's Conduit Exception is in the 2013 Omnibus Rule preamble, not in a CFR subsection)
+- Citing vendor pricing from training-data recall for rapidly-changing markets; community-reported ranges should be labeled "community-reported" explicitly
+- Claiming a rule is "finalized" when it is still an NPRM; claiming an audit program "takes effect in May 2026" when the May 2026 date is actually the final rule target, not a separate audit protocol
+
+**Defensibility rule:** If you cannot verify a claim to audit-grade precision, soften to qualitative language ("quote-based, low five figures per year") rather than citing a specific range you cannot back up from a public source.
+
+**Total-cost recompute rule:** When individual vendor line items change after audit, recompute any aggregate cost floor. Do not leave a stale total behind a corrected breakdown.
+
+### 4.5 Recovering assets from legacy sites
 
 When provider photos or other assets are missing, check the old site:
 
@@ -334,6 +384,45 @@ Before you start writing the response, re-check Gmail. Clients sending rapid-fir
 
 - **One reply per thread** is the default (use `threadId` to thread correctly).
 - **Consolidated reply + acks** when the client sent multiple threads during one review session on the same broad topic: send the full response on the newest thread, then 2-line "covered in the consolidated reply" acks on the earlier threads. Confirm shape with user before writing.
+
+### 6.2.1 Pushback tone for disputed decisions
+
+When the client is asking for something with real cost, legal, or architectural consequences (not just a UX preference), lead with a collegial "pushing back on this one a little, because..." opener rather than distancing formal language. This keeps the tone human without softening the substance that follows.
+
+```
+Hi Sarah,
+
+Pushing back on this one a little, because the architectural call
+here is central to the entire cost situation, and it also shapes
+MomDoc's ongoing HIPAA compliance posture and attack surface. I
+would not dig in this hard on a UX preference; this one earns the
+length because it carries real regulatory and dollar consequences.
+
+[then TL;DR, evidence, full reasoning...]
+```
+
+Do this BEFORE launching into the memo or decision tree. The opener signals human judgment; the substance underneath is where the rigor lives.
+
+### 6.2.2 TL;DR block for long or cold-CC emails
+
+Any email longer than ~500 words, any email CC'd to a recipient coming in cold (e.g., the client's CEO), or any email that escalates a dispute gets a 3-5 bullet TL;DR block immediately after the greeting. Two purposes: skimmers get the position in 15 seconds, CC'd parties do not need to archaeology the thread.
+
+Structure in HTML:
+```html
+<div style="background: #F5F0EB; border-left: 4px solid #D4A843; padding: 14px 18px; margin: 20px 0; border-radius: 4px;">
+  <div style="font-size: 12px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase;">TL;DR</div>
+  <ul>
+    <li>Evidence of prior approval, if relevant</li>
+    <li>The architectural or compliance reality in one sentence</li>
+    <li>Three options with real numbers</li>
+    <li>Decision needed by &lt;specific date&gt;</li>
+  </ul>
+</div>
+```
+
+Mirror the TL;DR in the plain-text body (`TL;DR\n-----\n- bullet\n- bullet`) so non-HTML fallback readers get the same summary.
+
+**Evidence images at the top, not in a footnote.** If the email includes screenshots of prior approval (heart-reacts, approving text threads, prior signed-off documentation), embed them RIGHT AFTER the TL;DR — not buried in §5 of the memo below. The first-scroll-visible evidence is what lands if someone skims.
 
 ### 6.3 Response structure
 
@@ -441,7 +530,95 @@ Keep the signature simple — typically just your first name or short profession
 
 If the GitHub repo is private, handle all issue tracking internally and communicate with the client via email only. Don't ask non-technical clients to use GitHub. The email responses ARE the client-facing deliverable; the in-repo tracker is Matthias/team-facing.
 
-## Phase 7: Deploy discipline
+## Phase 7: High-stakes disputes — file an Architecture Decision Record (ADR)
+
+When a client dispute has HIPAA, legal, liability, or material cost implications (not just UX preference), upgrade from "reply email" to a formal **Architecture Decision Record**. The ADR is both an internal engineering record and client-facing evidence of professional reasoning.
+
+### 7.1 Why an ADR, not just an email
+
+An ADR is contemporaneous documentation. Filing one on the day a dispute arises is load-bearing for future legal defensibility — it timestamps your reasoning BEFORE anyone knows how the dispute resolves. A memo that sits in a private folder is weak evidence; a memo sent to the client on the day the dispute arises is strong evidence.
+
+File in two places the same day:
+- **Internal:** `_resources/feedback/<date>/<topic>-decision-memo.md` (permanent project record)
+- **Client-facing:** full ADR rendered in the body of a client email (not attached), so anyone forwarding the email also forwards the full reasoning
+
+### 7.2 ADR structure
+
+```markdown
+# Architecture Decision Record: <subject>
+
+**Date filed:** <YYYY-MM-DD>
+**Author:** <you + firm>
+**Client:** <client name>
+**Status:** Decision pending from client; our position documented
+**Retention:** Permanent project record. Filed as contemporaneous documentation.
+
+## 1. Summary
+  - What is currently live
+  - When it was approved (with artifacts)
+  - What the client now requests
+  - Present-tense compliance exposure (see 7.3)
+
+## 2. The architectural problem
+  - 2.1 Definitions (with CFR citations, audited per Phase 4.4)
+  - 2.2 The only compliant architecture
+  - 2.3 Alternatives evaluated (each with BAA chain and cost)
+
+## 3. Preconditions for alternatives (see 7.4)
+## 4. Enforcement / regulatory context (audited)
+## 5. Approval history (screenshots, quotes, dates, thread IDs)
+## 6. Response to client's stated reasoning (point by point)
+## 7. Options presented (A / B / C with real costs)
+## 8. Recommendation
+## 9. Decision log (table of dates and events)
+## 10. Filed with this memo (cross-references: screenshots, thread IDs, GH issues)
+```
+
+### 7.3 Present-tense exposure framing
+
+If the client's CURRENT (legacy) architecture appears to have compliance gaps independent of the new-site decision, name that explicitly in §1 Summary. This reframes the conversation from "should we build this?" to "you may already have a liability; porting it inherits it."
+
+> "If <client> does not currently hold executed Business Associate Agreements with <vendor 1> and <vendor 2> for the existing pipeline, that pipeline is operating in apparent HIPAA violation today. This is not a hypothetical future risk; it is a present-tense exposure, independent of any decision about the new site."
+
+### 7.4 Preconditions for alternatives
+
+Name in writing the proof you require before building alternatives you will not build on faith. Typical preconditions for Option B (port a client's legacy non-compliant architecture):
+
+1. Documented BAA with each vendor in the chain (PDF copies)
+2. Documented BAA with the hosting layer if PHI traverses it
+3. Written confirmation from the client's counsel or privacy officer that the current architecture is compliant
+4. Executed BAA between your firm and the client covering the new scope, with subprocessor BAAs enumerated
+
+These preconditions are defensible professional conduct. Your firm declines to inherit liability for a pipeline whose compliance posture is unverified.
+
+### 7.5 Send the ADR in the email body, not as an attachment
+
+Put the full ADR in the HTML body of the client email. Attached PDFs get missed or filed unread. An in-body ADR is part of the email — anyone who opens the email also opens the reasoning, and anyone who forwards forwards the full memo.
+
+Structure the email:
+1. Greeting
+2. Pushback opener (see 6.2.1)
+3. TL;DR block (see 6.2.2)
+4. Evidence image (heart-react, approval screenshot) — immediately after TL;DR
+5. Transition: "Below is the full architectural reasoning..."
+6. Full ADR rendered as HTML (H1 title, H2 sections, numbered)
+7. Repeat key evidence image inline at the approval-history section for cold-read jumpers
+8. Decision ask with specific deadline
+9. Quoted thread history at the very bottom
+
+### 7.6 Internal memo cross-references
+
+In §10 of the internal memo copy, reference every related artifact:
+- Screenshot file paths
+- Gmail thread IDs
+- GitHub issue numbers
+- The sent email's eventual Message-ID once sent
+
+This makes the ADR a complete navigational hub for anyone investigating the dispute later (counsel, auditor, future you).
+
+---
+
+## Phase 8: Deploy discipline
 
 The email you just sent claims things are fixed. The client will verify on staging. **Before sending, confirm**:
 1. All fixes are committed
@@ -468,6 +645,116 @@ If the codebase has both a brand landing page AND a brand-specific directory rou
 
 Clients conflate office (where they see the provider) with hospital (where the provider delivers). "Dr. X is at Shea now" might mean her office is Shea OR she delivers at Shea. Check both data models before acting.
 
+### CEO CC on sensitive / family-dynamic disputes
+
+If the client's CEO is a family member, long-time friend, or someone whose CC introduces unusual optics, default to NOT CC'ing them. CC them only if ALL of:
+- The email is self-contained and legible cold (TL;DR + evidence at top, per 6.2.2)
+- The decision has material cost, legal, or liability consequences (not UX preference)
+- The dispute is with a lower-level ambassador, not the CEO themselves
+
+The TL;DR block serves double duty: it gives a CC'd CEO a cold-read briefing without them having to archaeology the thread, and it lets the ambassador see the position without needing to reply defensively.
+
+Escalation can also be indirect: send the email to the ambassador without CC, but structure the body as if it might be forwarded to the CEO. The ambassador chooses whether to escalate; you avoid the perceived overreach.
+
+### Never claim "ready to send" from self-assessment
+
+For client-facing copy, "ready to send" is a claim only the user can make after reading the draft in Gmail. The assistant's correct framing is:
+
+> "All the edits you asked for are applied, verifiable in the file. You review before send."
+
+Do not pronounce a draft "ready" in-session. Opening in Gmail surfaces rendering issues (client CSS handling, whitespace normalization, image `cid:` resolution, spam-filter signals from specific phrase patterns) that raw HTML review cannot catch.
+
+Same principle applies to "production-ready" claims about code or infrastructure. The assistant can state what was verified ("tests pass locally, build succeeds, type check clean") but cannot confirm "ready" from session state alone.
+
+### Historical label sweep after establishing a convention
+
+Once a Gmail label convention is established for a client (e.g., `<Client>/Triaged`), a second sweep to label historical feedback threads is worth doing. It makes the inbox searchable long after the fact.
+
+Tier the results:
+- **Tier 1** (clear feedback): subjects contain "findings", "feedback", "comments" → auto-label + archive
+- **Tier 2** (content deliveries or project-scoped): About Us submissions, research threads → label + archive (reversible via reply / manual)
+- **Tier 3** (source material): CV batches, provider rosters, calendar invites, meeting notes → skip
+
+Flag Tier 2 borderline items for user decision rather than guessing; archiving is reversible, but an unexpected archive of a hot item is an avoidable surprise.
+
+---
+
+## Delegating mechanical work to sub-agents
+
+For tasks that iterate over N items (applying M corrections across K files, parsing N emails into N issues, auditing N claims, running N dedup searches), dispatch Sonnet sub-agents. The primary / Opus model should stay on:
+
+- Synthesis (reading multiple outputs to form a single conclusion)
+- Legal and compliance nuance (CFR citation precision; keep-sharp-vs-soften calls)
+- Client-facing copy voice
+- Architectural judgment and trade-off calls
+
+Delegate to Sonnet when:
+- Applying a list of specific corrections across documents (with verbatim replacements provided in the brief)
+- Parsing N similar items into structured output (emails → issues, files → comments)
+- Running N dedup searches + make/skip filing decisions
+- Regenerating or reconciling a log or index file from a list of changes
+
+**Brief format for sub-agent dispatch:**
+1. Task statement (1 sentence, what must change)
+2. File paths (absolute, which files to edit or read)
+3. Specific corrections (verbatim text where possible; sub-agent does not re-derive)
+4. Constraints (style rules, preservation rules — "do not touch base64 blobs", "no em dashes", etc.)
+5. Output spec (what artifacts should exist at the end, what report format)
+
+The sub-agent returns a report; the primary agent reviews the output file, spot-checks, and makes the final call on what gets sent or committed.
+
+---
+
+## Gmail tooling reference: gws CLI vs MCP
+
+The `gws` CLI and the Gmail MCP overlap but have different capabilities. For client-feedback workflows, prefer `gws` for anything that modifies state.
+
+| Operation | Gmail MCP | gws CLI |
+|---|---|---|
+| Search threads | ✓ | ✓ |
+| Read full message | ✓ | ✓ (`messages get`) |
+| List labels | ✓ | ✓ (`labels list`) |
+| Create label | ✓ | ✓ (`labels create`) |
+| Create draft | ✓ | ✓ (`drafts create`) |
+| Update existing draft (preserves draft id) | ✗ | ✓ (`drafts update`) |
+| Delete draft | ✗ (scope-limited) | ✓ (`drafts delete`) |
+| Send draft | ✗ | ✓ (`drafts send`) |
+| Modify thread labels (archive + relabel) | ✗ | ✓ (`threads modify`) |
+| Download attachment content | ✗ (limited) | ✓ (`messages attachments get`) |
+
+### Tooling gotchas
+
+**Argv size limit (~128KB on Linux).** Raw emails with inline base64 images often exceed 100KB encoded, which makes `gws ... --json '<large JSON>'` fail with `Argument list too long`. For any raw-email payload, use:
+
+```bash
+gws gmail users drafts update \
+  --params '{"userId":"me","id":"<DRAFT_ID>"}' \
+  --json '{"id":"<DRAFT_ID>","message":{"threadId":"<THREAD_ID>"}}' \
+  --upload /tmp/reply.eml \
+  --upload-content-type message/rfc822
+```
+
+`--upload` routes the body through multipart HTTP upload instead of argv.
+
+**Preserve draft id when revising.** `drafts update` (with `--upload`) keeps the existing draft id, so if you already shared the draft URL or were iterating, the id does not change. `drafts create` makes a new draft; then delete the old one separately.
+
+**Thread attachment.** Setting `{"message":{"threadId":"<id>"}}` in the update/create JSON attaches the draft to an existing Gmail thread so it appears inline in the client's existing conversation view.
+
+**Label + archive in one call:**
+```bash
+gws gmail users threads modify \
+  --params '{"userId":"me","id":"<THREAD_ID>"}' \
+  --json '{"addLabelIds":["<LABEL_ID>"], "removeLabelIds":["INBOX"]}'
+```
+
+**Auto-unarchive on reply.** Threads archived (INBOX removed) automatically re-enter INBOX when the client replies. Archive-with-label is therefore safer than delete-when-triaged; nothing is lost and returning threads are visible again.
+
+**Label hierarchy.** Slash-separated names create nested labels (`MomDoc/Triaged`, `MomDoc/Triaged/2026-04`) and scale for per-client / per-date organization.
+
+**MIME `multipart/related` vs. base64 inline images.** A `multipart/related` message with `cid:` references and sibling `image/*` parts is typically 35% smaller than a base64 `data:` URL inline and plays better with forwarding chains and plaintext fallback. Gmail auto-normalizes inline `data:` URLs to `cid:` on first save, which breaks subsequent `drafts.update` uploads — either use MIME parts from the start, or re-inject the original `data:` URL into the HTML before re-uploading.
+
+---
+
 ## Checklist
 
 Before marking the workflow complete, verify:
@@ -487,3 +774,10 @@ Before marking the workflow complete, verify:
 - [ ] Draft content shown to user before sending, even when user said "send" (Phase 6.6)
 - [ ] Superseded drafts deleted before uploading revisions (Phase 6.5)
 - [ ] Sent message IDs recorded in `_index.md` (Phase 6.7)
+- [ ] Dedup searched before filing new issues; umbrella used for same-class findings (Phase 3.2 / 3.3)
+- [ ] Legal, regulatory, and vendor-pricing claims audited via WebSearch + WebFetch before any memo or email cites them (Phase 4.4)
+- [ ] Long (>500 words) or cold-CC emails include a TL;DR block + evidence image at the top (Phase 6.2.2)
+- [ ] Pushback opener used when the dispute is substantive, not just stylistic (Phase 6.2.1)
+- [ ] High-stakes disputes filed as ADR in both internal records AND client email body, same day (Phase 7)
+- [ ] Historical label sweep run after establishing a label convention (Patterns)
+- [ ] Mechanical iteration tasks (apply N corrections, parse N emails, audit N claims) delegated to Sonnet sub-agents (Delegating section)
