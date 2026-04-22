@@ -363,7 +363,7 @@ For batch manifests, the breakdown includes each job by name. When `--quality` i
 | Flag | Values | Default | Notes |
 |------|--------|---------|-------|
 | `--model` | xAI: `grok-imagine-image-pro`, `grok-imagine-image`. OpenAI: `gpt-image-1.5`, `gpt-image-1`, `gpt-image-1-mini` | provider-specific | Set by `--provider`. xAI default: `grok-imagine-image-pro`. OpenAI default: `gpt-image-1.5`. |
-| `--size` | `auto`, `1024x1024`, `1536x1024`, `1024x1536` | `auto` | xAI maps these to aspect ratios (1:1, 3:2, 2:3). DALL-E 3 also supports `1792x1024`, `1024x1792`. |
+| `--size` | `auto`, `1024x1024`, `1536x1024`, `1024x1536`, `4096x4096` | `auto` | xAI maps these to aspect ratios (1:1, 3:2, 2:3). OpenAI supports up to 4K. |
 | `--quality` | `auto`, `low`, `medium`, `high` | `high` | Controls rendering fidelity on both providers. xAI pricing stays flat regardless of quality level. |
 | `--resolution` | `auto`, `1k`, `2k` | `auto` | xAI only. Output pixel dimensions. `2k` gives sharper detail at no extra cost. OpenAI ignores this. |
 | `--format` | `png`, `jpeg`, `webp` | `png` | Controls output file format. Both providers save as this format. |
@@ -1174,3 +1174,4 @@ A single stock photo license costs more than a 50-image generation session. Iter
 4.00
 
 A single stock photo license costs more than a 50-image generation session. Iterate freely.
+eely.

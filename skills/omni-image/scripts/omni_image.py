@@ -323,6 +323,11 @@ XAI_PRESETS = {
 }
 
 COST_TABLE = {
+    "gpt-image-2": {
+        "low": {"square": 0.009, "rect": 0.013},
+        "medium": {"square": 0.034, "rect": 0.050},
+        "high": {"square": 0.133, "rect": 0.200},
+    },
     "gpt-image-1.5": {
         "low": {"square": 0.009, "rect": 0.013},
         "medium": {"square": 0.034, "rect": 0.050},
@@ -1262,7 +1267,7 @@ def main():
     def add_common_args(p):
         p.add_argument(
             "--model", default=None,
-            help="Model to use. Default: provider-specific (xai: grok-imagine-image, openai: gpt-image-1.5)",
+            help="Model to use. Default: provider-specific (xai: grok-imagine-image-pro, openai: gpt-image-2)",
         )
         p.add_argument(
             "--size", default="auto",
