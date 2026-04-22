@@ -433,33 +433,66 @@ project/
 
 ## DESIGN.md (Official Spec)
 
-DESIGN.md is a **dual-representation** design system document. The markdown is human-readable; underneath, Stitch maintains structured tokens. You can be approximate ("warm colors, rounded feel") or exact (`#2665fd`, `8px radius`) -- Stitch reconciles both.
+DESIGN.md is a **dual-representation** design system document following the [google-labs-code/design.md](https://github.com/google-labs-code/design.md) specification. The file combines machine-readable design tokens (YAML front matter) with human-readable design rationale (markdown prose). Tokens give exact values. Prose tells *why* those values exist and how to apply them.
 
 ### Creating a DESIGN.md
 
-1. **From concept** -- Describe aesthetic intent; Stitch translates to tokens
+1. **From concept** -- Describe aesthetic intent; generate YAML tokens and markdown
 2. **From existing brand** -- Provide URL or image; extract palette, typography
 3. **From existing project** -- Use `get_project` + `get_screen` to synthesize
 
 Feed content into the `designMd` field when calling `create_design_system`.
 
-### Official Section Order
+### File Structure & Validation
+
+A DESIGN.md file has two layers:
+1. **YAML front matter** — Machine-readable design tokens, delimited by `---` fences at the top. Supported token schemas: `colors`, `typography`, `rounded`, `spacing`, `components`.
+2. **Markdown body** — Human-readable rationale organized into `##` sections.
+
+Validate a DESIGN.md file, catch broken token references, and check WCAG contrast ratios using the official CLI:
+```bash
+npx @google/design.md lint DESIGN.md
+```
+
+### Official Format Example
 
 ```markdown
+---
+name: Heritage
+colors:
+  primary: "#1A1C1E"
+  secondary: "#6C7278"
+  tertiary: "#B8422E"
+  neutral: "#F7F5F2"
+typography:
+  h1:
+    fontFamily: Public Sans
+    fontSize: 3rem
+  body-md:
+    fontFamily: Public Sans
+    fontSize: 1rem
+  label-caps:
+    fontFamily: Space Grotesk
+    fontSize: 0.75rem
+rounded:
+  sm: 4px
+  md: 8px
+spacing:
+  sm: 8px
+  md: 16px
+---
+
 ## Overview
-A calm, professional interface for a healthcare scheduling platform.
-Accessibility-first design with high contrast and generous touch targets.
+Architectural Minimalism meets Journalistic Gravitas. The UI evokes a premium matte finish — a high-end broadsheet or contemporary gallery.
 
 ## Colors
-- **Primary** (#2665fd): CTAs, active states, key interactive elements
-- **Secondary** (#6074b9): Supporting actions, chips, toggle states
-- **Tertiary** (#bd3800): Accent highlights, badges, decorative elements
-- **Neutral** (#757681): Backgrounds, surfaces, non-chromatic UI
+The palette is rooted in high-contrast neutrals and a single accent color.
+- **Primary (#1A1C1E):** Deep ink for headlines and core text.
+- **Secondary (#6C7278):** Sophisticated slate for borders, captions, metadata.
+- **Tertiary (#B8422E):** "Boston Clay" — the sole driver for interaction.
+- **Neutral (#F7F5F2):** Warm limestone foundation, softer than pure white.
 
 ## Typography
-- **Headline Font**: Inter
-- **Body Font**: Inter
-- **Label Font**: Inter
 Headlines use semi-bold weight. Body text at 14-16px regular.
 
 ## Elevation
