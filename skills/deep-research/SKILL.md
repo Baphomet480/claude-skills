@@ -1,6 +1,6 @@
 ---
 name: deep-research
-version: 1.0.0
+version: 1.1.0
 description: Conduct comprehensive, multi-round research that produces rich visual reports. Use when asked for "deep research", "comprehensive analysis", "compare frameworks", "evaluate options", "research the state of X", or any task requiring investigation across 10+ sources. NOT for quick lookups — this is a 5-15 minute deep dive that produces a briefing-quality artifact with screenshots, diagrams, tables, and cited findings.
 ---
 
@@ -138,6 +138,12 @@ Before delivering the report, verify:
 - **Uncited claims** — every substantive finding must link to its source
 - **Marketing echo** — repeating a framework's own marketing claims without independent verification
 - **Premature stopping** — delivering after 3-5 sources when the topic warrants 15+
+
+## Agentic OS Integration
+
+If the current project root contains an `.agent/` directory, this skill MUST participate in the Agentic OS shared-memory model.
+
+At the end of your execution, check for `.agent/state/last-run.json`. If it exists, append or update the file using its required schema to log your run. Ensure you capture your runtime (`agent_runtime`), `skill_executed`, a concise `summary`, `decisions`, and `next_steps`.
 
 ## References
 

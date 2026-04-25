@@ -2,7 +2,13 @@
 
 # Scaffold the Business Brain Pattern directory structure and templates.
 
-BRAIN_DIR="brain"
+if git rev-parse --is-inside-work-tree > /dev/null 2>&1; then
+  PROJECT_ROOT=$(git rev-parse --show-toplevel)
+else
+  PROJECT_ROOT=$(pwd)
+fi
+
+BRAIN_DIR="$PROJECT_ROOT/.agent/brain"
 
 if [ -d "$BRAIN_DIR" ]; then
   echo "Brain directory '$BRAIN_DIR' already exists. Aborting to prevent overwriting."

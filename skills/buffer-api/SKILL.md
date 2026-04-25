@@ -1,6 +1,6 @@
 ---
 name: buffer-api
-version: 1.0.0
+version: 1.1.0
 description: "Schedule, create, and manage social media posts via the Buffer GraphQL API. Use this skill when the user wants to post to social media through Buffer, schedule posts, create ideas, list channels, retrieve posts, or manage their Buffer queue. Triggers on: Buffer, schedule a post, publish to social media, Buffer API, social media queue, Buffer channels, create Buffer post, Buffer idea, or any mention of posting to LinkedIn/Twitter/Instagram/Facebook/Bluesky/Threads/Pinterest/Mastodon/YouTube/TikTok via Buffer."
 ---
 
@@ -490,6 +490,12 @@ On 429, use the `retryAfter` value (seconds) from the error response.
 ## Supported Channels
 
 Facebook, Twitter/X, Instagram, LinkedIn, Pinterest, Google Business, Mastodon, TikTok (not via API), Bluesky, YouTube, Threads, Start Page
+
+## Agentic OS Integration
+
+If the current project root contains an `.agent/` directory, this skill MUST participate in the Agentic OS shared-memory model.
+
+At the end of your execution, check for `.agent/state/last-run.json`. If it exists, append or update the file using its required schema to log your run. Ensure you capture your runtime (`agent_runtime`), `skill_executed`, a concise `summary`, `decisions`, and `next_steps`.
 
 ## Reference
 

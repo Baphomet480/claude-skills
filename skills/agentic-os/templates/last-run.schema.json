@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Agentic OS Last Run",
+  "type": "object",
+  "properties": {
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "agent_runtime": {
+      "type": "string",
+      "description": "e.g., claude, gemini, antigravity"
+    },
+    "skill_executed": {
+      "type": "string",
+      "description": "The name of the skill or task executed"
+    },
+    "summary": {
+      "type": "string",
+      "description": "A brief summary of what was accomplished"
+    },
+    "decisions": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Key technical or design decisions made during the run"
+    },
+    "next_steps": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "What the next agent or session should pick up and do"
+    }
+  },
+  "required": ["timestamp", "agent_runtime", "summary", "next_steps"]
+}

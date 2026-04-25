@@ -1,7 +1,7 @@
 ---
 name: business-brain
 description: Implement the Business Brain pattern. Gives every agent skill access to your tone, audience, and positioning without bloating the context window. Use when asked for brand context, voice, or positioning, or when setting up a new project's brain.
-version: 1.0.0
+version: 1.1.0
 ---
 
 # Business Brain Pattern
@@ -20,7 +20,7 @@ The Business Brain pattern keeps individual skill prompts lean. Each skill loads
 
 When tasked with retrieving brand context, writing on-brand copy, or answering questions about the project's audience:
 
-1. **Check for a local brain:** Look for a `brain/`, `.claude/brain/`, or `.gemini/brain/` directory in the project workspace.
+1. **Check for a local brain:** Look for an `.agent/brain/` directory (or legacy `brain/`, `.claude/brain/`, `.gemini/brain/`) in the project workspace.
 2. **Selective loading:** Use your file reading tools to load **only the specific files needed** for the task.
    - Example: A social media drafting task might only need `brand-voice.md` and `audience-profiles.md`.
    - Example: A technical spec task might only need `content-rules.md`.
@@ -35,7 +35,7 @@ bash ~/.agents/skills/business-brain/scripts/init-brain.sh
 ```
 *(Path may vary depending on the agent environment, e.g., `~/.claude/skills/` or `~/.gemini/skills/`)*
 
-This script creates a `brain/` directory with the following templates:
+This script creates an `.agent/brain/` directory with the following templates:
 - `brand-voice.md`
 - `audience-profiles.md`
 - `positioning.md`
@@ -71,3 +71,9 @@ A well-built business brain isn't a data dump. It's structured and scannable:
 - List vs. prose preferences.
 - Length guidelines.
 - How to handle calls to action.
+
+## Agentic OS Integration
+
+If the current project root contains an `.agent/` directory, this skill MUST participate in the Agentic OS shared-memory model.
+
+At the end of your execution, check for `.agent/state/last-run.json`. If it exists, append or update the file using its required schema to log your run. Ensure you capture your runtime (`agent_runtime`), `skill_executed`, a concise `summary`, `decisions`, and `next_steps`.

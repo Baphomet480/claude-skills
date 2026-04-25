@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Agentic OS Learnings",
+  "type": "object",
+  "properties": {
+    "skill": {
+      "type": "string",
+      "description": "The name of the skill this learning applies to"
+    },
+    "history": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "what_worked": {
+            "type": "string"
+          },
+          "what_didnt": {
+            "type": "string"
+          },
+          "rule_change": {
+            "type": "string",
+            "description": "The actionable rule that the agent MUST follow next time"
+          }
+        },
+        "required": ["date", "rule_change"]
+      }
+    }
+  },
+  "required": ["skill", "history"]
+}
