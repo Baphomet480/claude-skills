@@ -4,7 +4,7 @@ import json
 import os
 import sys
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 import subprocess
 import argparse
 
@@ -19,6 +19,7 @@ AGENT_DIR = os.path.join(get_project_root(), '.agent')
 STATE_DIR = os.path.join(AGENT_DIR, 'state')
 TASKS_FILE = os.path.join(STATE_DIR, 'tasks.json')
 LAST_RUN_FILE = os.path.join(STATE_DIR, 'last-run.json')
+ERRORS_FILE = os.path.join(STATE_DIR, 'errors.json')
 
 def ensure_dirs():
     os.makedirs(STATE_DIR, exist_ok=True)
@@ -36,9 +37,32 @@ def save_tasks(tasks):
     with open(TASKS_FILE, 'w') as f:
         json.dump(tasks, f, indent=2)
 
+def log_error(task, reason, trace_id=None, decision_log=None):
+    if not os.path.exists(ERRORS_FILE):
+        errors = []
+    else:
+        try:
+            with open(ERRORS_FILE, 'r') as f:
+                errors = json.load(f)
+        except json.JSONDecodeError:
+            errors = []
+            
+    error_entry = {
+        "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
+        "task_id": task.get("id"),
+        "assigned_skill": task.get("assigned_skill"),
+        "reason": reason,
+        "trace_id": trace_id,
+        "decision_log": decision_log,
+        "resolved": False
+    }
+    errors.append(error_entry)
+    with open(ERRORS_FILE, 'w') as f:
+        json.dump(errors, f, indent=2)
+
 def log_last_run(task, status, outcome_details=None, trace_id=None, decision_log=None):
     log_entry = {
-        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
         "task_id": task.get("id"),
         "status": status,
         "description": task.get("description"),
@@ -64,7 +88,7 @@ def add_task(priority, assigned_skill, description, project_id=None, agent_id=No
         "project_id": project_id,
         "agent_id": agent_id,
         "user_id": user_id,
-        "created_at": datetime.utcnow().isoformat() + "Z",
+        "created_at": datetime.now(timezone.utc).isoformat() + "Z",
         "completed_at": None
     }
     tasks["pending"].append(task)
@@ -105,12 +129,14 @@ def complete_task(task_id, status="completed", outcome=None, trace_id=None, deci
         return
         
     task = tasks["in_progress"].pop(task_idx)
-    task["completed_at"] = datetime.utcnow().isoformat() + "Z"
+    task["completed_at"] = datetime.now(timezone.utc).isoformat() + "Z"
     
     if status == "completed":
         tasks["completed"].append(task)
     else:
         tasks["failed"].append(task)
+        reason = outcome.get("reason", "Unknown failure") if outcome else "Unknown failure"
+        log_error(task, reason, trace_id, decision_log)
         
     save_tasks(tasks)
     log_last_run(task, status, outcome, trace_id, decision_log)

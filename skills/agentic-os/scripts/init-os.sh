@@ -50,6 +50,14 @@ EOF
   echo "Created .agent/state/tasks.json"
 fi
 
+# Create errors.json
+if [ ! -f "$AGENT_DIR/state/errors.json" ]; then
+  cat > "$AGENT_DIR/state/errors.json" << 'EOF'
+[]
+EOF
+  echo "Created .agent/state/errors.json"
+fi
+
 # Create a template learnings file
 if [ ! -f "$AGENT_DIR/learnings/template.json" ]; then
   cat > "$AGENT_DIR/learnings/template.json" << 'EOF'
@@ -85,11 +93,22 @@ fi
 echo "✅ Agentic OS successfully initialized."
 echo "Agents (Claude, Gemini, Antigravity) will now share persistent memory and learnings in this project."
 
+# Sync skill eval templates from global skills directory
+SKILLS_DIR=$(cd "$(dirname "$0")/../.." && pwd)
+for eval_file in "$SKILLS_DIR"/*/templates/eval.json; do
+  if [ -f "$eval_file" ]; then
+    skill_name=$(basename $(dirname $(dirname "$eval_file")))
+    cp "$eval_file" "$AGENT_DIR/evals/${skill_name}.json"
+    echo "Imported eval template for skill: $skill_name"
+  fi
+done
+
 # Inject startup routine into agent instructions if they exist
-HEARTBEAT_INSTRUCTION="
+read -r -d '' HEARTBEAT_INSTRUCTION << 'EOF' || true
+
 ## Agentic OS Startup
-Upon every invocation, before responding to the user's prompt, check if \`.agent/state/tasks.json\` has pending tasks. If so, automatically execute the \`heartbeat\` skill (via \`python3 scripts/heartbeat.py pop\`) to process the queue.
-"
+Upon every invocation, before responding to the user's prompt, check if `.agent/state/tasks.json` has pending tasks. If so, automatically execute the `heartbeat` skill (via `python3 ~/.gemini/skills/heartbeat/scripts/heartbeat.py pop` for Gemini/Antigravity or `python3 ~/.claude/skills/heartbeat/scripts/heartbeat.py pop` for Claude) to process the queue.
+EOF
 
 if [ -f "$PROJECT_ROOT/GEMINI.md" ]; then
   if ! grep -q "Agentic OS Startup" "$PROJECT_ROOT/GEMINI.md"; then

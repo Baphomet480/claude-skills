@@ -1,0 +1,11 @@
+{
+  "skill": "template",
+  "history": [
+    {
+      "date": "YYYY-MM-DD",
+      "what_worked": "",
+      "what_didnt": "",
+      "rule_change": "This is a template. Duplicate this file and rename to <skill-name>.json to implement a feedback loop."
+    }
+  ]
+}

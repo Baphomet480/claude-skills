@@ -68,9 +68,9 @@ def verify_eval(skill, task_id, notes):
     else:
         data = {"skill": skill, "verifications": []}
         
-    from datetime import datetime
+    from datetime import datetime, timezone
     entry = {
-        "date": datetime.utcnow().isoformat() + "Z",
+        "date": datetime.now(timezone.utc).isoformat() + "Z",
         "task_id": task_id,
         "notes": notes,
         "status": "verified"

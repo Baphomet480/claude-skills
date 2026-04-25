@@ -1,0 +1,8 @@
+{
+  "skill": "deep-research",
+  "criteria": [
+    "Outputs must contain at least 3 distinct primary sources.",
+    "Information must be factual, omitting hallucinations.",
+    "Sources must be directly cited in the final output."
+  ]
+}

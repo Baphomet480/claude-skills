@@ -1,0 +1,18 @@
+{
+  "pending": [
+    {
+      "id": "task-ceb916e0",
+      "priority": "medium",
+      "description": "Test task for the command center",
+      "assigned_skill": "dummy_skill",
+      "project_id": null,
+      "agent_id": null,
+      "user_id": null,
+      "created_at": "2026-04-25T20:00:35.023572Z",
+      "completed_at": null
+    }
+  ],
+  "in_progress": [],
+  "completed": [],
+  "failed": []
+}

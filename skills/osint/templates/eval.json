@@ -1,0 +1,10 @@
+{
+  "skill": "osint",
+  "criteria": [
+    "Gate 1: Scope & Authorization - Confirm lawful basis, no prohibited methods, and explicitly state scope.",
+    "Gate 2: Disambiguation - Identify all plausible candidates and use a primary source discriminator before reporting.",
+    "Gate 3: Source Independence - Trace each claim to an independent primary source. Self-published claims are not independent.",
+    "Gate 4: Confidence Grading - Every finding must have a letter grade (A, B, C, D) based on the rubric.",
+    "Output Contract - Must produce a markdown dossier and a findings.json sidecar (unless it is a Quick investigation)."
+  ]
+}

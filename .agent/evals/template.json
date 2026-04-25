@@ -1,0 +1,7 @@
+{
+  "skill": "template",
+  "criteria": [
+    "This is a template. Duplicate this file and rename to <skill-name>.json to define quality gates.",
+    "Must output valid markdown."
+  ]
+}

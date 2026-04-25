@@ -1,0 +1,11 @@
+{
+  "skill": "deep-research",
+  "criteria": [
+    "Source diversity - At least 1 S-tier and 2 A-tier sources cited (or explicitly flagged as unavailable).",
+    "Visual richness - At least 1 screenshot/image AND 1 diagram/table embedded.",
+    "Narrative quality - Executive summary reads as prose, not bullet points.",
+    "Citation completeness - Every factual claim links to a source.",
+    "Gap transparency - Gaps and conflicts are explicitly documented.",
+    "Actionable output - Recommendations section exists with ranked, specific advice."
+  ]
+}

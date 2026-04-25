@@ -1,0 +1,13 @@
+{
+  "timestamp": "",
+  "task_id": "",
+  "status": "",
+  "description": "Agentic OS initialized.",
+  "assigned_skill": "init",
+  "project_id": "",
+  "agent_id": "",
+  "user_id": "",
+  "outcome": {},
+  "trace_id": "",
+  "decision_log": ""
+}

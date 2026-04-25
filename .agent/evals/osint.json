@@ -1,0 +1,8 @@
+{
+  "skill": "osint",
+  "criteria": [
+    "Outputs must prioritize operational security and avoiding direct contact with targets.",
+    "Findings must be clearly tied to a specific piece of evidence or pivot point.",
+    "Data must be organized logically, separating confirmed facts from hypotheses."
+  ]
+}

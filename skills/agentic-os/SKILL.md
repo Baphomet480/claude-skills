@@ -25,7 +25,9 @@ This creates the following structure at the root of the project:
 .agent/
   ├── state/
   │   ├── last-run.json      # Global log of the last agent actions
-  │   └── tasks.json         # Shared queue of pending/completed tasks
+  │   ├── tasks.json         # Shared queue of pending/completed tasks
+  │   ├── errors.json        # Log of unresolved task failures
+  │   └── status.md          # Output of the command-center skill
   ├── learnings/             # Per-skill feedback loops
   │   └── template.json
   └── evals/                 # Per-skill evaluation criteria
@@ -77,6 +79,22 @@ Used for operational continuity.
   "trace_id": "req-12345",
   "decision_log": "Used standard Tailwind utility classes instead of custom CSS for faster rendering"
 }
+```
+
+### `errors.json`
+Used by the `command-center` skill to track unresolved failures.
+```json
+[
+  {
+    "timestamp": "2026-04-25T12:05:00Z",
+    "task_id": "task-124",
+    "assigned_skill": "osint",
+    "reason": "Target API returned 429 Too Many Requests after 3 retries",
+    "trace_id": "req-12346",
+    "decision_log": "Attempted to backoff but exceeded max wait time.",
+    "resolved": false
+  }
+]
 ```
 
 ### `learnings.json` (per skill)
