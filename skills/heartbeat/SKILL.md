@@ -14,7 +14,7 @@ Use the `heartbeat.py` script included in this skill's `scripts/` directory to m
 
 1. **Pop Task**: Run `python3 scripts/heartbeat.py pop` to get the highest priority pending task and move it to `in_progress`.
 2. **Execute**: Read the task details and use the appropriate skill (e.g., `osint`, `deep-research`) to fulfill the task.
-3. **Complete/Fail**: Run `python3 scripts/heartbeat.py complete <task_id> --outcome '{"result": "..."}'` or `python3 scripts/heartbeat.py fail <task_id> --reason "..."` to update the task status and log to `last-run.json`.
+3. **Complete/Fail**: Run `python3 scripts/heartbeat.py complete <task_id> --outcome '{"result": "..."}' --trace-id <id> --decision-log "..."` or `python3 scripts/heartbeat.py fail <task_id> --reason "..." --trace-id <id>` to update the task status and log to `last-run.json`.
 
 ## Task Format
 
@@ -28,6 +28,9 @@ The `tasks.json` should contain an object with status arrays:
       "priority": "high",
       "description": "Deep research the current state of local LLM orchestration.",
       "assigned_skill": "deep-research",
+      "project_id": "claude-skills",
+      "agent_id": "antigravity",
+      "user_id": "matthias",
       "created_at": "2026-04-25T12:00:00Z",
       "completed_at": null
     }

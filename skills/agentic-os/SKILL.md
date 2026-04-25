@@ -46,7 +46,8 @@ Before executing a specialized task or skill:
 After generating your output but *before* finalizing:
 - If an `eval.json` exists for your task, grade your own output against its criteria. (Use `python3 ~/.agents/skills/agentic-os/scripts/eval.py list --skill <skill>`)
 - If you fail any criteria, revise your output.
-- Once you pass, consider what worked well and what didn't during generation.
+- Once you pass, log your verification using `python3 ~/.agents/skills/agentic-os/scripts/eval.py verify --skill <skill> --task-id <id> --notes "..."`
+- Consider what worked well and what didn't during generation.
 
 ### 3. Post-Task: Write State & Learnings
 Before you conclude your session or step:
@@ -63,11 +64,18 @@ Used for operational continuity.
 ```json
 {
   "timestamp": "2026-04-25T12:00:00Z",
-  "agent_runtime": "antigravity",
-  "skill_executed": "build-component",
-  "summary": "Built the new Hero component.",
-  "decisions": ["Used standard Tailwind utility classes instead of custom CSS for faster rendering"],
-  "next_steps": ["Wire up the Hero component to the CMS data"]
+  "task_id": "task-123",
+  "status": "completed",
+  "description": "Built the new Hero component.",
+  "assigned_skill": "build-component",
+  "project_id": "generic-service",
+  "agent_id": "antigravity",
+  "user_id": "matthias",
+  "outcome": {
+    "result": "Success"
+  },
+  "trace_id": "req-12345",
+  "decision_log": "Used standard Tailwind utility classes instead of custom CSS for faster rendering"
 }
 ```
 

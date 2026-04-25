@@ -1,7 +1,7 @@
 ---
 name: business-brain
 description: Implement the Business Brain pattern. Gives every agent skill access to your tone, audience, and positioning without bloating the context window. Use when asked for brand context, voice, or positioning, or when setting up a new project's brain.
-version: 1.1.0
+version: 1.2.0
 ---
 
 # Business Brain Pattern
@@ -76,4 +76,4 @@ A well-built business brain isn't a data dump. It's structured and scannable:
 
 If the current project root contains an `.agent/` directory, this skill MUST participate in the Agentic OS shared-memory model.
 
-At the end of your execution, check for `.agent/state/last-run.json`. If it exists, append or update the file using its required schema to log your run. Ensure you capture your runtime (`agent_runtime`), `skill_executed`, a concise `summary`, `decisions`, and `next_steps`.
+At the end of your execution, check for `.agent/state/last-run.json`. If it exists, append or update the file using its required schema to log your run. Ensure you capture your runtime (`agent_id`), `assigned_skill`, a concise `description`, `decision_log`, and `outcome`. Use `python3 ~/.agents/skills/heartbeat/scripts/heartbeat.py complete <task_id> ...` if completing a task from the queue.

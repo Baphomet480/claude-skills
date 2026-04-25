@@ -22,11 +22,16 @@ if [ ! -f "$AGENT_DIR/state/last-run.json" ]; then
   cat > "$AGENT_DIR/state/last-run.json" << 'EOF'
 {
   "timestamp": "",
-  "agent_runtime": "",
-  "skill_executed": "init",
-  "summary": "Agentic OS initialized.",
-  "decisions": [],
-  "next_steps": []
+  "task_id": "",
+  "status": "",
+  "description": "Agentic OS initialized.",
+  "assigned_skill": "init",
+  "project_id": "",
+  "agent_id": "",
+  "user_id": "",
+  "outcome": {},
+  "trace_id": "",
+  "decision_log": ""
 }
 EOF
   echo "Created .agent/state/last-run.json"
@@ -38,7 +43,8 @@ if [ ! -f "$AGENT_DIR/state/tasks.json" ]; then
 {
   "pending": [],
   "in_progress": [],
-  "completed": []
+  "completed": [],
+  "failed": []
 }
 EOF
   echo "Created .agent/state/tasks.json"

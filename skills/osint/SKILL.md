@@ -1,6 +1,6 @@
 ---
 name: osint
-version: 1.1.0
+version: 1.2.0
 description: Open-source intelligence on people, companies, domains, and B2B accounts. Use when the user wants to investigate, vet, research, or build a dossier on a target — phrases like "OSINT", "due diligence", "background check", "research this person", "look into [company/domain]", "vet this prospect/vendor", "what does X do", "is this account worth pursuing", "find me a contact at", "who's the buyer for", or any open-source investigation task. Disambiguates identities before reporting and grades every claim by independent source count.
 ---
 
@@ -174,7 +174,7 @@ If a key is missing, fall back to web search. Never tell the user "I can't do th
 
 If the current project root contains an `.agent/` directory, this skill MUST participate in the Agentic OS shared-memory model.
 
-At the end of your execution, check for `.agent/state/last-run.json`. If it exists, append or update the file using its required schema to log your run. Ensure you capture your runtime (`agent_runtime`), `skill_executed`, a concise `summary`, `decisions`, and `next_steps`.
+At the end of your execution, check for `.agent/state/last-run.json`. If it exists, append or update the file using its required schema to log your run. Ensure you capture your runtime (`agent_id`), `assigned_skill`, a concise `description`, `decision_log`, and `outcome`. Use `python3 ~/.agents/skills/heartbeat/scripts/heartbeat.py complete <task_id> ...` if completing a task from the queue.
 
 ## Optional: PAI / OpenCode integration
 

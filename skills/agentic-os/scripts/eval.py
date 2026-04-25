@@ -46,10 +46,40 @@ def list_evals(skill=None):
             print(f"No evals found for skill '{skill}'")
     else:
         for filename in os.listdir(EVALS_DIR):
-            if filename.endswith(".json"):
+            if filename.endswith(".json") and not filename.endswith("_results.json"):
                 with open(os.path.join(EVALS_DIR, filename), 'r') as f:
                     print(f"--- {filename} ---")
                     print(json.dumps(json.load(f), indent=2))
+
+def verify_eval(skill, task_id, notes):
+    if not os.path.exists(EVALS_DIR):
+        print("No evals directory found. Cannot verify.")
+        return
+        
+    eval_file = os.path.join(EVALS_DIR, f"{skill}.json")
+    if not os.path.exists(eval_file):
+        print(f"No evals found for skill '{skill}'. Nothing to verify.")
+        return
+        
+    results_file = os.path.join(EVALS_DIR, f"{skill}_results.json")
+    if os.path.exists(results_file):
+        with open(results_file, 'r') as f:
+            data = json.load(f)
+    else:
+        data = {"skill": skill, "verifications": []}
+        
+    from datetime import datetime
+    entry = {
+        "date": datetime.utcnow().isoformat() + "Z",
+        "task_id": task_id,
+        "notes": notes,
+        "status": "verified"
+    }
+    data["verifications"].append(entry)
+    
+    with open(results_file, 'w') as f:
+        json.dump(data, f, indent=2)
+    print(f"Logged verification for skill '{skill}' on task '{task_id}'")
 
 def main():
     parser = argparse.ArgumentParser(description="Agentic OS Evals Manager")
@@ -62,12 +92,19 @@ def main():
     list_parser = subparsers.add_parser("list", help="List evals")
     list_parser.add_argument("--skill", help="Filter by skill name")
     
+    verify_parser = subparsers.add_parser("verify", help="Log verification of quality gates for a skill")
+    verify_parser.add_argument("--skill", required=True, help="The skill name")
+    verify_parser.add_argument("--task-id", required=True, help="The task ID being verified")
+    verify_parser.add_argument("--notes", required=True, help="Notes on how the criteria were met")
+    
     args = parser.parse_args()
     
     if args.command == "add":
         add_eval(args.skill, args.criterion)
     elif args.command == "list":
         list_evals(args.skill)
+    elif args.command == "verify":
+        verify_eval(args.skill, args.task_id, args.notes)
 
 if __name__ == "__main__":
     main()
