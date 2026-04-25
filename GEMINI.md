@@ -12,4 +12,4 @@ You are working in the `claude-skills` repository, which contains framework-agno
 3. **File Editing:** Edit files only in the `skills/` directory. Do not edit `.skill` ZIP files in `dist/`.
 4. **Bug Filing:** If you encounter an `"UnhandledException"` from a skill script, read the `fix` field, document the bug in the skill's `KNOWN_BUGS.md`, and notify the user.
 5. **Versioning:** If you modify a skill's logic or documentation, increment its semver version in the `SKILL.md` frontmatter.
-6. **Agentic OS Startup:** Upon every invocation, before responding to the user's prompt, check if `.agent/state/tasks.json` has pending tasks. If so, automatically execute the `heartbeat` skill to process the queue.
+6. **Agentic OS Startup:** Upon every invocation, before responding to the user's prompt, check if `.agent/state/tasks.json` has pending tasks. If so, automatically execute the `heartbeat` skill (via `python3 ~/.gemini/skills/heartbeat/scripts/heartbeat.py pop`) to process the queue.

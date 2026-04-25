@@ -54,7 +54,7 @@ When operating within this repository, agents should adhere to the following dir
 2. **Installation:** If you add a new skill or fix symlinks, run `./scripts/install-skills.sh` to ensure it is correctly mapped to `~/.agents/skills/`, `~/.claude/skills/`, and `~/.gemini/skills/`.
 3. **Versioning:** If you modify a skill's logic or documentation, increment its semver `version` in the `SKILL.md` frontmatter.
 4. **No Direct `dist/` Edits:** Never attempt to modify the `.skill` ZIP archives in `dist/`. Edit the source in `skills/` and let the git hooks handle packaging.
-5. **Agentic OS Startup:** Upon every invocation, before responding to the user's prompt, check if `.agent/state/tasks.json` has pending tasks. If so, automatically execute the `heartbeat` skill to process the queue.
+5. **Agentic OS Startup:** Upon every invocation, before responding to the user's prompt, check if `.agent/state/tasks.json` has pending tasks. If so, automatically execute the `heartbeat` skill (via `python3 ~/.claude/skills/heartbeat/scripts/heartbeat.py pop`) to process the queue.
 
 ## Workflow
 
