@@ -10,6 +10,11 @@ Portable AI agent skill distribution repo. Skills are framework-agnostic instruc
 skills/          ← Source directories (edit here)
 dist/            ← Packaged .skill ZIP files (auto-generated)
 hooks/pre-commit ← Auto-packages modified skills into dist/ on commit
+scripts/         ← audit_skills.py (lint), install-skills.sh (symlink installer)
+tests/           ← pytest suites for audit + skill structure
+.agent/          ← Agentic OS layer (state, learnings, evals) — see "Agentic OS" below
+.claude/hooks/   ← PostToolUse hooks (auto-package on Edit/Write)
+conductor/       ← Project planning docs (product.md, tech-stack.md, workflow.md)
 ```
 
 ## How Skills Work
@@ -22,25 +27,32 @@ Each skill is a self-contained directory under `skills/` with:
 - **examples/** — Reference implementations
 - **scripts/** — Helper scripts (scanners, generators, etc.)
 
-Skills are consumed by both Claude (`~/.claude/skills/`) and Gemini (`~/.gemini/antigravity/skills/`).
+Skills are consumed by Claude (`~/.claude/skills/`) and Gemini (`~/.gemini/skills/`). See the Workflow section for the canonical symlink layout.
 
 ## Current Skills
 
 | Skill                        | Purpose                                                                      |
 | ---------------------------- | ---------------------------------------------------------------------------- |
+| `agentic-os`                 | Framework-agnostic persistent memory layer (.agent/) for cross-agent task queues and learnings |
 | `buffer-api`                 | Schedule, create, and manage social media posts via the Buffer GraphQL API   |
+| `business-brain`             | Tone, audience, and brand positioning context shared across skills           |
+| `claude-use-gemini-acp`      | Delegate sub-tasks from Claude to Gemini CLI via Agent Client Protocol       |
 | `client-feedback`            | Process client feedback emails into tracked issues and draft responses       |
 | `cloudflare-pages`           | Cloudflare Pages deployment, custom domains, and CI/CD                       |
+| `command-center`             | Aggregates state across tasks/errors/runs into a global status dashboard     |
 | `deep-research`              | Multi-round deep research producing visual reports with citations            |
 | `design-lookup`              | CSS components, SVG icons, and design pattern discovery from the web         |
 | `gemini-translate`           | Batch-translate content files using Gemini CLI subagent with glossary support|
+| `gemini-use-claude-acp`      | Delegate sub-tasks from Gemini to Claude Code via Agent Client Protocol      |
 | `google-workspace`           | Google Workspace (Drive, Docs, Sheets, Gmail, Calendar) via the `gws` CLI   |
 | `gs-brand-doc`               | Generate branded PDF documents using GS brand assets                         |
+| `heartbeat`                  | Agentic OS orchestrator — pops tasks from the .agent queue and routes to skills |
 | `kitchen-sink-design-system` | Framework-agnostic Kitchen Sink design system workflow and component inventory|
 | `linkedin-chrome`            | LinkedIn content management via Chrome browser automation                    |
 | `llms-txt`                   | Generate /llms.txt and /llms-full.txt for web projects (llmstxt.org spec)   |
 | `nextjs-tinacms`             | Next.js 16 + TinaCMS + Tina Cloud + Vercel -- visual editing, blocks, SEO   |
-| `omni-image`               | xAI/OpenAI image generation, editing, vision, batch processing (xAI default)|
+| `omni-image`                 | xAI/OpenAI image generation, editing, vision, batch processing (xAI default)|
+| `osint`                      | Open-source intelligence on people, companies, and domains                   |
 | `print-css`                  | Print stylesheets: @page, page breaks, colors, images, Next.js/Tailwind     |
 | `stitch-mcp`                 | Google Stitch MCP for UI design: screens, design systems, variants, prompts  |
 | `tina-schema-sync`           | Sync TinaCMS schema definitions with content models                          |
@@ -55,6 +67,8 @@ When operating within this repository, agents should adhere to the following dir
 3. **Versioning:** If you modify a skill's logic or documentation, increment its semver `version` in the `SKILL.md` frontmatter.
 4. **No Direct `dist/` Edits:** Never attempt to modify the `.skill` ZIP archives in `dist/`. Edit the source in `skills/` and let the git hooks handle packaging.
 5. **Agentic OS Startup:** Upon every invocation, before responding to the user's prompt, check if `.agent/state/tasks.json` has pending tasks. If so, automatically execute the `heartbeat` skill (via `python3 ~/.claude/skills/heartbeat/scripts/heartbeat.py pop`) to process the queue.
+6. **Tests:** Run `python3 -m pytest tests/` after touching `scripts/audit_skills.py` or skill-structure conventions.
+7. **Cross-agent rules:** Before starting work, also read `./GEMINI.md` for shared writing-style and technical-preference standards that apply to all agents (no em dashes, pnpm over npm, etc.).
 
 ## Workflow
 
@@ -79,6 +93,26 @@ All install paths are symlinks. Editing any copy edits the upstream source.
 - Franchise placeholder: Star Wars (use for sample data, form labels, empty states)
 - `.skill` files are standard ZIP archives renamed for clarity
 - Always edit in `skills/`, never edit `dist/` directly
+
+## Agentic OS
+
+This repo runs an Agentic OS layer at `.agent/` for cross-session memory and task queueing. Key paths:
+
+- `.agent/state/tasks.json` — shared task queue (pending / in_progress / completed / failed)
+- `.agent/state/last-run.json` — most recent completed task summary
+- `.agent/state/errors.json` — unresolved failures (consumed by `command-center`)
+- `.agent/learnings/<skill>.json` — per-skill rule changes from past sessions
+- `.agent/evals/<skill>.json` — per-skill "definition of done" criteria
+
+Process the queue with the `heartbeat` skill:
+
+```bash
+python3 ~/.claude/skills/heartbeat/scripts/heartbeat.py pop      # claim next task
+python3 ~/.claude/skills/heartbeat/scripts/heartbeat.py complete <task_id> --outcome '{"result":"…"}'
+python3 ~/.claude/skills/heartbeat/scripts/heartbeat.py fail <task_id> --reason "…"
+```
+
+Before any specialized work, read the relevant `learnings/<skill>.json` and apply its `rule_change` entries. After finishing, append new learnings via `learn.py`.
 
 ## Versioning
 
