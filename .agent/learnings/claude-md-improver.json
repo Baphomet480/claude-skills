@@ -1,0 +1,17 @@
+{
+  "skill": "claude-md-improver",
+  "history": [
+    {
+      "date": "2026-04-26",
+      "what_worked": "Cross-referencing on-disk skills/ against the CLAUDE.md table found 7 missing skills; cross-referencing two sections of CLAUDE.md against scripts/install-skills.sh found a contradictory Gemini install path.",
+      "what_didnt": "Trusting CLAUDE.md as a source of truth for skill paths. Line 25 said ~/.gemini/antigravity/skills/, line 70 said ~/.gemini/skills/, install script said ~/.gemini/skills/. The doc lied; the script was right.",
+      "rule_change": "When auditing CLAUDE.md in this repo, diff ls skills/ against the skills table AND diff every install path against scripts/install-skills.sh. Treat the install script as authoritative for paths."
+    },
+    {
+      "date": "2026-04-26",
+      "what_worked": "When evaluating skill descriptions in CLAUDE.md tables or SKILL.md frontmatter, scoring them against the trigger-not-summary rule surfaces concrete weaknesses ('helps with X' is a fail; 'use when the user asks to ...' is a pass).",
+      "what_didnt": "Treating the description field as a one-line summary. Anthropic's own skill-authoring docs and multiple 2026 community guides (Babich, Pixelmojo, Composio) converge on: the description is the trigger Claude reads to decide whether to load the skill \u2014 vague triggers cause missed loads; overly broad triggers cause wrong-skill loads.",
+      "rule_change": "When auditing a skill in this repo, evaluate its description against the trigger test: would a fresh Claude session, seeing only name+description (~100 tokens), correctly decide whether to load this skill for a plausible user request? If not, flag it. Apply the same test when reviewing the skills table in CLAUDE.md."
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "skill": "new-skill",
+  "history": [
+    {
+      "date": "2026-04-26",
+      "what_worked": "Reading scripts/audit_skills.py first to extract the kebab-case regex, then mirroring it in scaffold.sh so the scaffolder cannot produce a name the audit will reject.",
+      "what_didnt": "No failure observed yet, but the latent risk is the audit script's rules drifting from any scaffolder/validator that reimplements them from memory.",
+      "rule_change": "Any tool in .claude/skills/ that produces files for skills/ must validate against scripts/audit_skills.py rules \u2014 either by calling the audit script after writing, or by mirroring its regex with a comment pointing back to the source. Do not reimplement the rules from memory."
+    }
+  ]
+}

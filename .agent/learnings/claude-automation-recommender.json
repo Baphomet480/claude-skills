@@ -1,0 +1,11 @@
+{
+  "skill": "claude-automation-recommender",
+  "history": [
+    {
+      "date": "2026-04-26",
+      "what_worked": "block-dist-edits.sh uses jq + bash regex only \u2014 no subprocesses, no network, no file I/O \u2014 so it stays well under the latency budget for PreToolUse hooks.",
+      "what_didnt": "PreToolUse hooks gate every matched tool call. 2026 hook guides (Pixelmojo, claude-code-hooks-mastery, Smartscope) consistently call out a ~500ms budget; anything heavier (running a full lint, hitting an API, spawning a Python interpreter) makes Claude feel sluggish on every edit. This is non-obvious because the existing PostToolUse hooks in this repo (package-skill.sh, audit-on-skill-md.sh) have no such constraint and can take seconds.",
+      "rule_change": "When recommending or writing PreToolUse hooks for this repo, keep them under ~500ms. Use jq + shell builtins; avoid spawning python3, hitting the network, or invoking pytest/audit_skills.py at PreToolUse time. Push expensive checks to PostToolUse where blocking isn't required and latency is hidden."
+    }
+  ]
+}
