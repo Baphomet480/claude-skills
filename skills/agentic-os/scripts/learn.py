@@ -4,7 +4,7 @@ import json
 import os
 import sys
 import argparse
-from datetime import datetime
+from datetime import datetime, timezone
 import subprocess
 
 def get_project_root():
@@ -28,7 +28,7 @@ def add_learning(skill, what_worked, what_didnt, rule_change):
         data = {"skill": skill, "history": []}
         
     entry = {
-        "date": datetime.utcnow().strftime('%Y-%m-%d'),
+        "date": datetime.now(timezone.utc).strftime('%Y-%m-%d'),
         "what_worked": what_worked,
         "what_didnt": what_didnt,
         "rule_change": rule_change
