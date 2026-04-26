@@ -1,0 +1,162 @@
+{
+  "target": "Nadina Goodman (Herta Ingeborg Nadina Hofstatter Goodman)",
+  "target_slug": "nadina-goodman",
+  "investigation_type": "person/defensive-opsec-audit",
+  "depth": "deep",
+  "extracted_at": "2026-04-26",
+  "scope_note": "Defensive audit on behalf of her son. Findings list LEAK SOURCES, not leaked values, so the dossier itself does not amplify the exposure if it ever leaks.",
+  "disambiguation": {
+    "confirmed": true,
+    "anchor_sources": [
+      "Bueler Mortuary obituary for husband Clifford James Goodman Jr. (names her as surviving spouse + maiden name + all six children including Matthias)",
+      "Radaris snippet (age 78, AZ locations, named relatives matching obituary)"
+    ],
+    "ruled_out": [
+      "lifewithnadina_ (Pilates coach, 14K followers, different age)",
+      "Nadine Hope Goodman PA",
+      "Nadia Goodman of Bill & Melinda Gates Foundation",
+      "Nadine Goodman of CASA Mexico",
+      "Nadina Mesic (GoFundMe)"
+    ]
+  },
+  "findings": [
+    {
+      "claim": "Subject's full birth name and maiden name are publicly published in her late husband's obituary.",
+      "category": "identity_exposure",
+      "confidence": "A",
+      "sources": ["http://www.buelermortuary.com/obituaries/clifford-james-goodman-jr-md-facog"],
+      "fraud_relevance": "Maiden name is a common security-question answer."
+    },
+    {
+      "claim": "Subject's home street address is published in her late husband's obituary on a publicly indexed funeral-home website.",
+      "category": "address_leak",
+      "confidence": "A",
+      "sources": ["http://www.buelermortuary.com/obituaries/clifford-james-goodman-jr-md-facog"],
+      "severity": "critical",
+      "fraud_relevance": "Enables mail scams, in-person elder-targeting visits, burglary/swatting planning. Unusual to be in an obituary; usually removable by family request."
+    },
+    {
+      "claim": "Subject has a publicly indexed Radaris profile under 'Dina Goodman' showing age, multiple AZ addresses (Chandler, Show Low, Maricopa), and 7+ named relatives.",
+      "category": "people_search_aggregator",
+      "confidence": "A",
+      "sources": ["https://radaris.com/p/Dina/Goodman/ (snippet only; page 403'd direct fetch)"],
+      "severity": "high",
+      "fraud_relevance": "Standard substrate for cold-call elder scams. Removable via opt-out (manual or managed service)."
+    },
+    {
+      "claim": "Subject is widowed since May 29, 2022; husband was Clifford James Goodman Jr., MD, FACOG, OB/GYN at MomDoc Phoenix-metro practice est. 1976.",
+      "category": "life_event",
+      "confidence": "A",
+      "sources": ["http://www.buelermortuary.com/obituaries/clifford-james-goodman-jr-md-facog"]
+    },
+    {
+      "claim": "Subject has six adult children publicly named in obituary: Clifford III, Peter, Nick, Matthias, Dana, Michael. 18 grandchildren (count only, not named).",
+      "category": "family_structure",
+      "confidence": "A",
+      "sources": ["http://www.buelermortuary.com/obituaries/clifford-james-goodman-jr-md-facog"],
+      "fraud_relevance": "Complete grandparent-scam targeting kit (caller can plausibly impersonate any named child)."
+    },
+    {
+      "claim": "Subject is German-born and a German speaker.",
+      "category": "personal_attribute",
+      "confidence": "A",
+      "sources": ["http://www.buelermortuary.com/obituaries/clifford-james-goodman-jr-md-facog"],
+      "fraud_relevance": "Vector for German-language scam callers; also a likely security-question category (place of birth)."
+    },
+    {
+      "claim": "Subject has a public Pinterest profile (pinterest.com/nadinagoodman) with hobby boards consistent with her demographic.",
+      "category": "social_handle",
+      "confidence": "A",
+      "sources": ["https://www.pinterest.com/nadinagoodman/"]
+    },
+    {
+      "claim": "An Instagram account at instagram.com/nadinagoodman exists; content not visible from search snippet (likely private).",
+      "category": "social_handle",
+      "confidence": "B",
+      "sources": ["search snippet for instagram.com/nadinagoodman"]
+    },
+    {
+      "claim": "Daughter 'Dana Goodman' has at least two public Instagram accounts (@dana__goodman, @goodman.dana).",
+      "category": "extended_family_exposure",
+      "confidence": "B",
+      "sources": ["search results"],
+      "fraud_relevance": "Family-member social can leak schedule data ('mom is alone this weekend') exploitable for time-targeted calls."
+    },
+    {
+      "claim": "Family local-prominence indicators are publicly documented: husband's father was first Chief of Staff at Chandler Regional Hospital; husband's grandfather was Mesa mayor 5 times; 40-year MD practice.",
+      "category": "wealth_signal",
+      "confidence": "A",
+      "sources": ["http://www.buelermortuary.com/obituaries/clifford-james-goodman-jr-md-facog"],
+      "fraud_relevance": "Elevates target tier from generic to researched; cannot be unpublished."
+    }
+  ],
+  "hypotheses_not_facts": [
+    {
+      "hypothesis": "Likely lives alone or with limited cohabitants given widow-since-2022 + age 78 + 6 dispersed adult children.",
+      "reason": "Inference from public family structure; not directly stated."
+    },
+    {
+      "hypothesis": "At least one of the six adult children probably manages or shares her phone/financial decisions; the requester (Matthias) is a candidate.",
+      "reason": "Common pattern in this demographic."
+    },
+    {
+      "hypothesis": "Show Low, AZ may be a second home / vacation property typical of Phoenix-area families.",
+      "reason": "Two-residence pattern in Radaris; common pattern locally."
+    },
+    {
+      "hypothesis": "Pinterest activity pattern (Christmas/Crochet/Funny shirts) suggests low technical sophistication baseline — not derogatory, descriptive.",
+      "reason": "Inference from interests; relevant for tailoring opsec coaching."
+    }
+  ],
+  "opsec_recommendations_for_son": [
+    {
+      "priority": "critical",
+      "action": "Contact Bueler Mortuary, request the home street address line be removed from the public obituary text.",
+      "cost": "$0",
+      "effort": "1 phone call or email"
+    },
+    {
+      "priority": "high",
+      "action": "Subscribe her to a managed broker-removal service (Optery, DeleteMe, Kanary, PrivacyDuck) for 12 months.",
+      "cost": "$100–300/yr",
+      "effort": "30 min setup, then automatic"
+    },
+    {
+      "priority": "high",
+      "action": "Set a family code-word for any urgent money request; share with all 6 children + 18 grandchildren via group text.",
+      "cost": "$0",
+      "effort": "1 group text",
+      "note": "Highest cost-to-impact ratio of anything on the list."
+    },
+    {
+      "priority": "medium-high",
+      "action": "Walk her through one real grandparent-scam transcript (FTC publishes them) so she recognizes the script.",
+      "cost": "$0",
+      "effort": "20 min in person or by phone"
+    },
+    {
+      "priority": "medium",
+      "action": "Place a credit freeze at Equifax, Experian, TransUnion (free since 2018).",
+      "cost": "$0",
+      "effort": "30 min total online"
+    },
+    {
+      "priority": "medium",
+      "action": "Audit her phone: enable carrier-level scam blocker; consider Google Voice as a public-facing number layer.",
+      "cost": "$0",
+      "effort": "1–2 hours"
+    },
+    {
+      "priority": "low-medium",
+      "action": "Sweep his own and siblings' social profiles for explicit family-relationship confirmations (Mom tags, family-event photos with her named) — these are what give scam scripts their authenticity weight.",
+      "cost": "$0",
+      "effort": "30 min"
+    }
+  ],
+  "deliberately_excluded_from_dossier": [
+    "Literal home street address (in obituary; not duplicated here to keep dossier safe to share with privacy-removal services)",
+    "Phone numbers from people-search aggregators",
+    "Names of the 18 grandchildren",
+    "Specific second-residence address details"
+  ]
+}

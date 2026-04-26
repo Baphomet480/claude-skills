@@ -1,0 +1,148 @@
+{
+  "target": "Matthias Goodman",
+  "target_slug": "matthias-goodman",
+  "investigation_type": "person/self-osint",
+  "depth": "standard",
+  "extracted_at": "2026-04-25",
+  "disambiguation": {
+    "confirmed": true,
+    "anchor_sources": [
+      "genericservice.app -> linkedin/in/matthias-goodman-3a36961a0",
+      "github.com/Baphomet480 profile name",
+      "local git config (this repo)"
+    ],
+    "ruled_out": [
+      "linkedin.com/in/matthias-goodman-aa2b30153 (no shared discriminators)",
+      "Multiple 'Matthew Goodman' profiles (different spelling)"
+    ]
+  },
+  "findings": [
+    {
+      "claim": "Subject is the founder/principal of Generic Service, a Phoenix-AZ stability-focused infrastructure consulting firm.",
+      "category": "business_identity",
+      "confidence": "A",
+      "sources": [
+        "https://genericservice.app",
+        "https://github.com/Baphomet480 (real name attached)",
+        "local git author identity in this repo"
+      ]
+    },
+    {
+      "claim": "Subject's GitHub handle is Baphomet480; profile publicly displays the real name 'Matthias Goodman'.",
+      "category": "online_identity",
+      "confidence": "A",
+      "sources": ["https://github.com/Baphomet480"]
+    },
+    {
+      "claim": "Subject uses two parallel emails with the same local-part: matthiasgoodman@icloud.com (account) and matthiasgoodman@gmail.com (git commits).",
+      "category": "contact_pattern",
+      "confidence": "B",
+      "sources": [
+        "local CLAUDE.md memory (icloud)",
+        "git log in this repo (gmail)"
+      ]
+    },
+    {
+      "claim": "Generic Service publishes productized service tiers with prices ($2,000-$2,500), targeting hybrid vSphere+Azure environments in healthcare, manufacturing, and professional services.",
+      "category": "business_offering",
+      "confidence": "A",
+      "sources": ["https://genericservice.app"]
+    },
+    {
+      "claim": "Public GitHub footprint (7 repos) is dominated by MSP tooling (NinjaOne, Autotask) and AI-agent infrastructure (claude-skills, multiple MCP servers).",
+      "category": "technical_footprint",
+      "confidence": "A",
+      "sources": ["https://github.com/Baphomet480"]
+    },
+    {
+      "claim": "LinkedIn page title for matthias-goodman-3a36961a0 reads 'Senior Cloud Engineer at Candor' — possibly current employment alongside Generic Service, possibly stale headline.",
+      "category": "employment",
+      "confidence": "C",
+      "sources": ["Google search-result snippet for the LinkedIn URL (direct fetch blocked by LinkedIn 999)"]
+    },
+    {
+      "claim": "Skill 'hugo-sveltia-cms' attributed to Baphomet480/claude-skills is currently indexed on skills.rest but is no longer present in the local repo's skills/ directory.",
+      "category": "public_cache_drift",
+      "confidence": "B",
+      "sources": [
+        "https://skills.rest/skill/hugo-sveltia-cms (search snippet)",
+        "local ls skills/ confirms absence"
+      ]
+    },
+    {
+      "claim": "Neither matthiasgoodman@icloud.com nor matthiasgoodman@gmail.com appears in any web-indexed content.",
+      "category": "negative_finding",
+      "confidence": "A",
+      "sources": ["targeted Google search for both addresses returned no hits"]
+    },
+    {
+      "claim": "No public Twitter/X, Mastodon, blog, podcast appearance, or trade-press mention found under the name 'Matthias Goodman' or the brand 'Generic Service'.",
+      "category": "negative_finding",
+      "confidence": "B",
+      "sources": ["multiple targeted searches; absence noted"]
+    },
+    {
+      "claim": "WHOIS on genericservice.app is privacy-protected (default for .app TLD via Google). No registrant info exposed.",
+      "category": "infrastructure",
+      "confidence": "A",
+      "sources": ["whois genericservice.app"]
+    }
+  ],
+  "hypotheses_not_facts": [
+    {
+      "hypothesis": "The 'Baphomet480' handle predates the Generic Service brand and was reused for technical accounts; not chosen for the consulting context.",
+      "reason": "Tone and numeric suffix inconsistent with brand voice."
+    },
+    {
+      "hypothesis": "Generic Service is a solo or near-solo practice.",
+      "reason": "No other named principals; one-person GitHub footprint; LinkedIn shows ~78 connections."
+    },
+    {
+      "hypothesis": "Active working relationship with at least one MSP using NinjaOne or Autotask — possibly Candor, possibly the 'existing IT provider' GS partners with.",
+      "reason": "MSP-tool repos in public footprint."
+    }
+  ],
+  "opsec_recommendations": [
+    {
+      "priority": "high",
+      "issue": "Pseudonymous GitHub handle is linked to real name in 1 click via profile field + commit author email.",
+      "action_options": [
+        "If pseudonym is intentional: separate git identity, remove name from GitHub profile.",
+        "If pseudonym is vestigial: rename GitHub account to MatthiasGoodman or genericservice for brand coherence."
+      ]
+    },
+    {
+      "priority": "high",
+      "issue": "LinkedIn headline 'Senior Cloud Engineer at Candor' may confuse prospects clicking from genericservice.app.",
+      "action_options": [
+        "Update LinkedIn headline to lead with 'Founder, Generic Service' (with or without Candor as secondary).",
+        "Or move Candor to past-position if no longer current."
+      ]
+    },
+    {
+      "priority": "medium",
+      "issue": "Stale skill ('hugo-sveltia-cms') indexed on skills.rest after removal from repo.",
+      "action_options": [
+        "Periodic sweep comparing dist/ against external indexers.",
+        "Request takedown/refresh from skills.rest.",
+        "Add a 'deprecated' field convention to skill manifests."
+      ]
+    },
+    {
+      "priority": "low",
+      "issue": "Email local-part 'matthiasgoodman' is identical across icloud and gmail providers.",
+      "action_options": [
+        "Plus-addressing for high-risk signups.",
+        "Catch-all forwarder on a personal domain."
+      ]
+    },
+    {
+      "priority": "low",
+      "issue": "Baphomet480/claude-skills is public with 0 stars/forks — discoverability vs. privacy goal is unclear.",
+      "action_options": [
+        "If discoverability: add README, topic tags, license.",
+        "If privacy: make repo private and rely on dist/ artifacts only."
+      ]
+    }
+  ]
+}

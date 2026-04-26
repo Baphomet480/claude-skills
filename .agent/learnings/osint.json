@@ -1,0 +1,17 @@
+{
+  "skill": "osint",
+  "history": [
+    {
+      "date": "2026-04-26",
+      "what_worked": "Self-OSINT disambiguation succeeded by anchoring on a domain owned by the subject (genericservice.app) that links out to the canonical LinkedIn profile, then cross-confirming with GitHub profile name field and local git config. Two same-name candidates resolved cleanly without guessing.",
+      "what_didnt": "LinkedIn direct fetch returned HTTP 999 (anti-bot); skills.rest returned 403. Both forced reliance on Google search-result snippets, capping affected findings at C confidence. Worth knowing that LinkedIn is effectively un-fetchable via WebFetch and the snippet-only path needs to be planned for, not reacted to.",
+      "rule_change": "When investigating a person who owns a public domain, fetch the domain FIRST and look for outbound LinkedIn / social links \u2014 that's the cheapest disambiguator and gives an A-grade anchor. Do not attempt direct WebFetch on linkedin.com or skills.rest URLs; budget for snippet-only data from these sources from the outset and grade affected findings accordingly."
+    },
+    {
+      "date": "2026-04-26",
+      "what_worked": "When the audit framing is defensive (audit on behalf of the target's family), explicitly omitting leaked values from the dossier itself (address, phone, grandchild names) keeps the report safe to share with privacy-removal services. Naming the leak source is the load-bearing data; the value would only re-amplify the exposure.",
+      "what_didnt": "An obituary that contains a literal home street address looks like one source but is actually a critical-severity leak \u2014 easy to miss if reviewing it as 'family info' rather than 'targeting kit.' The address line is also unusual enough that funeral homes will typically remove it on family request, but only if someone asks.",
+      "rule_change": "When auditing an elder-relative target, treat any indexed obituary as a complete elder-fraud targeting kit and read it line-by-line for: street address, named family members, language/cultural background, wealth signals, second residences. Report each as a removable opsec issue with its own action option. Always omit leaked literal values from the resulting dossier so the report itself is safe to share with privacy-removal services."
+    }
+  ]
+}

@@ -1,13 +1,23 @@
 {
-  "timestamp": "",
-  "task_id": "",
-  "status": "",
-  "description": "Agentic OS initialized.",
-  "assigned_skill": "init",
-  "project_id": "",
-  "agent_id": "",
-  "user_id": "",
-  "outcome": {},
-  "trace_id": "",
-  "decision_log": ""
+  "timestamp": "2026-04-26T04:35:00Z",
+  "task_id": "ad-hoc-osint-nadina-goodman",
+  "status": "completed",
+  "description": "Defensive opsec audit on Nadina Goodman (mother of requester Matthias Goodman) at requester's request. Deep depth, focused on elder-fraud risk surface and removable leaks.",
+  "assigned_skill": "osint",
+  "project_id": "claude-skills",
+  "agent_id": "claude-opus-4-7",
+  "user_id": "matthias",
+  "outcome": {
+    "result": "Success",
+    "artifacts": [
+      "osint/nadina-goodman/dossier.md",
+      "osint/nadina-goodman/findings.json"
+    ],
+    "findings_count": 10,
+    "hypotheses_count": 4,
+    "opsec_recommendations_count": 7,
+    "highest_priority_issue": "Subject's home street address is publicly published in her late husband's obituary on a publicly indexed funeral-home website. Removable by family request to the funeral home."
+  },
+  "trace_id": "session-2026-04-26-osint-nadina",
+  "decision_log": "Authorization gate passed via requester's explicit defensive framing ('for he to address her risk'). Disambiguation anchored on husband's obituary which named both subject and Matthias, cross-confirmed with Radaris snippet. Five LinkedIn / Pinterest / Instagram name-collision candidates ruled out. Dossier deliberately omits leaked values (address, phone, grandchildren names) to avoid the dossier itself becoming a re-amplifier of the leak. Delivered via Telegram per requester's channel."
 }
